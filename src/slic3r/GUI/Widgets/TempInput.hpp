@@ -1,14 +1,12 @@
 #ifndef slic3r_GUI_TempInput_hpp_
 #define slic3r_GUI_TempInput_hpp_
 
-#include "../wxExtensions.hpp"
-#include <wx/stattext.h>
-#include <wx/textctrl.h>
+#include "../QtExtensions.hpp"
 #include "StaticBox.hpp"
-
+#include "StateColor.hpp"
+#include <QLineEdit>
+#include <QLabel>
 #include <unordered_set>
-
-wxDECLARE_EVENT(wxCUSTOMEVT_SET_TEMP_FINISH, wxCommandEvent);
 
 enum TempInputType {
     TEMP_OF_MAIN_NOZZLE_TYPE,
@@ -16,33 +14,9 @@ enum TempInputType {
     TEMP_OF_NORMAL_TYPE
 };
 
-class TempInput : public wxNavigationEnabled<StaticBox>
+class TempInput : public StaticBox
 {
-    bool   hover;
-
-    bool           m_read_only{false};
-    bool           m_on_changing {false};
-    wxSize         labelSize;
-    ScalableBitmap normal_icon;
-    ScalableBitmap actice_icon;
-    ScalableBitmap degree_icon;
-    ScalableBitmap round_scale_hint_icon;/*the size hint of icon, use to compute size*/
-
-    StateColor   label_color;
-    StateColor   text_color;
-
-    wxTextCtrl *  text_ctrl;
-    wxStaticText *warning_text;
-
-    int  max_temp     = 0;
-    int  min_temp     = 0;
-    std::unordered_set<int> additional_temps;
-    bool warning_mode = false;
-    TempInputType m_input_type;
-
-    int              padding_left    = 0;
-    static const int TempInputWidth  = 200;
-    static const int TempInputHeight = 50;
+    Q_OBJECT
 public:
     enum WarningType {
         WARNING_TOO_HIGH,
@@ -50,107 +24,94 @@ public:
         WARNING_UNKNOWN,
     };
 
-    TempInput();
+    TempInput(QWidget *parent = nullptr);
+    TempInput(QWidget *parent, int type, const QString &text,
+              TempInputType input_type, const QString &label = {},
+              const QString &normal_icon = {}, const QString &active_icon = {});
 
-    TempInput(wxWindow *     parent,
-              int            type,
-              wxString       text,
-              TempInputType  input_type,
-              wxString       label       = "",
-              wxString       normal_icon = "",
-              wxString       actice_icon = "",
-              const wxPoint &pos         = wxDefaultPosition,
-              const wxSize & size        = wxDefaultSize,
-              long           style       = 0);
+    void init(QWidget *parent, const QString &text,
+              const QString &label = {},
+              const QString &normal_icon = {},
+              const QString &active_icon = {});
 
-public:
-    void Create(wxWindow *     parent,
-                wxString       text,
-                wxString       label       = "",
-                wxString       normal_icon = "",
-                wxString       actice_icon = "",
-                const wxPoint &pos         = wxDefaultPosition,
-                const wxSize & size        = wxDefaultSize,
-                long           style       = 0);
-
-
-    wxPopupTransientWindow *wdialog{nullptr};
-    int  temp_type;
-    bool actice = false;
-
-
-    wxString erasePending(wxString &str);
+    int  temp_type = 0;
+    bool active    = false;
 
     void SetTagTemp(int temp);
-    void SetTagTemp(wxString temp);
-
+    void SetTagTemp(const QString &temp);
     void SetCurrTemp(int temp);
-    void SetCurrTemp(wxString temp);
+    void SetCurrTemp(const QString &temp);
     void SetCurrType(TempInputType type);
-    TempInputType GetCurrType(){return m_input_type;};
+    TempInputType GetCurrType() const { return m_input_type; }
 
-    bool AllisNum(std::string str);
+    bool AllisNum(const std::string &str) const;
     void SetFinish();
     void Warning(bool warn, WarningType type = WARNING_UNKNOWN);
     void SetIconActive();
     void SetIconNormal();
-
-   void SetReadOnly(bool ro) { m_read_only = ro; }
+    void SetReadOnly(bool ro);
 
     void SetMaxTemp(int temp);
     void SetMinTemp(int temp);
-    void AddTemp(int temp) { additional_temps.insert(temp); };
+    void AddTemp(int t) { additional_temps.insert(t); }
 
-    int GetType() { return temp_type; }
+    int     GetType() const { return temp_type; }
+    QString GetTagTemp() const;
+    QString GetCurrTemp() const;
+    int     get_max_temp() const { return max_temp; }
+    void    SetLabel(const QString &label);
 
-    wxString GetTagTemp() { return text_ctrl->GetValue(); }
-    wxString GetCurrTemp() { return GetLabel(); }
-    int get_max_temp() { return max_temp; }
-    void SetLabel(const wxString &label);
-
-    void SetTextColor(StateColor const &color);
-
-    void SetLabelColor(StateColor const &color);
+    void SetTextColor(const StateColor &color);
+    void SetLabelColor(const StateColor &color);
 
     virtual void Rescale();
+    bool Enable(bool enable = true);
+    void SetMinSize(const QSize &size);
 
-    virtual bool Enable(bool enable = true) override;
+    QLineEdit *GetTextCtrl()       { return text_ctrl; }
+    const QLineEdit *GetTextCtrl() const { return text_ctrl; }
 
-    virtual void SetMinSize(const wxSize &size) override;
+    bool IsOnChanging()  const { return m_on_changing; }
+    void SetOnChanging()       { m_on_changing = true; }
+    void ReSetOnChanging()     { m_on_changing = false; }
 
-    wxTextCtrl *GetTextCtrl() { return text_ctrl; }
-
-    wxTextCtrl const *GetTextCtrl() const { return text_ctrl; }
-
-    bool  IsOnChanging() const { return m_on_changing; }
-    void  SetOnChanging() { m_on_changing = true; }
-    void  ReSetOnChanging() { m_on_changing = false; }
+signals:
+    void tempFinished(const QString &value);
+    void textChanged(const QString &text);
 
 protected:
-    virtual void DoSetSize(int x, int y, int width, int height, int sizeFlags = wxSIZE_AUTO);
-
-    void DoSetToolTipText(wxString const &tip) override;
+    void doRender(QPainter &painter) override;
+    void enterEvent(QEnterEvent *event) override;
+    void leaveEvent(QEvent *event) override;
 
 private:
-    void ResetWaringDlg();
-    bool CheckIsValidVal(bool show_warning);
+    void measureSize();
+    QString erasePending(QString &str);
 
-    void paintEvent(wxPaintEvent &evt);
+    bool           m_hover         = false;
+    bool           m_read_only     = false;
+    bool           m_on_changing   = false;
+    QSize          labelSize;
+    ScalableBitmap normal_icon;
+    ScalableBitmap active_icon;
+    ScalableBitmap degree_icon;
 
-    void render(wxDC &dc);
+    StateColor   label_color;
+    StateColor   text_color;
 
-	void messureMiniSize();
-    void messureSize();
+    QLineEdit *text_ctrl    = nullptr;
+    QLabel    *warning_text = nullptr;
+    QLabel    *curr_label   = nullptr;
 
-    // some useful events
-    void mouseMoved(wxMouseEvent &event);
-    void mouseWheelMoved(wxMouseEvent &event);
-    void mouseEnterWindow(wxMouseEvent &event);
-    void mouseLeaveWindow(wxMouseEvent &event);
-    void keyPressed(wxKeyEvent &event);
-    void keyReleased(wxKeyEvent &event);
+    int  max_temp     = 0;
+    int  min_temp     = 0;
+    bool warning_mode = false;
+    std::unordered_set<int> additional_temps;
+    TempInputType m_input_type = TEMP_OF_NORMAL_TYPE;
 
-    DECLARE_EVENT_TABLE()
+    int padding_left = 0;
+    static constexpr int TempInputWidth  = 200;
+    static constexpr int TempInputHeight = 50;
 };
 
 #endif // !slic3r_GUI_TempInput_hpp_

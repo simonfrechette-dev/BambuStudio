@@ -4,7 +4,6 @@
 #include <memory>
 #include <vector>
 
-#include <wx/event.h>
 
 namespace Slic3r {
 
@@ -66,8 +65,6 @@ private:
 	std::unique_ptr<priv> p;
 };
 
-wxDECLARE_EVENT(EVT_SLIC3R_VERSION_ONLINE, wxCommandEvent);
-wxDECLARE_EVENT(EVT_SLIC3R_EXPERIMENTAL_VERSION_ONLINE, wxCommandEvent);
 
 
 }

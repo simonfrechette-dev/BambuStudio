@@ -18,31 +18,31 @@ namespace Slic3r { namespace GUI {
 //   Row 4:      [Try Now (brand)]  [Skip]  [Don't show me Beta updates again]
 //
 // Return codes:
-//   wxID_YES  — user clicked "Try Now"
-//   wxID_NO   — user clicked "Skip"
-//   wxID_CANCEL — user clicked "Don't show me Beta updates again"
+//   1  — user clicked "Try Now"
+//   0   — user clicked "Skip"
+//   0 — user clicked "Don't show me Beta updates again"
 class BetaVersionDialog : public DPIDialog
 {
 public:
-    BetaVersionDialog(wxWindow *parent = nullptr);
+    BetaVersionDialog(QWidget *parent = nullptr);
     ~BetaVersionDialog();
 
-    void updateContent(const wxString &available_version,
-                       const wxString &current_version);
+    void updateContent(const QString &available_version,
+                       const QString &current_version);
 
-    void on_dpi_changed(const wxRect &suggested_rect) override;
+    void on_dpi_changed(const QRect &suggested_rect) override;
 
 private:
-    void createDetailItem(wxSizer *parent_sizer, wxWindow *parent_win,
+    void createDetailItem(QLayout *parent_sizer, QWidget *parent_win,
                           int index,
-                          const wxString &title, const wxString &body,
-                          const wxString &bold_segment = wxEmptyString);
+                          const QString &title, const QString &body,
+                          const QString &bold_segment = QString());
 
     Label  *m_heading_label{nullptr};
     Label  *m_version_label{nullptr};
     Label  *m_overview_label{nullptr};
-    wxPanel *m_detail_panel{nullptr};
-    wxBoxSizer *m_detail_sizer{nullptr};
+    QWidget *m_detail_panel{nullptr};
+    QBoxLayout *m_detail_sizer{nullptr};
 
     Button *m_button_try_now{nullptr};
     Button *m_button_skip{nullptr};

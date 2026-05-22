@@ -1,6 +1,7 @@
 #ifndef slic3r_GUI_CaliHistory_hpp_
 #define slic3r_GUI_CaliHistory_hpp_
 
+#include "Widgets/SwitchButton.hpp"
 #include "GUI_Utils.hpp"
 #include "wxExtensions.hpp"
 #include "Widgets/ComboBox.hpp"
@@ -11,15 +12,15 @@ namespace GUI {
 
 class HistoryWindow : public DPIDialog {
 public:
-    HistoryWindow(wxWindow* parent, const std::vector<PACalibResult>& calib_results_history, bool& show);
+    HistoryWindow(QWidget* parent, const std::vector<PACalibResult>& calib_results_history, bool& show);
     ~HistoryWindow();
-    void on_dpi_changed(const wxRect& suggested_rect) {}
-    void on_select_nozzle(wxCommandEvent& evt);
-    void on_switch_extruder(wxCommandEvent &evt);
+    void on_dpi_changed(const QRect& suggested_rect) {}
+    void on_select_nozzle(QEvent& evt);
+    void on_switch_extruder(QEvent &evt);
     void reqeust_history_result(MachineObject* obj);
     void sync_history_result(MachineObject* obj);
     void on_device_connected(MachineObject* obj);
-    void on_timer(wxTimerEvent& event);
+    void on_timer(QTimerEvent& event);
     void update(MachineObject* obj);
 protected:
     void sync_history_data();
@@ -27,14 +28,14 @@ protected:
     float get_nozzle_value();
     int get_extruder_id();
 
-    void on_click_new_button(wxCommandEvent &event);
+    void on_click_new_button(QEvent &event);
 
-    wxPanel*                   m_history_data_panel;
+    QWidget*                   m_history_data_panel;
     ComboBox*                  m_comboBox_nozzle_dia;
     SwitchButton*              m_extruder_switch_btn;
     Label*              m_tips;
 
-    wxTimer*                   m_refresh_timer { nullptr };
+    QTimer*                   m_refresh_timer { nullptr };
 
     bool&                      m_show_history_dialog;
     std::vector<PACalibResult> m_calib_results_history;
@@ -46,14 +47,14 @@ protected:
 class EditCalibrationHistoryDialog : public DPIDialog
 {
 public:
-    EditCalibrationHistoryDialog(wxWindow *parent, const PACalibResult &result, const MachineObject *obj, const std::vector<PACalibResult> history_results);
+    EditCalibrationHistoryDialog(QWidget *parent, const PACalibResult &result, const MachineObject *obj, const std::vector<PACalibResult> history_results);
     ~EditCalibrationHistoryDialog();
-    void on_dpi_changed(const wxRect& suggested_rect) override;
+    void on_dpi_changed(const QRect& suggested_rect) override;
     PACalibResult get_result();
 
 protected:
-    virtual void on_save(wxCommandEvent& event);
-    virtual void on_cancel(wxCommandEvent& event);
+    virtual void on_save(QEvent& event);
+    virtual void on_cancel(QEvent& event);
 
 protected:
     std::string m_old_name;
@@ -68,18 +69,18 @@ protected:
 class NewCalibrationHistoryDialog : public DPIDialog
 {
 public:
-    NewCalibrationHistoryDialog(wxWindow *parent, const std::vector<PACalibResult> history_results);
+    NewCalibrationHistoryDialog(QWidget *parent, const std::vector<PACalibResult> history_results);
     ~NewCalibrationHistoryDialog(){};
-    void on_dpi_changed(const wxRect &suggested_rect) override{};
+    void on_dpi_changed(const QRect &suggested_rect) override{};
 
 protected:
-    virtual void on_ok(wxCommandEvent &event);
-    virtual void on_cancel(wxCommandEvent &event);
-    void on_select_extruder(wxCommandEvent &event);
-    void on_select_nozzle_pos(wxCommandEvent &event);
-    void on_select_nozzle_volume(wxCommandEvent &event);
+    virtual void on_ok(QEvent &event);
+    virtual void on_cancel(QEvent &event);
+    void on_select_extruder(QEvent &event);
+    void on_select_nozzle_pos(QEvent &event);
+    void on_select_nozzle_volume(QEvent &event);
 
-    wxArrayString get_all_filaments(const MachineObject *obj);
+    QStringList get_all_filaments(const MachineObject *obj);
     int get_extruder_id(int extruder_index);  // extruder_index 0 : left, 1 : right
     int get_nozzle_combo_id_code() const;
 

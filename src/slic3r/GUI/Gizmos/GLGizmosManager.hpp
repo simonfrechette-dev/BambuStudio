@@ -9,7 +9,7 @@
 
 #include "libslic3r/ObjectID.hpp"
 
-#include "wx/timer.h"
+#include <QTimer>
 
 #include <map>
 #include <memory>
@@ -112,8 +112,8 @@ private:
     std::unique_ptr<CommonGizmosDataPool> m_common_gizmos_data;
 
     //When there are more than 9 colors, shortcut key coloring
-    wxTimer m_timer_set_color;
-    void on_set_color_timer(wxTimerEvent& evt);
+    QTimer m_timer_set_color;
+    void on_set_color_timer();
 
     // key MENU_ICON_NAME, value = ImtextureID
     static std::map<int, void*> icon_list;
@@ -308,10 +308,10 @@ public:
 
     std::string get_tooltip() const;
 
-    bool on_mouse(wxMouseEvent& evt);
-    bool on_mouse_wheel(wxMouseEvent& evt);
-    bool on_char(wxKeyEvent& evt);
-    bool on_key(wxKeyEvent& evt);
+    bool on_mouse(const QMouseEvent& evt);
+    bool on_mouse_wheel(const QWheelEvent& evt);
+    bool on_char(const QKeyEvent& evt);
+    bool on_key(const QKeyEvent& evt);
 
     void update_after_undo_redo(const UndoRedo::Snapshot& snapshot);
 

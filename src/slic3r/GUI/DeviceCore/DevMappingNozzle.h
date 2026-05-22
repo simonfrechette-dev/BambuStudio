@@ -7,8 +7,8 @@
 #include <string>
 #include <unordered_map>
 #include <nlohmann/json.hpp>
+#include "libslic3r/ProjectTask.hpp"
 
-#include <wx/string.h>
 
 namespace Slic3r
 {
@@ -65,7 +65,7 @@ public:
     void SetManualNozzleMappingByFila(int fila_id, int nozzle_pos_id);
 
     std::vector<int> GetMappedNozzlePosVecByFilaId(int fila_id) const;// return empy if not mapped
-    wxString GetMappedNozzlePosStrByFilaId(int fila_id, const wxString& default_str = "?") const;
+    QString GetMappedNozzlePosStrByFilaId(int fila_id, const QString& default_str = "?") const;
 
     // flush weight
     float  GetFlushWeightBase() const { return m_flush_weight_base; }

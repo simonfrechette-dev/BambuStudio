@@ -2,7 +2,6 @@
 #define slic3r_Duet_hpp_
 
 #include <string>
-#include <wx/string.h>
 
 #include "PrintHost.hpp"
 
@@ -19,9 +18,9 @@ public:
 
 	const char* get_name() const override;
 
-	bool test(wxString &curl_msg) const override;
-	wxString get_test_ok_msg() const override;
-	wxString get_test_failed_msg(wxString &msg) const override;
+	bool test(QString &curl_msg) const override;
+	QString get_test_ok_msg() const override;
+	QString get_test_failed_msg(QString &msg) const override;
 	bool upload(PrintHostUpload upload_data, ProgressFn prorgess_fn, ErrorFn error_fn) const override;
 	bool has_auto_discovery() const override { return false; }
 	bool can_test() const override { return true; }
@@ -37,9 +36,9 @@ private:
 	std::string get_connect_url(const bool dsfUrl) const;
 	std::string get_base_url() const;
 	std::string timestamp_str() const;
-	ConnectionType connect(wxString &msg) const;
+	ConnectionType connect(QString &msg) const;
 	void disconnect(ConnectionType connectionType) const;
-	bool start_print(wxString &msg, const std::string &filename, ConnectionType connectionType, bool simulationMode) const;
+	bool start_print(QString &msg, const std::string &filename, ConnectionType connectionType, bool simulationMode) const;
 	int get_err_code_from_body(const std::string &body) const;
 };
 

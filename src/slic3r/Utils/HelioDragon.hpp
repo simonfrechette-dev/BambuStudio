@@ -2,7 +2,6 @@
 #define slic3r_HelioDragon_hpp_
 
 #include <string>
-#include <wx/string.h>
 #include <boost/optional.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/asio/ip/address.hpp>
@@ -12,7 +11,6 @@
 #include <condition_variable>
 #include <mutex>
 #include <boost/thread.hpp>
-#include <wx/event.h>
 #include <chrono>
 
 #include "PrintHost.hpp"

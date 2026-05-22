@@ -1,18 +1,15 @@
 #ifndef slic3r_GUI_PrivacyUpdateDialog_hpp_
 #define slic3r_GUI_PrivacyUpdateDialog_hpp_
+#include <QWidget>
+#include <QString>
 
 #include "GUI_Utils.hpp"
 #include "Widgets/Button.hpp"
 #include "Widgets/Label.hpp"
 #include "Widgets/WebView.hpp"
-#include <wx/webview.h>
-#include <wx/progdlg.h>
-#include <wx/simplebook.h>
 
 namespace Slic3r { namespace GUI {
 
-wxDECLARE_EVENT(EVT_PRIVACY_UPDATE_CONFIRM, wxCommandEvent);
-wxDECLARE_EVENT(EVT_PRIVACY_UPDATE_CANCEL, wxCommandEvent);
 
 class PrivacyUpdateDialog : public DPIDialog
 {
@@ -23,28 +20,28 @@ public:
         MAX_STYLE_NUM = 2
     };
     PrivacyUpdateDialog(
-        wxWindow* parent,
-        wxWindowID      id = wxID_ANY,
-        const wxString& title = wxEmptyString,
+        QWidget* parent,
+        int      id = -1,
+        const QString& title = QString(),
         enum ButtonStyle btn_style = CONFIRM_AND_CANCEL,
-        const wxPoint& pos = wxDefaultPosition,
-        const wxSize& size = wxDefaultSize,
-        long style = wxPD_APP_MODAL| wxCAPTION
+        const QPoint& pos = QPoint(),
+        const QSize& size = QSize(),
+        long style = 0
     );
-    wxWebView* CreateTipView(wxWindow* parent);
-    void OnNavigating(wxWebViewEvent& event);
+    QWidget* CreateTipView(QWidget* parent);
+    void OnNavigating(QEvent& event);
     bool ShowReleaseNote(std::string content);
     void RunScript(std::string script);
     void set_text(std::string str) { m_mkdown_text = str; };
     void on_show();
     void on_hide();
-    void update_btn_label(wxString ok_btn_text, wxString cancel_btn_text);
+    void update_btn_label(QString ok_btn_text, QString cancel_btn_text);
     void rescale();
     ~PrivacyUpdateDialog();
-    void on_dpi_changed(const wxRect& suggested_rect);
+    void on_dpi_changed(const QRect& suggested_rect);
 
-    wxBoxSizer* m_sizer_main;
-    wxWebView* m_vebview_release_note{ nullptr };
+    QBoxLayout* m_sizer_main;
+    QWidget* m_vebview_release_note{ nullptr };
     Label* m_staticText_release_note{ nullptr };
     Button* m_button_ok;
     Button* m_button_cancel;

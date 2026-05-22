@@ -2,7 +2,6 @@
 #define slic3r_Repetier_hpp_
 
 #include <string>
-#include <wx/string.h>
 #include <boost/optional.hpp>
 
 #include "PrintHost.hpp"
@@ -20,9 +19,9 @@ public:
 
     const char* get_name() const override;
 
-    bool test(wxString &curl_msg) const override;
-    wxString get_test_ok_msg () const override;
-    wxString get_test_failed_msg (wxString &msg) const override;
+    bool test(QString &curl_msg) const override;
+    QString get_test_ok_msg () const override;
+    QString get_test_failed_msg (QString &msg) const override;
     bool upload(PrintHostUpload upload_data, ProgressFn prorgess_fn, ErrorFn error_fn) const override;
     bool has_auto_discovery() const override { return false; }
     bool can_test() const override { return true; }
@@ -30,8 +29,8 @@ public:
     bool supports_multiple_printers() const override { return true; }
     std::string get_host() const override { return host; }
     
-    bool get_groups(wxArrayString &groups) const override;
-    bool get_printers(wxArrayString &printers) const override;
+    bool get_groups(QStringList &groups) const override;
+    bool get_printers(QStringList &printers) const override;
 
 protected:
     virtual bool validate_version_text(const boost::optional<std::string> &version_text) const;

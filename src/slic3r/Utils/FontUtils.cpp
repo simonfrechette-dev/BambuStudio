@@ -1,4 +1,5 @@
 #include "FontUtils.hpp"
+#include <QFont>
 //#define STB_TRUETYPE_IMPLEMENTATION
 #include "imgui/imstb_truetype.h"
 #include "libslic3r/Utils.hpp"
@@ -6,9 +7,6 @@
 
 #if defined(__APPLE__)
 #include <CoreText/CTFont.h>
-#include <wx/uri.h>
-#include <wx/fontutil.h> // wxNativeFontInfo
-#include <wx/osx/core/cfdictionary.h>
 #elif defined(__linux__)
 #include "FontConfigHelp.hpp"
 #endif
@@ -59,16 +57,7 @@ std::string get_file_path(const wxFont &font)
     return path_str;
 }
 #endif // __APPLE__
-std::string get_human_readable_name(const wxFont &font)
-{
-    if (!font.IsOk()) return "Font is NOT ok.";
-    // Face name is optional in wxFont
-    if (!font.GetFaceName().empty()) {
-        return std::string(font.GetFaceName().c_str());
-    } else {
-        return std::string((font.GetFamilyString() + " " + font.GetStyleString() + " " + font.GetWeightString()).c_str());
-    }
-}
+// get_human_readable_name not used on Linux
 
 using fontinfo_opt = std::optional<stbtt_fontinfo>;
 
@@ -230,29 +219,18 @@ std::unique_ptr<FontFile> create_font_file(void *hfont)
 }
 #endif
 
-std::unique_ptr<FontFile> create_font_file(const wxFont &font)
+std::unique_ptr<FontFile> create_font_file(const QFont &font)
 {
-#ifdef _WIN32
-    return create_font_file(font.GetHFONT());
-#elif defined(__APPLE__)
-    std::string file_path = get_file_path(font);
-    if (!is_valid_ttf(file_path)) {
-        BOOST_LOG_TRIVIAL(error) << "Can not process font('" << get_human_readable_name(font) << "'), "
-                                 << "file in path('" << file_path << "') is not valid TTF.";
-        return nullptr;
-    }
-    return create_font_file(file_path.c_str());
-#elif defined(__linux__)
+#ifdef __linux__
     std::string font_path = Slic3r::GUI::get_font_path(font);
     if (font_path.empty()) {
-        BOOST_LOG_TRIVIAL(error) << "Can not read font('" << get_human_readable_name(font) << "'), "
+        BOOST_LOG_TRIVIAL(error) << "Can not read font('"
+                                 << font.family().toStdString() << "'), "
                                  << "file path is empty.";
         return nullptr;
     }
     return create_font_file(font_path.c_str());
 #else
-    // HERE is place to add implementation for another platform
-    // to convert wxFont to font data as windows or font file path as linux
     return nullptr;
 #endif
 }
@@ -279,33 +257,29 @@ bool can_generate_text_shape_from_font(const stbtt_fontinfo &font_info)
     return true;
 }
 
-bool can_generate_text_shape(const std::string& font_name) {
-    wxFont wx_font(wxFontInfo().FaceName(font_name.c_str()).Encoding(wxFontEncoding::wxFONTENCODING_SYSTEM));
-    std::unique_ptr<FontFile> font = create_font_file(wx_font);
-    if (!font)
-        return false;
-
-    fontinfo_opt font_info_opt = load_font_info(font->data->data(), 0);
-    if (!font_info_opt.has_value())
-        return false;
-
+bool can_generate_text_shape(const std::string &font_name)
+{
+#ifdef __linux__
+    std::string font_path = Slic3r::GUI::get_font_path_by_name(font_name);
+    if (font_path.empty()) return false;
+    auto font_file = create_font_file(font_path.c_str());
+    if (!font_file || font_file->infos.empty()) return false;
+    auto font_info_opt = load_font_info(font_file->data->data(), 0);
+    if (!font_info_opt.has_value()) return false;
     return can_generate_text_shape_from_font(*font_info_opt);
+#else
+    return false;
+#endif
 }
 
-bool can_load(const wxFont &font)
+bool can_load(const QFont &font)
 {
-#ifdef _WIN32
-    DWORD  dwTable = 0, dwOffset = 0;
-    size_t size  = 0;
-    void * hfont = font.GetHFONT();
-    if (!load_hfont(hfont, dwTable, dwOffset, size)) return false;
-    return hfont != nullptr;
-#elif defined(__APPLE__)
-    return true;
-#elif defined(__linux__)
+#ifdef __linux__
+    std::string path = Slic3r::GUI::get_font_path(font);
+    return !path.empty();
+#else
     return true;
 #endif
-    return false;
 }
 
 }

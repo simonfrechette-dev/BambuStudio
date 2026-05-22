@@ -14,12 +14,13 @@
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/log/trivial.hpp>
 
-#include <wx/glcanvas.h>
-#include <wx/msgdlg.h>
+#include <QMessageBox>
+#include <QSysInfo>
+#include <QOpenGLWidget>
+#include <QOpenGLContext>
+#include <QSurfaceFormat>
 
 #ifdef __APPLE__
-// Part of hack to remove crash when closing the application on OSX 10.9.5 when building against newer wxWidgets
-#include <wx/platinfo.h>
 
 #include "../Utils/MacDarkMode.hpp"
 #endif // __APPLE__
@@ -406,11 +407,11 @@ bool OpenGLManager::init_gl(bool popup_error)
             BOOST_LOG_TRIVIAL(error) << "Found opengl version <= 2.0"<< std::endl;
             // Complain about the OpenGL version.
             if (popup_error) {
-                wxString message = from_u8((boost::format(
+                QString message = from_u8((boost::format(
                     _utf8(L("The application cannot run normally because OpenGL version is lower than 2.0.\n")))).str());
                 message += "\n";
                 message += _L("Please upgrade your graphics card driver.");
-                wxMessageBox(message, _L("Unsupported OpenGL version"), wxOK | wxICON_ERROR);
+                QMessageBox::critical(nullptr, _L("Unsupported OpenGL version"), message);
             }
         }
 
@@ -421,9 +422,9 @@ bool OpenGLManager::init_gl(bool popup_error)
             if (!result) {
                 BOOST_LOG_TRIVIAL(error) << "Unable to load shaders: "<<error<< std::endl;
                 if (popup_error) {
-                    wxString message = from_u8((boost::format(
+                    QString message = from_u8((boost::format(
                         _utf8(L("Unable to load shaders:\n%s"))) % error).str());
-                    wxMessageBox(message, _L("Error loading shaders"), wxOK | wxICON_ERROR);
+                    QMessageBox::critical(nullptr, _L("Error loading shaders"), message);
                 }
             }
         }
@@ -460,19 +461,11 @@ bool OpenGLManager::init_gl(bool popup_error)
     return true;
 }
 
-wxGLContext* OpenGLManager::init_glcontext(wxGLCanvas& canvas)
+QOpenGLContext* OpenGLManager::init_glcontext(QOpenGLWidget& canvas)
 {
-    if (m_context == nullptr) {
-        m_context = new wxGLContext(&canvas);
-
-#ifdef __APPLE__
-        // Part of hack to remove crash when closing the application on OSX 10.9.5 when building against newer wxWidgets
-        s_os_info.major = wxPlatformInfo::Get().GetOSMajorVersion();
-        s_os_info.minor = wxPlatformInfo::Get().GetOSMinorVersion();
-        s_os_info.micro = wxPlatformInfo::Get().GetOSMicroVersion();
-#endif //__APPLE__
-    }
-    return m_context;
+    (void)canvas;
+    // Qt manages the GL context via QOpenGLWidget — no explicit wxGLContext needed
+    return nullptr;
 }
 
 void OpenGLManager::bind_shader(const std::shared_ptr<GLShaderProgram>& p_shader)
@@ -828,40 +821,25 @@ std::string OpenGLManager::framebuffer_type_to_string(EFramebufferType type)
     }
 }
 
-wxGLCanvas* OpenGLManager::create_wxglcanvas(wxWindow& parent, EMSAAType msaa_type)
+QOpenGLWidget* OpenGLManager::create_glwidget(QWidget& parent, EMSAAType msaa_type)
 {
+    // Phase 4 TODO: configure QSurfaceFormat for MSAA, depth, stencil
     const uint8_t msaa_samples = get_msaa_samples(msaa_type);
-    int attribList[] = {
-        WX_GL_RGBA,
-        WX_GL_DOUBLEBUFFER,
-        // RGB channels each should be allocated with 8 bit depth. One should almost certainly get these bit depths by default.
-        WX_GL_MIN_RED, 			8,
-        WX_GL_MIN_GREEN, 		8,
-        WX_GL_MIN_BLUE, 		8,
-        // Requesting an 8 bit alpha channel. Interestingly, the NVIDIA drivers would most likely work with some alpha plane, but glReadPixels would not return
-        // the alpha channel on NVIDIA if not requested when the GL context is created.
-        WX_GL_MIN_ALPHA, 		8,
-        WX_GL_DEPTH_SIZE, 		24,
-        //BBS: turn on stencil buffer for outline
-        WX_GL_STENCIL_SIZE,     8,
-        WX_GL_SAMPLE_BUFFERS, 	msaa_samples > 0 ? GL_TRUE : GL_FALSE,
-        WX_GL_SAMPLES, 			msaa_samples,
-#ifndef __APPLE__
-        WX_GL_CORE_PROFILE,
-#endif
-        0
-    };
+    QSurfaceFormat fmt;
+    fmt.setDepthBufferSize(24);
+    fmt.setStencilBufferSize(8);
+    fmt.setAlphaBufferSize(8);
+    if (msaa_samples > 0)
+        fmt.setSamples(msaa_samples);
+    fmt.setProfile(QSurfaceFormat::CoreProfile);
+    auto* canvas = new QOpenGLWidget(&parent);
+    canvas->setFormat(fmt);
 
     if (s_multisample == EMultisampleState::Unknown) {
-        detect_multisample(attribList);
-//        // debug output
-//        std::cout << "Multisample " << (can_multisample() ? "enabled" : "disabled") << std::endl;
+        detect_multisample(nullptr);
     }
 
-    if (! can_multisample())
-        attribList[12] = 0;
-
-    return new wxGLCanvas(&parent, wxID_ANY, attribList, wxDefaultPosition, wxDefaultSize, wxWANTS_CHARS);
+    return canvas;
 }
 
 void OpenGLManager::set_cut_plane_color(ColorRGBA color) {
@@ -1034,19 +1012,12 @@ uint32_t OpenGLManager::get_target(ESamplerType t_sampler_type)
     return target;
 }
 
-void OpenGLManager::detect_multisample(int* attribList)
+void OpenGLManager::detect_multisample(int* /*attribList*/)
 {
-    int wxVersion = wxMAJOR_VERSION * 10000 + wxMINOR_VERSION * 100 + wxRELEASE_NUMBER;
-    bool enable_multisample = wxVersion >= 30003;
+    // Phase 4 TODO: detect multisample support via QOpenGLContext / QSurfaceFormat
     s_multisample =
-        enable_multisample &&
-        // Disable multi-sampling on ChromeOS, as the OpenGL virtualization swaps Red/Blue channels with multi-sampling enabled,
-        // at least on some platforms.
-        platform_flavor() != PlatformFlavor::LinuxOnChromium &&
-        wxGLCanvas::IsDisplaySupported(attribList)
+        platform_flavor() != PlatformFlavor::LinuxOnChromium
         ? EMultisampleState::Enabled : EMultisampleState::Disabled;
-    // Alternative method: it was working on previous version of wxWidgets but not with the latest, at least on Windows
-    // s_multisample = enable_multisample && wxGLCanvas::IsExtensionSupported("WGL_ARB_multisample");
 }
 
 FrameBuffer::FrameBuffer(const FrameBufferParams& params)

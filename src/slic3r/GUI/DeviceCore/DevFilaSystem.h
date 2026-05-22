@@ -13,8 +13,8 @@
 #include <unordered_set>
 #include <set>
 
-#include <wx/string.h>
-#include <wx/colour.h>
+#include <QColor>
+#include <QString>
 
 #define HOLD_COUNT_MAX          3
 
@@ -64,7 +64,7 @@ public:
     float                    n        = 0.0f; // k range: 0.6 ~ 2.0
     int                      cali_idx = -1;   // - 1 means default
 
-    wxColour        wx_color;
+    QColor        wx_color;
     bool            is_bbl;
     bool            is_exists = false;
     int             hold_count = 0;
@@ -93,7 +93,7 @@ public:
     bool is_tray_info_ready() const;
     bool is_unset_third_filament() const;
 
-    wxColour    get_color()  const { return decode_color(color); };
+    QColor    get_color()  const { return decode_color(color); };
 
     std::string get_filament_id() const { return setting_id; }
     std::string get_display_filament_type() const;
@@ -102,7 +102,7 @@ public:
     std::optional<int> get_filament_remain_weight() const;
 
     // static
-    static wxColour decode_color(const std::string& color);
+    static QColor decode_color(const std::string& color);
 
     static double get_fila_remain_tolerance() { return 0.05; } //+- 5%
 
@@ -174,7 +174,7 @@ public:
 
 public:
     std::string GetAmsId() const { return m_ams_id; }
-    wxString    GetDisplayName() const; // display
+    QString    GetDisplayName() const; // display
 
     void     SetAmsType(int type) { m_ams_type = (DevAmsType) type; }
     void     SetAmsType(DevAmsType type) { m_ams_type = type; }
@@ -278,7 +278,7 @@ public:
 
     /* tray*/
     DevAmsTray* GetAmsTray(const std::string& ams_id, const std::string& tray_id) const;
-    void        CollectAmsColors(std::vector<wxColour>& ams_colors) const;
+    void        CollectAmsColors(std::vector<QColor>& ams_colors) const;
 
     std::map<int, DevAmsSlotId> GetTrayIndexMap();
     int GetTrayIdByAmsSlotId(int ams_id, int slot_id);

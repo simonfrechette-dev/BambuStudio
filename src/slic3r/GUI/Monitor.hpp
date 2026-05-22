@@ -1,118 +1,106 @@
 #ifndef slic3r_Monitor_hpp_
 #define slic3r_Monitor_hpp_
 
-#include "Tabbook.hpp"
-#include <wx/notebook.h>
-#include <wx/scrolwin.h>
-#include <wx/sizer.h>
-#include <wx/bmpcbox.h>
-#include <wx/bmpbuttn.h>
-#include <wx/treectrl.h>
-#include <wx/imaglist.h>
-#include <wx/artprov.h>
-#include <wx/xrc/xmlres.h>
-#include <wx/string.h>
-#include <wx/stattext.h>
-#include <wx/gdicmn.h>
-#include <wx/font.h>
-#include <wx/colour.h>
-#include <wx/settings.h>
-#include <wx/sizer.h>
-#include <wx/grid.h>
-#include <wx/dataview.h>
-#include <wx/panel.h>
-#include <wx/statline.h>
-#include <wx/bitmap.h>
-#include <wx/image.h>
-#include <wx/icon.h>
-#include <wx/bmpbuttn.h>
-#include <wx/button.h>
-#include <wx/gbsizer.h>
-#include <wx/statbox.h>
-#include <wx/tglbtn.h>
-#include <wx/popupwin.h>
-#include <wx/spinctrl.h>
-#include <wx/artprov.h>
-#include <wx/webrequest.h>
+// Qt port of Monitor.hpp
+
 #include <map>
 #include <vector>
 #include <memory>
+#include <QWidget>
+#include <QLabel>
+#include <QPixmap>
+#include <QTimer>
+#include <QBoxLayout>
+#include <QProgressBar>
 #include "Event.hpp"
 #include "libslic3r/ProjectTask.hpp"
-#include "wxExtensions.hpp"
 #include "slic3r/GUI/MsgDialog.hpp"
 #include "slic3r/GUI/DeviceManager.hpp"
+#include "slic3r/GUI/DeviceCore/DevHMS.h"
 #include "slic3r/GUI/MonitorBasePanel.h"
 #include "slic3r/GUI/StatusPanel.hpp"
-#include "slic3r/GUI/UpgradePanel.hpp"
-#include "slic3r/GUI/HMSPanel.hpp"
-#include "slic3r/GUI/AmsWidgets.hpp"
-#include "Widgets/SideTools.hpp"
-#include "SelectMachinePop.hpp"
+class SelectMachinePopup;
+class Tabbook;
+class AddMachinePanel;
+class MediaFilePanel;
+namespace Slic3r { namespace GUI { class SideTools; } }
+namespace Slic3r { namespace GUI { class UpgradePanel; } }
+namespace Slic3r { namespace GUI { class HMSPanel; } }
 
 namespace Slic3r {
 namespace GUI {
 
 class MediaFilePanel;
 
-class AddMachinePanel : public wxPanel
+class AddMachinePanel : public QWidget
 {
+    Q_OBJECT
 protected:
-	Button* m_button_add_machine;
-	wxStaticText* m_staticText_add_machine;
-	wxStaticBitmap* m_bitmap_empty;
+    QPushButton*    m_button_add_machine{ nullptr };
+    QLabel*         m_staticText_add_machine{ nullptr };
+    QLabel*         m_bitmap_empty{ nullptr };
 
-	void on_add_machine(wxCommandEvent& event);
+    void on_add_machine();
 
 public:
+    explicit AddMachinePanel(QWidget* parent = nullptr);
+    ~AddMachinePanel();
 
-	AddMachinePanel(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString);
-	~AddMachinePanel();
-
-	void msw_rescale();
+    void msw_rescale();
 };
 
-class MonitorPanel : public wxPanel
+class MonitorPanel : public QWidget
 {
+    Q_OBJECT
 private:
     static bool is_hms_list_equal(const std::map<std::string, DevHMSItem> &map1, const std::map<std::string, DevHMSItem> &map2);
 
-    Tabbook*		m_tabpanel{ nullptr };
-    wxSizer*        m_main_sizer{ nullptr };
+    Tabbook*            m_tabpanel{ nullptr };
+    QBoxLayout*         m_main_sizer{ nullptr };
 
-    AddMachinePanel*    m_status_add_machine_panel;
-    StatusPanel*        m_status_info_panel;
-    MediaFilePanel*     m_media_file_panel;
-    UpgradePanel*       m_upgrade_panel;
-    HMSPanel*           m_hms_panel;
+    AddMachinePanel*    m_status_add_machine_panel{ nullptr };
+    StatusPanel*        m_status_info_panel{ nullptr };
+    MediaFilePanel*     m_media_file_panel{ nullptr };
+    Slic3r::GUI::UpgradePanel*       m_upgrade_panel{ nullptr };
+    Slic3r::GUI::HMSPanel*           m_hms_panel{ nullptr };
 
-	/* side tools */
-    SideTools*      m_side_tools{nullptr};
-    wxStaticBitmap* m_bitmap_printer_type;
-    wxStaticBitmap* m_bitmap_arrow;
-    wxStaticText*   m_staticText_printer_name;
-    wxStaticBitmap* m_bitmap_wifi_signal;
-    wxBoxSizer *    m_side_tools_sizer;
-    SelectMachinePopup m_select_machine;
+    /* status tab live-update widgets */
+    QLabel*             m_lbl_printer_name{ nullptr };
+    QLabel*             m_lbl_nozzle_temp{ nullptr };
+    QLabel*             m_lbl_bed_temp{ nullptr };
+    QLabel*             m_lbl_chamber_temp{ nullptr };
+    QProgressBar*       m_prog_bar{ nullptr };
+    QLabel*             m_lbl_job_name{ nullptr };
+    QLabel*             m_lbl_time_remain{ nullptr };
+    QLabel*             m_lbl_layer{ nullptr };
 
-	/* images */
-    wxBitmap m_signal_strong_img;
-    wxBitmap m_signal_middle_img;
-    wxBitmap m_signal_weak_img;
-    wxBitmap m_signal_no_img;
-    wxBitmap m_printer_img;
-    wxBitmap m_arrow_img;
+    /* side tools */
+    Slic3r::GUI::SideTools* m_side_tools{ nullptr };
+    QLabel*             m_bitmap_printer_type{ nullptr };
+    QLabel*             m_bitmap_arrow{ nullptr };
+    QLabel*             m_staticText_printer_name{ nullptr };
+    QLabel*             m_bitmap_wifi_signal{ nullptr };
+    QBoxLayout*         m_side_tools_sizer{ nullptr };
+    SelectMachinePopup* m_select_machine{nullptr};
 
-    int last_wifi_signal = -1;
-    int last_status;
-    bool m_initialized { false };
-    bool update_flag{false};
-    wxTimer* m_refresh_timer = nullptr;
+    /* images */
+    QPixmap m_signal_strong_img;
+    QPixmap m_signal_middle_img;
+    QPixmap m_signal_weak_img;
+    QPixmap m_signal_no_img;
+    QPixmap m_printer_img;
+    QPixmap m_arrow_img;
+
+    int  last_wifi_signal = -1;
+    int  last_status = 0;
+    bool m_initialized{ false };
+    bool update_flag{ false };
+    QTimer* m_refresh_timer = nullptr;
 
     std::map<std::string, DevHMSItem> m_last_hms_list;
 
 public:
-    MonitorPanel(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL);
+    explicit MonitorPanel(QWidget* parent = nullptr);
     ~MonitorPanel();
 
     enum PrinterTab {
@@ -124,49 +112,48 @@ public:
         PT_MAX_NUM = 5
     };
 
-	void init_bitmap();
+    void init_bitmap();
     void init_timer();
     void init_tabpanel();
-    Tabbook* get_tabpanel() { return m_tabpanel; };
+    Tabbook* get_tabpanel() { return m_tabpanel; }
     void set_default();
-    wxWindow* create_side_tools();
+    QWidget* create_side_tools();
 
     void on_sys_color_changed();
     void msw_rescale();
 
-    StatusPanel* get_status_panel() {return m_status_info_panel;};
-	void select_machine(std::string machine_sn);
-    void on_timer(wxTimerEvent& event);
-    void on_select_printer(wxCommandEvent& event);
-    void on_printer_clicked(wxMouseEvent &event);
-    void on_size(wxSizeEvent &event);
+    StatusPanel* get_status_panel() { return m_status_info_panel; }
+    void select_machine(std::string machine_sn);
 
     /* update apis */
-    //void update_ams(MachineObject* obj);
     void update_all();
-
     void update_hms_tag();
     bool Show(bool show);
-
     void show_status(int status);
 
     std::string get_string_from_tab(PrinterTab tab);
 
-    MachineObject *obj { nullptr };
+    MachineObject* obj{ nullptr };
     std::string last_conn_type = "undedefined";
 
-    void stop_update() {update_flag = false;};
-    void start_update() {update_flag = true;};
-
+    void stop_update()  { update_flag = false; }
+    void start_update() { update_flag = true; }
 
     void jump_to_HMS();
     void jump_to_Upgrade();
     void jump_to_LiveView();
     void jump_to_Rack();
-};
 
+public Q_SLOTS:
+    void on_timer();
+    void on_select_printer();
+    void on_printer_clicked();
+
+protected:
+    void resizeEvent(QResizeEvent* event) override;
+};
 
 } // GUI
 } // Slic3r
 
-#endif /* slic3r_Tab_hpp_ */
+#endif /* slic3r_Monitor_hpp_ */

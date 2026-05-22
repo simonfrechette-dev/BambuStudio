@@ -2,6 +2,8 @@
 #define slic3r_MultiMachineMangerPage_hpp_
 
 #include "GUI_Utils.hpp"
+#include "wxExtensions.hpp"
+#include "Widgets/TextInput.hpp"
 #include "MultiMachine.hpp"
 
 namespace Slic3r { 
@@ -16,33 +18,33 @@ class MultiMachineItem : public DeviceItem
 {
 
 public:
-    MultiMachineItem(wxWindow* parent, MachineObject* obj);
+    MultiMachineItem(QWidget* parent, MachineObject* obj);
     ~MultiMachineItem() {};
 
-    void OnEnterWindow(wxMouseEvent& evt);
-    void OnLeaveWindow(wxMouseEvent& evt);
-    void OnLeftDown(wxMouseEvent& evt);
-    void OnMove(wxMouseEvent& evt);
+    void OnEnterWindow(QMouseEvent& evt);
+    void OnLeaveWindow(QMouseEvent& evt);
+    void OnLeftDown(QMouseEvent& evt);
+    void OnMove(QMouseEvent& evt);
 
-    void         paintEvent(wxPaintEvent& evt);
-    void         render(wxDC& dc);
-    void         DrawTextWithEllipsis(wxDC& dc, const wxString& text, int maxWidth,  int left, int top = 0);
-    void         doRender(wxDC& dc);
-    void         post_event(wxCommandEvent&& event);
-    virtual void DoSetSize(int x, int y, int width, int height, int sizeFlags = wxSIZE_AUTO);
+    void         paintEvent(QPaintEvent& evt);
+    void         render(QPainter& dc);
+    void         DrawTextWithEllipsis(QPainter& dc, const QString& text, int maxWidth,  int left, int top = 0);
+    void         doRender(QPainter& dc);
+    void         post_event(QEvent&& event);
+    // DoSetSize removed for Qt port
 
 public:
     bool m_hover{ false };
     ScalableBitmap m_bitmap_check_disable;
     ScalableBitmap m_bitmap_check_off;
     ScalableBitmap m_bitmap_check_on;
-    wxString get_left_time(int mc_left_time);
+    QString get_left_time(int mc_left_time);
 };
     
-class MultiMachineManagerPage : public wxPanel
+class MultiMachineManagerPage : public QWidget
 {
 public:
-    MultiMachineManagerPage(wxWindow* parent);
+    MultiMachineManagerPage(QWidget* parent);
     ~MultiMachineManagerPage() {};
 
     void update_page();
@@ -55,7 +57,7 @@ public:
 
     void start_timer();
     void update_page_number();
-    void on_timer(wxTimerEvent& event);
+    void on_timer(QTimerEvent& event);
     void clear_page();
 
     void page_num_enter_evt();
@@ -71,16 +73,16 @@ private:
 
 
     Button*                 m_button_edit{nullptr};
-    wxBoxSizer*             page_sizer{ nullptr };
-    wxPanel*                m_main_panel{ nullptr };
-    wxBoxSizer*             m_main_sizer{nullptr};
-    wxBoxSizer*             m_sizer_machine_list{nullptr};
-    wxScrolledWindow*       m_machine_list{ nullptr };
-    wxStaticText*           m_selected_num{ nullptr };
+    QBoxLayout*             page_sizer{ nullptr };
+    QWidget*                m_main_panel{ nullptr };
+    QBoxLayout*             m_main_sizer{nullptr};
+    QBoxLayout*             m_sizer_machine_list{nullptr};
+    QScrollArea*       m_machine_list{ nullptr };
+    QLabel*           m_selected_num{ nullptr };
 
     // table head
-    wxPanel*                m_table_head_panel{ nullptr };
-    wxBoxSizer*             m_table_head_sizer{ nullptr };
+    QWidget*                m_table_head_panel{ nullptr };
+    QBoxLayout*             m_table_head_sizer{ nullptr };
     Button*                 m_printer_name{ nullptr };
     Button*                 m_task_name{ nullptr };
     Button*                 m_status{ nullptr };
@@ -88,7 +90,7 @@ private:
     Button*                 m_stop_all_botton{nullptr};
 
     // tip when no device
-    wxStaticText*           m_tip_text{ nullptr };
+    QLabel*           m_tip_text{ nullptr };
     Button*                 m_button_add{ nullptr };
 
     // Flipping pages
@@ -101,11 +103,11 @@ private:
     bool                        next{ false };
     Button*                     btn_last_page{ nullptr };
     Button*                     btn_next_page{ nullptr };
-    wxStaticText*               st_page_number{ nullptr };
-    wxBoxSizer*                 m_flipping_page_sizer{ nullptr };
-    wxBoxSizer*                 m_page_sizer{ nullptr };
-    wxPanel*                    m_flipping_panel{ nullptr };
-    wxTimer*                    m_flipping_timer{ nullptr };
+    QLabel*               st_page_number{ nullptr };
+    QBoxLayout*                 m_flipping_page_sizer{ nullptr };
+    QBoxLayout*                 m_page_sizer{ nullptr };
+    QWidget*                    m_flipping_panel{ nullptr };
+    QTimer*                    m_flipping_timer{ nullptr };
     TextInput*                  m_page_num_input{ nullptr };
     Button*                     m_page_num_enter{ nullptr };
 };

@@ -2,11 +2,14 @@
 
 #ifdef EXIST_FONT_CONFIG_INCLUDE
 
-#include <wx/filename.h>
 #include <fontconfig/fontconfig.h>
 #include "libslic3r/Utils.hpp"
+#include <QFont>
+#include <QFileInfo>
+#include <QString>
 
 using namespace Slic3r::GUI;
+using Slic3r::ScopeGuard;
 
 
 // @Vojta suggest to make static variable global
@@ -17,124 +20,103 @@ static std::optional<Slic3r::ScopeGuard> finalize_guard;
 // cache for Loading of the default configuration file and building information about the available fonts.
 static FcConfig *fc = nullptr;
 
-std::string Slic3r::GUI::get_font_path(const wxFont &font, bool reload_fonts)
+static void ensure_fc_initialized(bool reload_fonts)
 {
     if (!finalize_guard.has_value()) {
         FcInit();
         fc = FcInitLoadConfigAndFonts();
-        finalize_guard.emplace([]() {
-            // Some internal problem of Font config or other library use FC too(like wxWidget)
-            // fccache.c:795: FcCacheFini: Assertion `fcCacheChains[i] == NULL' failed.
-            //FcFini();
-            FcConfigDestroy(fc);
-        });
+        finalize_guard.emplace([]() { FcConfigDestroy(fc); });
     } else if (reload_fonts) {
         FcConfigDestroy(fc);
         fc = FcInitLoadConfigAndFonts();
     }
+}
 
-    if (fc == nullptr) return "";
+static std::string fc_file_path_from_pattern(FcPattern *matchPattern)
+{
+    FcConfigSubstitute(NULL, matchPattern, FcMatchPattern);
+    FcDefaultSubstitute(matchPattern);
 
-    wxString                 fontDesc = font.GetNativeFontInfoUserDesc();
-    wxString                 faceName = font.GetFaceName();
-    const wxScopedCharBuffer faceNameBuffer = faceName.ToUTF8();
-    const char *             fontFamily     = faceNameBuffer;
+    FcResult res;
+    FcPattern *resultPattern = FcFontMatch(NULL, matchPattern, &res);
+    if (resultPattern == nullptr) return {};
+    ScopeGuard sg_rp([resultPattern]() { FcPatternDestroy(resultPattern); });
 
-    // Check font slant
+    FcChar8 *fileName = nullptr;
+    if (FcPatternGetString(resultPattern, FC_FILE, 0, &fileName) != FcResultMatch
+        || fileName == nullptr)
+        return {};
+
+    std::string fontFileName(reinterpret_cast<const char*>(fileName));
+    if (fontFileName.empty()) return {};
+
+    QFileInfo fileInfo(QString::fromStdString(fontFileName));
+    if (!fileInfo.exists() || !fileInfo.isReadable()) return {};
+    return fileInfo.absoluteFilePath().toStdString();
+}
+
+std::string Slic3r::GUI::get_font_path(const QFont &font, bool reload_fonts)
+{
+    ensure_fc_initialized(reload_fonts);
+    if (fc == nullptr) return {};
+
+    std::string familyName = font.family().toStdString();
+    const char *fontFamily = familyName.c_str();
+
+    // Map QFont style → FC slant
     int slant = FC_SLANT_ROMAN;
-    if (fontDesc.Find(wxS("Oblique")) != wxNOT_FOUND)
+    if (font.style() == QFont::StyleOblique)
         slant = FC_SLANT_OBLIQUE;
-    else if (fontDesc.Find(wxS("Italic")) != wxNOT_FOUND)
+    else if (font.style() == QFont::StyleItalic)
         slant = FC_SLANT_ITALIC;
 
-    // Check font weight
+    // Map QFont weight (1-1000) → FC weight
     int weight = FC_WEIGHT_NORMAL;
-    if (fontDesc.Find(wxS("Book")) != wxNOT_FOUND)
-        weight = FC_WEIGHT_BOOK;
-    else if (fontDesc.Find(wxS("Medium")) != wxNOT_FOUND)
-        weight = FC_WEIGHT_MEDIUM;
-#ifdef FC_WEIGHT_ULTRALIGHT
-    else if (fontDesc.Find(wxS("Ultra-Light")) != wxNOT_FOUND)
-        weight = FC_WEIGHT_ULTRALIGHT;
-#endif
-    else if (fontDesc.Find(wxS("Light")) != wxNOT_FOUND)
-        weight = FC_WEIGHT_LIGHT;
-    else if (fontDesc.Find(wxS("Semi-Bold")) != wxNOT_FOUND)
-        weight = FC_WEIGHT_DEMIBOLD;
-#ifdef FC_WEIGHT_ULTRABOLD
-    else if (fontDesc.Find(wxS("Ultra-Bold")) != wxNOT_FOUND)
-        weight = FC_WEIGHT_ULTRABOLD;
-#endif
-    else if (fontDesc.Find(wxS("Bold")) != wxNOT_FOUND)
-        weight = FC_WEIGHT_BOLD;
-    else if (fontDesc.Find(wxS("Heavy")) != wxNOT_FOUND)
-        weight = FC_WEIGHT_BLACK;
+    int qw = font.weight();
+    if (qw <= 150)       weight = FC_WEIGHT_THIN;
+    else if (qw <= 250)  weight = FC_WEIGHT_ULTRALIGHT;
+    else if (qw <= 325)  weight = FC_WEIGHT_LIGHT;
+    else if (qw <= 375)  weight = FC_WEIGHT_BOOK;
+    else if (qw <= 450)  weight = FC_WEIGHT_NORMAL;
+    else if (qw <= 550)  weight = FC_WEIGHT_MEDIUM;
+    else if (qw <= 650)  weight = FC_WEIGHT_DEMIBOLD;
+    else if (qw <= 750)  weight = FC_WEIGHT_BOLD;
+    else if (qw <= 850)  weight = FC_WEIGHT_ULTRABOLD;
+    else                 weight = FC_WEIGHT_BLACK;
 
-    // Check font width
+    // Map QFont stretch → FC width
     int width = FC_WIDTH_NORMAL;
-    if (fontDesc.Find(wxS("Ultra-Condensed")) != wxNOT_FOUND)
-        width = FC_WIDTH_ULTRACONDENSED;
-    else if (fontDesc.Find(wxS("Extra-Condensed")) != wxNOT_FOUND)
-        width = FC_WIDTH_EXTRACONDENSED;
-    else if (fontDesc.Find(wxS("Semi-Condensed")) != wxNOT_FOUND)
-        width = FC_WIDTH_SEMICONDENSED;
-    else if (fontDesc.Find(wxS("Condensed")) != wxNOT_FOUND)
-        width = FC_WIDTH_CONDENSED;
-    else if (fontDesc.Find(wxS("Ultra-Expanded")) != wxNOT_FOUND)
-        width = FC_WIDTH_ULTRAEXPANDED;
-    else if (fontDesc.Find(wxS("Extra-Expanded")) != wxNOT_FOUND)
-        width = FC_WIDTH_EXTRAEXPANDED;
-    else if (fontDesc.Find(wxS("Semi-Expanded")) != wxNOT_FOUND)
-        width = FC_WIDTH_SEMIEXPANDED;
-    else if (fontDesc.Find(wxS("Expanded")) != wxNOT_FOUND)
-        width = FC_WIDTH_EXPANDED;
+    int qs = font.stretch();
+    if (qs > 0 && qs <= 56)       width = FC_WIDTH_ULTRACONDENSED;
+    else if (qs <= 69)            width = FC_WIDTH_EXTRACONDENSED;
+    else if (qs <= 81)            width = FC_WIDTH_CONDENSED;
+    else if (qs <= 93)            width = FC_WIDTH_SEMICONDENSED;
+    else if (qs <= 106)           width = FC_WIDTH_NORMAL;
+    else if (qs <= 118)           width = FC_WIDTH_SEMIEXPANDED;
+    else if (qs <= 137)           width = FC_WIDTH_EXPANDED;
+    else if (qs <= 175)           width = FC_WIDTH_EXTRAEXPANDED;
+    else if (qs > 175)            width = FC_WIDTH_ULTRAEXPANDED;
 
-    FcResult   res;
     FcPattern *matchPattern = FcPatternBuild(NULL, FC_FAMILY, FcTypeString,
-                                             (FcChar8 *) fontFamily, NULL);
+                                             (FcChar8 *)fontFamily, NULL);
     ScopeGuard sg_mp([matchPattern]() { FcPatternDestroy(matchPattern); });
-
     FcPatternAddInteger(matchPattern, FC_SLANT, slant);
     FcPatternAddInteger(matchPattern, FC_WEIGHT, weight);
     FcPatternAddInteger(matchPattern, FC_WIDTH, width);
 
-    FcConfigSubstitute(NULL, matchPattern, FcMatchPattern);
-    FcDefaultSubstitute(matchPattern);
+    return fc_file_path_from_pattern(matchPattern);
+}
 
-    FcPattern *resultPattern = FcFontMatch(NULL, matchPattern, &res);
-    if (resultPattern == nullptr) return "";
-    ScopeGuard sg_rp([resultPattern]() { FcPatternDestroy(resultPattern); });
+std::string Slic3r::GUI::get_font_path_by_name(const std::string &family_name, bool reload_fonts)
+{
+    if (family_name.empty()) return {};
+    ensure_fc_initialized(reload_fonts);
+    if (fc == nullptr) return {};
 
-    FcChar8 *fileName;
-    if (FcPatternGetString(resultPattern, FC_FILE, 0, &fileName) !=
-        FcResultMatch)
-        return "";
-    wxString fontFileName = wxString::FromUTF8((char *) fileName);
-
-    if (fontFileName.IsEmpty()) return "";
-
-    // find full file path
-    wxFileName myFileName(fontFileName);
-    if (!myFileName.IsOk()) return "";
-
-    if (myFileName.IsRelative()) {
-        // Check whether the file is relative to the current working directory
-        if (!(myFileName.MakeAbsolute() && myFileName.FileExists())) {
-            return "";
-            // File not found, search in given search paths
-            // wxString foundFileName =
-            // m_searchPaths.FindAbsoluteValidPath(fileName); if
-            // (!foundFileName.IsEmpty()) {
-            //    myFileName.Assign(foundFileName);
-            //}
-        }
-    }
-
-    if (!myFileName.FileExists() || !myFileName.IsFileReadable()) return "";
-
-    // File exists and is accessible
-    wxString fullFileName = myFileName.GetFullPath();
-    return std::string(fullFileName.c_str());
+    FcPattern *matchPattern = FcPatternBuild(NULL, FC_FAMILY, FcTypeString,
+                                             (FcChar8 *)family_name.c_str(), NULL);
+    ScopeGuard sg([matchPattern]() { FcPatternDestroy(matchPattern); });
+    return fc_file_path_from_pattern(matchPattern);
 }
 
 #endif // EXIST_FONT_CONFIG_INCLUDE

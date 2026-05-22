@@ -20,7 +20,7 @@ public:
         //SP_BEFORE_COMPLETED,  // to keep displaying DailyTips for 3 seconds 
         SP_COMPLETED          // Has export hyperlink and print info, fades after 20 sec if sidebar is shown, otherwise no fade out
     };
-    SlicingProgressNotification(const NotificationData& n, NotificationIDProvider& id_provider, wxEvtHandler* evt_handler, std::function<bool()> callback)
+    SlicingProgressNotification(const NotificationData& n, NotificationIDProvider& id_provider, QObject* evt_handler, std::function<bool()> callback)
         : PopNotification(n, id_provider, evt_handler)
         , m_cancel_callback(callback)
         , m_dailytips_panel(new DailyTipsPanel(true, DailyTipsLayout::Vertical))

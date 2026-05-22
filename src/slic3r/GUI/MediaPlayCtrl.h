@@ -7,17 +7,14 @@
 
 #ifndef MediaPlayCtrl_h
 #define MediaPlayCtrl_h
+#include <QWidget>
+#include <QString>
+#include <QLabel>
 
 #define USE_WX_MEDIA_CTRL_2 0
 
-#if USE_WX_MEDIA_CTRL_2
-#include "wxMediaCtrl2.h"
-#define wxMediaCtrl3 wxMediaCtrl2
-#else
 #include "wxMediaCtrl3.h"
-#endif
 
-#include <wx/panel.h>
 
 #include <boost/thread.hpp>
 #include <boost/thread/condition_variable.hpp>
@@ -42,10 +39,10 @@ class FileTransferObject;
 
 namespace GUI {
 
-class MediaPlayCtrl : public wxPanel
+class MediaPlayCtrl : public QWidget
 {
 public:
-    MediaPlayCtrl(wxWindow *parent, wxMediaCtrl3 *media_ctrl, const wxPoint &pos = wxDefaultPosition, const wxSize &size = wxDefaultSize);
+    MediaPlayCtrl(QWidget *parent, QWidget *media_ctrl, const QPoint &pos = QPoint(), const QSize &size = QSize());
 
     ~MediaPlayCtrl();
 
@@ -65,22 +62,22 @@ public:
     void SetDeviceImageUrl(std::string url);
 
 protected:
-    void onStateChanged(wxMediaEvent & event);
+    void onStateChanged(QEvent & event);
 
     void Play();
 
-    void Stop(wxString const &msg = {}, wxString const &msg2 = {});
+    void Stop(QString const &msg = {}, QString const &msg2 = {});
 
     void TogglePlay();
 
-    void SetStatus(wxString const &msg, bool hyperlink = true);
+    void SetStatus(QString const &msg, bool hyperlink = true);
 
 private:
     void load();
 
     void start_device_image_flow();
 
-    void on_show_hide(wxShowEvent & evt);
+    void on_show_hide(QShowEvent & evt);
 
     void media_proc();
 
@@ -89,16 +86,16 @@ private:
     static bool get_stream_url(std::string *url = nullptr);
 
 private:
-    static constexpr wxMediaState MEDIASTATE_IDLE = (wxMediaState) 3;
-    static constexpr wxMediaState MEDIASTATE_INITIALIZING = (wxMediaState) 4;
-    static constexpr wxMediaState MEDIASTATE_LOADING = (wxMediaState) 5;
-    static constexpr wxMediaState MEDIASTATE_BUFFERING = (wxMediaState) 6;
+    static constexpr int MEDIASTATE_IDLE = (int) 3;
+    static constexpr int MEDIASTATE_INITIALIZING = (int) 4;
+    static constexpr int MEDIASTATE_LOADING = (int) 5;
+    static constexpr int MEDIASTATE_BUFFERING = (int) 6;
 
     // token
     std::shared_ptr<int> m_token = std::make_shared<int>(0);
 
-    wxMediaCtrl3 * m_media_ctrl;
-    wxMediaState m_last_state = MEDIASTATE_IDLE;
+    QWidget * m_media_ctrl;
+    int m_last_state = MEDIASTATE_IDLE;
     std::string m_machine;
     int m_lan_proto = 0;
     std::string m_lan_ip;
@@ -112,9 +109,9 @@ private:
     int m_remote_proto = 0;
     bool m_device_busy = false;
     bool m_disable_lan = false;
-    wxString m_url;
+    QString m_url;
 
-    std::deque<wxString> m_tasks;
+    std::deque<QString> m_tasks;
     boost::mutex m_mutex;
     boost::condition_variable m_cond;
     boost::thread m_thread;
@@ -125,8 +122,8 @@ private:
     int m_failed_code = 0;
     std::vector<double> m_stat;
     std::set<int> m_last_failed_codes;
-    wxDateTime    m_last_user_play;
-    wxDateTime    m_next_retry;
+    QDateTime    m_last_user_play;
+    QDateTime    m_next_retry;
     std::chrono::system_clock::time_point m_play_timer;
     int           m_print_idle = 0;
     int           m_load_duration = 0;

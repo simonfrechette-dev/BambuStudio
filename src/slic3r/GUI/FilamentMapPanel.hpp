@@ -1,25 +1,25 @@
 #pragma once
+#include <QWidget>
+#include <QString>
 
 #include "GUI.hpp"
 #include "DragDropPanel.hpp"
-#include <wx/string.h>
 
 namespace Slic3r::GUI {
 
-wxDECLARE_EVENT(wxEVT_INVALID_MANUAL_MAP, wxCommandEvent);
 class FilamentMapBtnPanel;
 
-class FilamentMapPanel : public wxPanel
+class FilamentMapPanel : public QWidget
 {
 public:
-    FilamentMapPanel(wxWindow *parent) : wxPanel(parent) {};
+    FilamentMapPanel(QWidget *parent) : QWidget(parent) {};
     virtual FilamentMapMode GetMode() const = 0;
 };
 
 class FilamentMapManualPanel : public FilamentMapPanel
 {
 public:
-    FilamentMapManualPanel(wxWindow                       *parent,
+    FilamentMapManualPanel(QWidget                       *parent,
                            const std::vector<std::string> &color,
                            const std::vector<std::string> &type,
                            const std::vector<int>         &filament_list,
@@ -37,32 +37,32 @@ public:
     void UpdateNozzleVolumeType();
     void UpdateNozzleCountDisplay();
 
-    bool Show(bool show = true) override;
+    void setVisible(bool show) override;
 
     FilamentMapMode GetMode() const override { return FilamentMapMode::fmmManual; }
 
 private:
-    void OnTimer(wxTimerEvent &evt);
-    void OnSwitchFilament(wxCommandEvent &);
+    void OnTimer(QTimerEvent &evt);
+    void OnSwitchFilament(QEvent &);
     void SyncPanelHeights();
-    void OnDragDropCompleted(wxCommandEvent &evt);
-    void OnSuggestionClicked(wxCommandEvent& event);
+    void OnDragDropCompleted(QEvent &evt);
+    void OnSuggestionClicked(QEvent& event);
     DragDropPanel *m_left_panel;
     SeparatedDragDropPanel *m_right_panel;
 
     Label *m_description;
     Label *m_tips;
     Label *m_errors;
-    wxPanel *m_suggestion_panel;
+    QWidget *m_suggestion_panel;
 
-    ScalableButton *m_switch_btn;
+    QPushButton *m_switch_btn;
 
     std::vector<int>         m_filament_map;
     std::vector<int>         m_filament_volume_map;
     std::vector<int>         m_filament_list;
     std::vector<std::string> m_filament_color;
     std::vector<std::string> m_filament_type;
-    wxTimer* m_timer;
+    QTimer* m_timer;
     int m_invalid_id{ -1 };
     bool m_force_validation{ false };
 };
@@ -70,7 +70,7 @@ private:
 class FilamentMapAutoPanel : public FilamentMapPanel
 {
 public:
-    FilamentMapAutoPanel(wxWindow *parent, FilamentMapMode mode, bool machine_synced, const std::vector<FilamentMapMode> &available_modes = {});
+    FilamentMapAutoPanel(QWidget *parent, FilamentMapMode mode, bool machine_synced, const std::vector<FilamentMapMode> &available_modes = {});
     FilamentMapMode GetMode() const override { return m_mode; }
 
 private:
@@ -89,7 +89,7 @@ private:
 class FilamentMapSavingPanel : public FilamentMapPanel
 {
 public:
-    FilamentMapSavingPanel(wxWindow *parent);
+    FilamentMapSavingPanel(QWidget *parent);
     FilamentMapMode GetMode() const override { return FilamentMapMode::fmmAutoForFlush; }
 };
 

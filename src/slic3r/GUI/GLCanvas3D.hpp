@@ -24,20 +24,21 @@
 
 #include <float.h>
 
-#include <wx/timer.h>
+#include <QTimer>
+#include <QEvent>
+#include <QString>
 
-class wxSizeEvent;
-class wxIdleEvent;
-class wxKeyEvent;
-class wxMouseEvent;
-class wxTimerEvent;
-class wxPaintEvent;
-class wxGLCanvas;
-class wxGLContext;
+class QOpenGLWidget;
+class QOpenGLContext;
+class QResizeEvent;
+class QKeyEvent;
+class QMouseEvent;
+class QWheelEvent;
+class QFocusEvent;
+class QObject;
 
 // Support for Retina OpenGL on Mac OS.
-// wxGTK3 seems to simulate OSX behavior in regard to HiDPI scaling support, enable it as well.
-#define ENABLE_RETINA_GL (__APPLE__ || __WXGTK3__)
+#define ENABLE_RETINA_GL (__APPLE__)
 
 namespace Slic3r {
 
@@ -89,67 +90,19 @@ public:
 };
 
 
-class RenderTimerEvent : public wxEvent
-{
-public:
-    RenderTimerEvent(wxEventType type, wxTimer& timer)
-        : wxEvent(timer.GetId(), type),
-        m_timer(&timer)
-    {
-        SetEventObject(timer.GetOwner());
-    }
-    int GetInterval() const { return m_timer->GetInterval(); }
-    wxTimer& GetTimer() const { return *m_timer; }
-
-    virtual wxEvent* Clone() const { return new RenderTimerEvent(*this); }
-    virtual wxEventCategory GetEventCategory() const  { return wxEVT_CATEGORY_TIMER; }
-private:
-    wxTimer* m_timer;
-};
-
-class  ToolbarHighlighterTimerEvent : public wxEvent
-{
-public:
-    ToolbarHighlighterTimerEvent(wxEventType type, wxTimer& timer)
-        : wxEvent(timer.GetId(), type),
-        m_timer(&timer)
-    {
-        SetEventObject(timer.GetOwner());
-    }
-    int GetInterval() const { return m_timer->GetInterval(); }
-    wxTimer& GetTimer() const { return *m_timer; }
-
-    virtual wxEvent* Clone() const { return new ToolbarHighlighterTimerEvent(*this); }
-    virtual wxEventCategory GetEventCategory() const { return wxEVT_CATEGORY_TIMER; }
-private:
-    wxTimer* m_timer;
-};
+// Timer event stubs — Phase 3 will replace with Qt signals/slots
+struct RenderTimerEvent {};
+struct ToolbarHighlighterTimerEvent {};
+struct GizmoHighlighterTimerEvent {};
 
 
-class  GizmoHighlighterTimerEvent : public wxEvent
-{
-public:
-    GizmoHighlighterTimerEvent(wxEventType type, wxTimer& timer)
-        : wxEvent(timer.GetId(), type),
-        m_timer(&timer)
-    {
-        SetEventObject(timer.GetOwner());
-    }
-    int GetInterval() const { return m_timer->GetInterval(); }
-    wxTimer& GetTimer() const { return *m_timer; }
-
-    virtual wxEvent* Clone() const { return new GizmoHighlighterTimerEvent(*this); }
-    virtual wxEventCategory GetEventCategory() const { return wxEVT_CATEGORY_TIMER; }
-private:
-    wxTimer* m_timer;
-};
-
-
-wxDECLARE_EVENT(EVT_GLCANVAS_OBJECT_SELECT, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLCANVAS_PLATE_NAME_CHANGE, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLCANVAS_MOVE_PLATE, SimpleEvent);
+// Qt6 event type constants (replacing wxDECLARE_EVENT macros)
+// Phase 3 will wire these to proper Qt signals/slots
+inline const QEvent::Type EVT_GLCANVAS_OBJECT_SELECT               = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLCANVAS_PLATE_NAME_CHANGE           = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLCANVAS_MOVE_PLATE                  = static_cast<QEvent::Type>(QEvent::registerEventType());
 //BBS: declare EVT_GLCANVAS_PLATE_SELECT
-wxDECLARE_EVENT(EVT_GLCANVAS_PLATE_SELECT, SimpleEvent);
+inline const QEvent::Type EVT_GLCANVAS_PLATE_SELECT                = static_cast<QEvent::Type>(QEvent::registerEventType());
 
 using Vec2dEvent = Event<Vec2d>;
 // _bool_ value is used as a indicator of selection in the 3DScene
@@ -162,48 +115,48 @@ template <size_t N> using Vec3dsEvent = ArrayEvent<Vec3d, N>;
 
 using HeightProfileSmoothEvent = Event<HeightProfileSmoothingParams>;
 
-wxDECLARE_EVENT(EVT_GLCANVAS_SCHEDULE_BACKGROUND_PROCESS, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLCANVAS_RIGHT_CLICK, RBtnEvent);
-wxDECLARE_EVENT(EVT_GLCANVAS_PLATE_RIGHT_CLICK, RBtnPlateEvent);
-wxDECLARE_EVENT(EVT_GLCANVAS_REMOVE_OBJECT, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLCANVAS_ARRANGE, SimpleEvent);
+inline const QEvent::Type EVT_GLCANVAS_SCHEDULE_BACKGROUND_PROCESS = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLCANVAS_RIGHT_CLICK                 = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLCANVAS_PLATE_RIGHT_CLICK           = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLCANVAS_REMOVE_OBJECT               = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLCANVAS_ARRANGE                     = static_cast<QEvent::Type>(QEvent::registerEventType());
 //BBS: add arrange and orient event
-wxDECLARE_EVENT(EVT_GLCANVAS_ARRANGE_PARTPLATE, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLCANVAS_ARRANGE_OUTPLATE, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLCANVAS_ORIENT, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLCANVAS_ORIENT_PARTPLATE, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLCANVAS_SELECT_CURR_PLATE_ALL, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLCANVAS_SELECT_ALL, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLCANVAS_QUESTION_MARK, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLCANVAS_INCREASE_INSTANCES, Event<int>); // data: +1 => increase, -1 => decrease
-wxDECLARE_EVENT(EVT_GLCANVAS_INSTANCE_MOVED, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLCANVAS_FORCE_UPDATE, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLCANVAS_INSTANCE_ROTATED, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLCANVAS_INSTANCE_SCALED, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLCANVAS_ENABLE_ACTION_BUTTONS, Event<bool>);
-wxDECLARE_EVENT(EVT_GLCANVAS_UPDATE_GEOMETRY, Vec3dsEvent<2>);
-wxDECLARE_EVENT(EVT_GLCANVAS_MOUSE_DRAGGING_STARTED, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLCANVAS_MOUSE_DRAGGING_FINISHED, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLCANVAS_UPDATE_BED_SHAPE, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLCANVAS_TAB, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLCANVAS_RESETGIZMOS, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLCANVAS_MOVE_SLIDERS, wxKeyEvent);
-wxDECLARE_EVENT(EVT_GLCANVAS_EDIT_COLOR_CHANGE, wxKeyEvent);
-wxDECLARE_EVENT(EVT_GLCANVAS_JUMP_TO, wxKeyEvent);
-wxDECLARE_EVENT(EVT_GLCANVAS_UNDO, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLCANVAS_REDO, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLCANVAS_SWITCH_TO_OBJECT, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLCANVAS_SWITCH_TO_GLOBAL, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLCANVAS_COLLAPSE_SIDEBAR, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLCANVAS_RELOAD_FROM_DISK, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLCANVAS_RENDER_TIMER, wxTimerEvent/*RenderTimerEvent*/);
-wxDECLARE_EVENT(EVT_GLCANVAS_TOOLBAR_HIGHLIGHTER_TIMER, wxTimerEvent);
-wxDECLARE_EVENT(EVT_GLCANVAS_GIZMO_HIGHLIGHTER_TIMER, wxTimerEvent);
-wxDECLARE_EVENT(EVT_GLCANVAS_UPDATE, SimpleEvent);
-wxDECLARE_EVENT(EVT_CUSTOMEVT_TICKSCHANGED, wxCommandEvent);
-wxDECLARE_EVENT(EVT_GLCANVAS_RESET_LAYER_HEIGHT_PROFILE, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLCANVAS_ADAPTIVE_LAYER_HEIGHT_PROFILE, Event<float>);
-wxDECLARE_EVENT(EVT_GLCANVAS_SMOOTH_LAYER_HEIGHT_PROFILE, HeightProfileSmoothEvent);
+inline const QEvent::Type EVT_GLCANVAS_ARRANGE_PARTPLATE           = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLCANVAS_ARRANGE_OUTPLATE            = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLCANVAS_ORIENT                      = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLCANVAS_ORIENT_PARTPLATE            = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLCANVAS_SELECT_CURR_PLATE_ALL       = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLCANVAS_SELECT_ALL                  = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLCANVAS_QUESTION_MARK               = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLCANVAS_INCREASE_INSTANCES          = static_cast<QEvent::Type>(QEvent::registerEventType()); // data: +1 => increase, -1 => decrease
+inline const QEvent::Type EVT_GLCANVAS_INSTANCE_MOVED              = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLCANVAS_FORCE_UPDATE                = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLCANVAS_INSTANCE_ROTATED            = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLCANVAS_INSTANCE_SCALED             = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLCANVAS_ENABLE_ACTION_BUTTONS       = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLCANVAS_UPDATE_GEOMETRY             = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLCANVAS_MOUSE_DRAGGING_STARTED      = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLCANVAS_MOUSE_DRAGGING_FINISHED     = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLCANVAS_UPDATE_BED_SHAPE            = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLCANVAS_TAB                         = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLCANVAS_RESETGIZMOS                 = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLCANVAS_MOVE_SLIDERS                = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLCANVAS_EDIT_COLOR_CHANGE           = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLCANVAS_JUMP_TO                     = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLCANVAS_UNDO                        = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLCANVAS_REDO                        = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLCANVAS_SWITCH_TO_OBJECT            = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLCANVAS_SWITCH_TO_GLOBAL            = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLCANVAS_COLLAPSE_SIDEBAR            = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLCANVAS_RELOAD_FROM_DISK            = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLCANVAS_RENDER_TIMER                = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLCANVAS_TOOLBAR_HIGHLIGHTER_TIMER   = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLCANVAS_GIZMO_HIGHLIGHTER_TIMER     = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLCANVAS_UPDATE                      = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_CUSTOMEVT_TICKSCHANGED               = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLCANVAS_RESET_LAYER_HEIGHT_PROFILE  = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLCANVAS_ADAPTIVE_LAYER_HEIGHT_PROFILE = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLCANVAS_SMOOTH_LAYER_HEIGHT_PROFILE = static_cast<QEvent::Type>(QEvent::registerEventType());
 
 class GLCanvas3D
 {
@@ -300,7 +253,7 @@ class GLCanvas3D
         bool is_enabled() const;
         void set_enabled(bool enabled);
 
-        void show_tooltip_information(const GLCanvas3D& canvas, std::map<wxString, wxString> captions_texts, float x, float y);
+        void show_tooltip_information(const GLCanvas3D& canvas, std::map<QString, QString> captions_texts, float x, float y);
         void render_variable_layer_height_dialog(const GLCanvas3D& canvas);
         void render_overlay(const GLCanvas3D& canvas);
         void render_volumes(const GLCanvas3D& canvas, const GLVolumeCollection& volumes);
@@ -509,20 +462,9 @@ class GLCanvas3D
         }
     };
 
-    class RenderTimer : public wxTimer {
-    private:
-        virtual void Notify() override;
-    };
-
-    class ToolbarHighlighterTimer : public wxTimer {
-    private:
-        virtual void Notify() override;
-    };
-
-    class GizmoHighlighterTimer : public wxTimer {
-    private:
-        virtual void Notify() override;
-    };
+    class RenderTimer : public QTimer {};
+    class ToolbarHighlighterTimer : public QTimer {};
+    class GizmoHighlighterTimer : public QTimer {};
 
     class RenderPipelineStageModifier
     {
@@ -599,18 +541,18 @@ public:
 
 private:
     bool m_is_dark = false;
-    wxGLCanvas* m_canvas;
-    wxGLContext* m_context;
+    QOpenGLWidget* m_canvas;
+    QOpenGLContext* m_context;
     bool m_dirty_context{ true };
     Bed3D &m_bed;
-    std::map<std::string, wxString> m_assembly_view_desc;
+    std::map<std::string, QString> m_assembly_view_desc;
 #if ENABLE_RETINA_GL
     std::unique_ptr<RetinaHelper> m_retina_helper;
 #endif
     unsigned int m_last_w, m_last_h;
     bool m_in_render;
-    wxTimer m_timer;
-    wxTimer m_timer_set_color;
+    QTimer m_timer;
+    QTimer m_timer_set_color;
     int m_color_input_value = -1;
     LayersEditing m_layers_editing;
     Mouse m_mouse;
@@ -784,7 +726,7 @@ public:
 
     struct ToolbarHighlighter
     {
-        void set_timer_owner(wxEvtHandler* owner, int timerid = wxID_ANY);
+        void set_timer_owner(QObject* owner);
         void init(const std::shared_ptr<GLToolbarItem>& toolbar_item, GLCanvas3D* canvas);
         void blink();
         void invalidate();
@@ -799,7 +741,7 @@ public:
 
     struct GizmoHighlighter
     {
-        void set_timer_owner(wxEvtHandler* owner, int timerid = wxID_ANY);
+        void set_timer_owner(QObject* owner);
         void init(GLGizmosManager* manager, GLGizmosManager::EType gizmo, GLCanvas3D* canvas);
         void blink();
         void invalidate();
@@ -819,20 +761,20 @@ public:
     GLModel m_unit_cube;
 
 public:
-    explicit GLCanvas3D(wxGLCanvas* canvas, Bed3D &bed);
+    explicit GLCanvas3D(QOpenGLWidget* canvas, Bed3D &bed);
     ~GLCanvas3D();
 
     bool is_initialized() const { return m_initialized; }
 
-    void set_context(wxGLContext* context);
+    void set_context(QOpenGLContext* context);
     void set_type(ECanvasType type);
     ECanvasType get_canvas_type() { return m_canvas_type; }
 
-    wxGLCanvas* get_wxglcanvas() { return m_canvas; }
-	const wxGLCanvas* get_wxglcanvas() const { return m_canvas; }
+    QOpenGLWidget* get_wxglcanvas() { return m_canvas; }
+	const QOpenGLWidget* get_wxglcanvas() const { return m_canvas; }
 
     bool init();
-    void post_event(wxEvent &&event);
+    void post_event(QEvent* event);
 
     float get_explosion_ratio() { return m_explosion_ratio; }
     void reset_explosion_ratio() { m_explosion_ratio = 1.0; }
@@ -1085,19 +1027,19 @@ public:
     void bind_event_handlers();
     void unbind_event_handlers();
 
-    void on_size(wxSizeEvent& evt);
-    void on_idle(wxIdleEvent& evt);
-    void on_char(wxKeyEvent& evt);
-    void on_key(wxKeyEvent& evt);
-    void on_mouse_wheel(wxMouseEvent& evt);
-    void on_timer(wxTimerEvent& evt);
-    void on_render_timer(wxTimerEvent& evt);
-    void on_set_color_timer(wxTimerEvent& evt);
-    void on_mouse(wxMouseEvent& evt);
-    void on_gesture(wxGestureEvent& evt);
-    void on_paint(wxPaintEvent& evt);
-    void on_kill_focus(wxFocusEvent &evt);
-    void on_set_focus(wxFocusEvent& evt);
+    void on_size(QResizeEvent* evt);
+    void on_idle();
+    void on_char(QKeyEvent* evt);
+    void on_key(QKeyEvent* evt);
+    void on_mouse_wheel(QWheelEvent* evt);
+    void on_timer();
+    void on_render_timer();
+    void on_set_color_timer();
+    void on_mouse(QMouseEvent* evt);
+    void on_gesture();
+    void on_paint();
+    void on_kill_focus(QFocusEvent* evt);
+    void on_set_focus(QFocusEvent* evt);
     void on_back_slice_begin();
     void force_set_focus();
 
@@ -1205,13 +1147,8 @@ public:
 
     // Timestamp for FPS calculation and notification fade-outs.
     static int64_t timestamp_now() {
-#ifdef _WIN32
-        // Cheaper on Windows, calls GetSystemTimeAsFileTime()
-        return wxGetUTCTimeMillis().GetValue();
-#else
-        // calls clock()
-        return wxGetLocalTimeMillis().GetValue();
-#endif
+        return std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now().time_since_epoch()).count();
     }
 
     void reset_sequential_print_clearance() {
@@ -1244,7 +1181,7 @@ public:
 
     bool is_object_sinking(int object_idx) const;
     void apply_retina_scale(Vec2d &screen_coordinate) const;
-    void _perform_layer_editing_action(wxMouseEvent* evt = nullptr);
+    void _perform_layer_editing_action(QMouseEvent* evt = nullptr);
 
     // Convert the screen space coordinate to an object space coordinate.
     // If the Z screen space coordinate is not provided, a depth buffer value is substituted.
@@ -1417,9 +1354,9 @@ private:
         bool                               ban_light              = false,
         const ExtraThumbData&              extra_thumb_data       = ExtraThumbData());
     void _show_isolated_volumes_notification();
-    static bool _move_isolated_volumes_closer(wxEvtHandler*);
+    static bool _move_isolated_volumes_closer(QObject*);
     void _check_assembly_far_from_origin();
-    static bool _reset_assembly_to_origin(wxEvtHandler*);
+    static bool _reset_assembly_to_origin(QObject*);
     static void _filter_assembly_thumbnail_candidates_by_bvh(const std::vector<GLVolume*>& assemble_candidate_volumes,
         const std::vector<BoundingBoxf3>&  assemble_candidate_boxes,
         bool                               skip_single_volume_bvh,

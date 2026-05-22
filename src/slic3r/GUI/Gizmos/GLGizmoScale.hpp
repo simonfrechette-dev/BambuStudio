@@ -1,3 +1,4 @@
+#include <QKeyEvent>
 #ifndef slic3r_GLGizmoScale_hpp_
 #define slic3r_GLGizmoScale_hpp_
 
@@ -70,7 +71,7 @@ public:
     void enable_ununiversal_scale(bool enable);
     BoundingBoxf3 get_bounding_box() const override;
 
-    bool on_key(const wxKeyEvent& key_event) override;
+    bool on_key(const QKeyEvent& key_event) override;
 
     std::string get_icon_filename(bool b_dark_mode) const override;
 protected:

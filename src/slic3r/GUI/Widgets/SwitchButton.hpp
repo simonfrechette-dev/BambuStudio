@@ -1,250 +1,273 @@
 #ifndef slic3r_GUI_SwitchButton_hpp_
 #define slic3r_GUI_SwitchButton_hpp_
 
-#include "../wxExtensions.hpp"
+#include "../QtExtensions.hpp"
 #include "StateColor.hpp"
-
-#include <wx/tglbtn.h>
-#include <wx/popupwin.h>
+#include "StaticBox.hpp"
 #include "Label.hpp"
 #include "Button.hpp"
 
-wxDECLARE_EVENT(wxCUSTOMEVT_SWITCH_POS, wxCommandEvent);
-wxDECLARE_EVENT(wxCUSTOMEVT_MULTISWITCH_SELECTION, wxCommandEvent);
-wxDECLARE_EVENT(wxEXPAND_LEFT_DOWN, wxCommandEvent);
+#include <QAbstractButton>
+#include <QWidget>
+#include <QHBoxLayout>
+#include <QString>
+#include <QColor>
+#include <vector>
+#include <string>
 
-class SwitchButton : public wxBitmapToggleButton
+// ---------------------------------------------------------------------------
+// SwitchButton — bitmap-based or text-label toggle
+// ---------------------------------------------------------------------------
+class SwitchButton : public QAbstractButton
 {
+    Q_OBJECT
 public:
-	SwitchButton(wxWindow * parent = NULL, wxWindowID id = wxID_ANY);
+    explicit SwitchButton(QWidget *parent = nullptr, int id = -1);
 
-public:
-	void SetLabels(wxString const & lbl_on, wxString const & lbl_off);
+    void SetLabels(const QString &lbl_on, const QString &lbl_off);
+    void SetTextColor(const StateColor &color);
+    void SetTextColor2(const StateColor &color);
+    void SetTrackColor(const StateColor &color);
+    void SetThumbColor(const StateColor &color);
+    void SetValue(bool value);
+    bool GetValue() const { return m_value; }
+    void Rescale();
 
-	void SetTextColor(StateColor const &color);
+    QSize sizeHint() const override;
 
-	void SetTextColor2(StateColor const &color);
-
-    void SetTrackColor(StateColor const &color);
-
-	void SetThumbColor(StateColor const &color);
-
-	void SetValue(bool value) override;
-
-	void Rescale();
-
-private:
-	void update();
-
-private:
-	ScalableBitmap m_on;
-	ScalableBitmap m_off;
-
-	wxString labels[2];
-    StateColor   text_color;
-    StateColor   text_color2;
-	StateColor   track_color;
-	StateColor   thumb_color;
-};
-
-class SwitchBoard : public wxWindow
-{
-public:
-    SwitchBoard(wxWindow *parent = NULL, wxString leftL = "", wxString right = "", wxSize size = wxDefaultSize);
-    wxString leftLabel;
-    wxString rightLabel;
-
-	void updateState(wxString target);
-    void SetLabels(const wxString &left, const wxString &right);
-
-	bool switch_left{false};
-    bool switch_right{false};
-    bool is_enable {true};
-
-    void* client_data = nullptr;/*MachineObject* in StatusPanel*/
-
-public:
-    void Enable();
-    void Disable();
-    bool IsEnabled(){return is_enable;};
-
-    void  SetClientData(void* data) { client_data = data; };
-    void* GetClientData() { return client_data; };
-
-    void SetAutoDisableWhenSwitch() { auto_disable_when_switch = true; };
+signals:
+    void toggled(bool checked);
 
 protected:
-    void paintEvent(wxPaintEvent& evt);
-    void render(wxDC& dc);
-    void doRender(wxDC& dc);
-    void on_left_down(wxMouseEvent& evt);
+    void paintEvent(QPaintEvent *event) override;
+    void mousePressEvent(QMouseEvent *event) override;
+    void mouseReleaseEvent(QMouseEvent *event) override;
 
 private:
+    void update();
+
+    bool           m_value = false;
+    QString        m_labels[2];
+    ScalableBitmap m_on;
+    ScalableBitmap m_off;
+    StateColor     text_color;
+    StateColor     text_color2;
+    StateColor     track_color;
+    StateColor     thumb_color;
+};
+
+// ---------------------------------------------------------------------------
+// SwitchBoard — left/right dual-label toggle
+// ---------------------------------------------------------------------------
+class SwitchBoard : public QWidget
+{
+    Q_OBJECT
+public:
+    explicit SwitchBoard(QWidget *parent = nullptr,
+                         const QString &leftL  = {},
+                         const QString &right  = {},
+                         const QSize &  size   = {});
+
+    QString leftLabel;
+    QString rightLabel;
+
+    void updateState(const QString &target);
+    void SetLabels(const QString &left, const QString &right);
+
+    bool  switch_left  = false;
+    bool  switch_right = false;
+    bool  is_enable    = true;
+    void *client_data  = nullptr;
+
+    void Enable()  { is_enable = true;  update(); }
+    void Disable() { is_enable = false; update(); }
+    bool IsEnabled() const { return is_enable; }
+
+    void  SetClientData(void *data) { client_data = data; }
+    void *GetClientData()           { return client_data; }
+
+    void SetAutoDisableWhenSwitch() { auto_disable_when_switch = true; }
+
+signals:
+    void switchPos(bool leftSelected);
+
+protected:
+    void paintEvent(QPaintEvent *event) override;
+    void mousePressEvent(QMouseEvent *event) override;
+
+private:
+    void doRender(QPainter &p);
     bool auto_disable_when_switch = false;
 };
 
-class CustomToggleButton : public wxWindow {
+// ---------------------------------------------------------------------------
+// CustomToggleButton — icon+text toggle with primary/secondary colour
+// ---------------------------------------------------------------------------
+class CustomToggleButton : public QWidget
+{
+    Q_OBJECT
 public:
-    CustomToggleButton(wxWindow* parent, const wxString& label,
-        wxWindowID id = wxID_ANY,
-        const wxPoint& pos = wxDefaultPosition,
-        const wxSize& size = wxDefaultSize);
+    explicit CustomToggleButton(QWidget *parent, const QString &label,
+                                int id = -1, const QPoint &pos = {},
+                                const QSize &size = {});
 
-
-    void SetLabel(const wxString& label) override;
-
-    void SetSelectedIcon(const wxString& iconPath);
-    void SetUnSelectedIcon(const wxString& iconPath);
-
+    void setText(const QString &label);
+    void SetSelectedIcon(const QString &iconPath);
+    void SetUnSelectedIcon(const QString &iconPath);
     void SetIsSelected(bool selected);
-    bool IsSelected() const;
+    bool IsSelected() const { return m_isSelected; }
+    void set_primary_colour(QColor col)   { m_primary_colour = col; }
+    void set_secondary_colour(QColor col) { m_secondary_colour = col; }
 
-    void set_primary_colour(wxColour col) {m_primary_colour = col;};
-    void set_secondary_colour(wxColour col) {m_secondary_colour = col;};
+signals:
+    void clicked();
 
-private:
-    void OnPaint(wxPaintEvent& event);
-    void render(wxDC& dc);
-    void doRender(wxDC& dc);
-    void OnSize(wxSizeEvent& event);
-
-    void on_left_down(wxMouseEvent& e);
-
-    wxString m_label;
-    wxBitmap m_selected_icon;
-    wxBitmap m_unselected_icon;
-    wxColour m_primary_colour{wxColour("#00AE42")};
-    wxColour m_secondary_colour{wxColour("#DEF5E7")};
-
-    bool m_isSelected;
-};
-
-class RichTooltipPopup : public wxPopupTransientWindow {
-public:
-    RichTooltipPopup(wxWindow* parent, const wxString& iconName, const wxString& text);
-    void ShowAtPosition(wxWindow* anchor);
+protected:
+    void paintEvent(QPaintEvent *event) override;
+    void mousePressEvent(QMouseEvent *event) override;
 
 private:
-    void OnPaint(wxPaintEvent& event);
-    wxBitmap m_icon;
-    wxString m_text;
+    QString  m_label;
+    QPixmap  m_selected_icon;
+    QPixmap  m_unselected_icon;
+    QColor   m_primary_colour{QColor("#00AE42")};
+    QColor   m_secondary_colour{QColor("#DEF5E7")};
+    bool     m_isSelected = false;
 };
 
-class ExpandButton : public wxWindow {
+// ---------------------------------------------------------------------------
+// RichTooltipPopup — dark tooltip popup with optional icon
+// ---------------------------------------------------------------------------
+class RichTooltipPopup : public QWidget
+{
+    Q_OBJECT
 public:
-    ExpandButton(wxWindow* parent,
-        std::string bmp,
-        wxWindowID id = wxID_ANY,
-        const wxPoint& pos = wxDefaultPosition,
-        const wxSize& size = wxDefaultSize);
-    ~ExpandButton();
-    
-    void update_bitmap(std::string bmp);
+    explicit RichTooltipPopup(QWidget *parent,
+                              const QString &iconName,
+                              const QString &text);
+    void ShowAtPosition(QWidget *anchor);
+
+protected:
+    void paintEvent(QPaintEvent *event) override;
+
+private:
+    QPixmap m_icon;
+    QString m_text;
+};
+
+// ---------------------------------------------------------------------------
+// ExpandButton — small icon button with rich tooltip
+// ---------------------------------------------------------------------------
+class ExpandButton : public QWidget
+{
+    Q_OBJECT
+public:
+    explicit ExpandButton(QWidget *parent, const std::string &bmp,
+                          int id = -1,
+                          const QPoint &pos = {}, const QSize &size = {});
+    ~ExpandButton() override;
+
+    void update_bitmap(const std::string &bmp);
     void msw_rescale();
-    void SetRichTooltip(const wxString& iconName, const wxString& text);
+    void SetRichTooltip(const QString &iconName, const QString &text);
     void ShowRichTooltip();
     void HideRichTooltip();
 
+signals:
+    void expandClicked(int id);
+
+protected:
+    void paintEvent(QPaintEvent *event) override;
+    void enterEvent(QEnterEvent *event) override;
+    void leaveEvent(QEvent *event) override;
+    void mousePressEvent(QMouseEvent *event) override;
+
 private:
-    std::string m_bmp_str;
-    wxBitmap m_bmp;
-    void OnPaint(wxPaintEvent& event);
-    void render(wxDC& dc);
-    void doRender(wxDC& dc);
-    
-    wxString m_tooltip_icon;
-    wxString m_tooltip_text;
-    RichTooltipPopup* m_tooltip_popup{nullptr};
+    std::string         m_bmp_str;
+    QPixmap             m_bmp;
+    QString             m_tooltip_icon;
+    QString             m_tooltip_text;
+    RichTooltipPopup   *m_tooltip_popup{nullptr};
 };
 
-class ExpandButtonHolder : public wxPanel {
+// ---------------------------------------------------------------------------
+// ExpandButtonHolder — row container of ExpandButtons
+// ---------------------------------------------------------------------------
+class ExpandButtonHolder : public QWidget
+{
+    Q_OBJECT
 public:
-    ExpandButtonHolder(wxWindow* parent,
-        wxWindowID id = wxID_ANY,
-        const wxPoint& pos = wxDefaultPosition,
-        const wxSize& size = wxDefaultSize);
+    explicit ExpandButtonHolder(QWidget *parent = nullptr, int id = -1,
+                                const QPoint &pos = {}, const QSize &size = {});
 
-    //wxBoxSizer* expand_sizer{nullptr};
-    wxBoxSizer* hsizer{nullptr};
-    wxBoxSizer* vsizer{nullptr};
-    int GetAvailable();
-    void addExpandButton(wxWindowID id, std::string img);
-    void ShowExpandButton(wxWindowID id, bool show);
-    void updateExpandButtonBitmap(wxWindowID id, std::string bitmap);
-    void EnableExpandButton(wxWindowID id, bool enb);
-    void SetExpandButtonTooltip(wxWindowID id, const wxString& tooltip);
-    void SetExpandButtonRichTooltip(wxWindowID id, const wxString& iconName, const wxString& text);
-
+    int  GetAvailable();
+    void addExpandButton(int id, const std::string &img);
+    void ShowExpandButton(int id, bool show);
+    void updateExpandButtonBitmap(int id, const std::string &bitmap);
+    void EnableExpandButton(int id, bool enb);
+    void SetExpandButtonTooltip(int id, const QString &tooltip);
+    void SetExpandButtonRichTooltip(int id, const QString &iconName, const QString &text);
     void msw_rescale();
+
+    QHBoxLayout *hsizer{nullptr};
+
+signals:
+    void expandClicked(int id);
+
 private:
-    ExpandButton* FindExpandButton(wxWindowID id);
-    void OnPaint(wxPaintEvent& event);
-    void render(wxDC& dc);
-    void doRender(wxDC& dc);
+    ExpandButton *FindExpandButton(int id);
 };
 
+// ---------------------------------------------------------------------------
+// MultiSwitchButton — tab-strip selector
+// ---------------------------------------------------------------------------
 class MultiSwitchButton : public StaticBox
 {
+    Q_OBJECT
     std::vector<Button *> btns;
-    wxBoxSizer           *sizer = nullptr;
+    QHBoxLayout          *sizer = nullptr;
     int                   sel   = -1;
 
 public:
-    MultiSwitchButton(wxWindow *parent = nullptr, wxWindowID id = wxID_ANY, const wxPoint &pos = wxDefaultPosition, const wxSize &size = wxDefaultSize, long style = 0);
+    explicit MultiSwitchButton(QWidget *parent = nullptr);
+    ~MultiSwitchButton() override;
 
-    ~MultiSwitchButton();
-
-public:
-    int AppendOption(const wxString &option, void *clientData = nullptr);
-
-    void SetOptions(const std::vector<wxString> &options);
-
-    void DeleteAllOptions();
-
-    unsigned int GetCount() const;
-
-    int      GetSelection() const;
-    void     SetSelection(int index);
-    wxString GetSelectedText() const;
-
-    Button*  GetButton(unsigned int index) const
-    {
-        return index >= 0 && index < btns.size() ? btns[index] : nullptr;
+    int          AppendOption(const QString &option, void *clientData = nullptr);
+    void         SetOptions(const std::vector<QString> &options);
+    void         DeleteAllOptions();
+    unsigned int GetCount() const { return (unsigned)btns.size(); }
+    int          GetSelection() const { return sel; }
+    void         SetSelection(int index);
+    QString      GetSelectedText() const;
+    Button      *GetButton(unsigned int index) const {
+        return index < btns.size() ? btns[index] : nullptr;
     }
+    QString      GetOptionText(unsigned int index) const;
+    void         SetOptionText(unsigned int index, const QString &text);
+    void        *GetOptionData(unsigned int index) const;
+    void         SetOptionData(unsigned int index, void *clientData);
+    void         SetBackgroundColor(const StateColor &color);
+    void         SetTextColor(const StateColor &color);
+    void         SetButtonTextColor(int index, const StateColor &color);
+    void         SetButtonCornerRadius(double radius);
+    void         SetButtonPadding(const QSize &padding);
+    void         Rescale();
 
-    wxString GetOptionText(unsigned int index) const;
-    void     SetOptionText(unsigned int index, const wxString &text);
-
-    void *GetOptionData(unsigned int index) const;
-    void  SetOptionData(unsigned int index, void *clientData);
-
-    void SetBackgroundColor(const StateColor &color);
-    void SetTextColor(const StateColor &color);
-    void SetButtonTextColor(int index, const StateColor &color)
-    {
-        if (index >= btns.size()) return;
-
-        btns[index]->SetTextColor(color);
-        btns[index]->Refresh();
-    }
-    void SetButtonCornerRadius(double radius);
-    void SetButtonPadding(const wxSize &padding);
-
-    void Rescale();
+signals:
+    void selectionChanged(int index);
 
 protected:
-    void button_clicked(wxCommandEvent &event);
+    void button_clicked();
     void update_button_styles();
-
-    bool send_selection_event();
 
 private:
     StateColor m_bg_color;
     StateColor m_bg_color_grayed;
     StateColor m_text_color;
     StateColor m_text_color_grayed;
-    double     m_button_radius;
-    wxSize     m_button_padding;
+    double     m_button_radius  = 10.0;
+    QSize      m_button_padding = {10, 6};
+    std::vector<void *> m_option_data;
 };
 
 #endif // !slic3r_GUI_SwitchButton_hpp_

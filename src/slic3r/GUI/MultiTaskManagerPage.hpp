@@ -30,25 +30,25 @@ namespace GUI {
 class MultiTaskItem : public DeviceItem
 {
 public:
-    MultiTaskItem(wxWindow* parent, MachineObject* obj, int type);
+    MultiTaskItem(QWidget* parent, MachineObject* obj, int type);
     ~MultiTaskItem() {};
 
 
-    void OnEnterWindow(wxMouseEvent& evt);
-    void OnLeaveWindow(wxMouseEvent& evt);
-    void OnSelectedDevice(wxCommandEvent& evt);
-    void OnLeftDown(wxMouseEvent& evt);
-    void OnMove(wxMouseEvent& evt);
+    void OnEnterWindow(QMouseEvent& evt);
+    void OnLeaveWindow(QMouseEvent& evt);
+    void OnSelectedDevice(QEvent& evt);
+    void OnLeftDown(QMouseEvent& evt);
+    void OnMove(QMouseEvent& evt);
 
-    void         paintEvent(wxPaintEvent& evt);
-    void         render(wxDC& dc);
-    void         doRender(wxDC& dc);
-    void         DrawTextWithEllipsis(wxDC& dc, const wxString& text, int maxWidth, int left, int top = 0);
-    void         post_event(wxCommandEvent&& event);
-    virtual void DoSetSize(int x, int y, int width, int height, int sizeFlags = wxSIZE_AUTO);
+    void         paintEvent(QPaintEvent& evt);
+    void         render(QPainter& dc);
+    void         doRender(QPainter& dc);
+    void         DrawTextWithEllipsis(QPainter& dc, const QString& text, int maxWidth, int left, int top = 0);
+    void         post_event(QEvent&& event);
+    // DoSetSize removed for Qt port
 
     bool m_hover{ false };
-    wxString get_left_time(int mc_left_time);
+    QString get_left_time(int mc_left_time);
     
     ScalableBitmap m_bitmap_check_disable;
     ScalableBitmap m_bitmap_check_off;
@@ -56,8 +56,8 @@ public:
 
     int          m_sending_percent{0};
     int          m_task_type{0}; //0-local 1-cloud
-    wxString     m_project_name;
-    wxString     m_dev_name;
+    QString     m_project_name;
+    QString     m_dev_name;
     std::string  m_dev_id;
     TaskStateInfo* task_obj { nullptr };
     std::string  m_job_id;
@@ -75,16 +75,16 @@ public:
     void onCancel();
 };
 
-class LocalTaskManagerPage : public wxPanel
+class LocalTaskManagerPage : public QWidget
 {
 public:
-    LocalTaskManagerPage(wxWindow* parent);
+    LocalTaskManagerPage(QWidget* parent);
     ~LocalTaskManagerPage() {};
 
     void update_page();
     void refresh_user_device(bool clear = false);
     bool Show(bool show);
-    void cancel_all(wxCommandEvent& evt);
+    void cancel_all(QEvent& evt);
     void msw_rescale();
 
 private:
@@ -94,16 +94,16 @@ private:
     bool                        device_state_big{ true };
     bool                        device_send_time{ true };
 
-    wxPanel* m_main_panel{ nullptr };
-    wxBoxSizer* m_main_sizer{ nullptr };
-    wxBoxSizer* page_sizer{ nullptr };
-    wxBoxSizer* m_sizer_task_list{ nullptr };
-    wxScrolledWindow* m_task_list{ nullptr };
-    wxStaticText* m_selected_num{ nullptr };
+    QWidget* m_main_panel{ nullptr };
+    QBoxLayout* m_main_sizer{ nullptr };
+    QBoxLayout* page_sizer{ nullptr };
+    QBoxLayout* m_sizer_task_list{ nullptr };
+    QScrollArea* m_task_list{ nullptr };
+    QLabel* m_selected_num{ nullptr };
 
     // table head
-    wxPanel* m_table_head_panel{ nullptr };
-    wxBoxSizer* m_table_head_sizer{ nullptr };
+    QWidget* m_table_head_panel{ nullptr };
+    QBoxLayout* m_table_head_sizer{ nullptr };
     CheckBox* m_select_checkbox{ nullptr };
     Button* m_task_name{ nullptr };
     Button* m_printer_name{ nullptr };
@@ -114,19 +114,19 @@ private:
 
     // ctrl button for all
     int m_sel_number{0};
-    wxPanel* m_ctrl_btn_panel{ nullptr };
-    wxBoxSizer* m_btn_sizer{ nullptr };
+    QWidget* m_ctrl_btn_panel{ nullptr };
+    QBoxLayout* m_btn_sizer{ nullptr };
     Button* btn_stop_all{ nullptr };
-    wxStaticText* m_sel_text{ nullptr };
+    QLabel* m_sel_text{ nullptr };
 
     // tip when no device
-    wxStaticText* m_tip_text{ nullptr };
+    QLabel* m_tip_text{ nullptr };
 };
 
-class CloudTaskManagerPage : public wxPanel
+class CloudTaskManagerPage : public QWidget
 {
 public:
-    CloudTaskManagerPage(wxWindow* parent);
+    CloudTaskManagerPage(QWidget* parent);
     ~CloudTaskManagerPage();
 
     void update_page();
@@ -135,11 +135,11 @@ public:
     bool Show(bool show);
     void update_page_number();
     void start_timer();
-    void on_timer(wxTimerEvent& event);
+    void on_timer(QTimerEvent& event);
 
-    void pause_all(wxCommandEvent& evt);
-    void resume_all(wxCommandEvent& evt);
-    void stop_all(wxCommandEvent& evt);
+    void pause_all(QEvent& evt);
+    void resume_all(QEvent& evt);
+    void stop_all(QEvent& evt);
 
     void enable_buttons(bool enable);
     void page_num_enter_evt();
@@ -155,12 +155,12 @@ private:
     /* job_id -> sel */
     std::map <std::string, MultiTaskItem*> m_task_items;
 
-    wxPanel* m_main_panel{ nullptr };
-    wxBoxSizer* page_sizer{ nullptr };
-    wxBoxSizer* m_sizer_task_list{ nullptr };
-    wxBoxSizer* m_main_sizer{ nullptr };
-    wxScrolledWindow* m_task_list{ nullptr };
-    wxStaticText* m_selected_num{ nullptr };
+    QWidget* m_main_panel{ nullptr };
+    QBoxLayout* page_sizer{ nullptr };
+    QBoxLayout* m_sizer_task_list{ nullptr };
+    QBoxLayout* m_main_sizer{ nullptr };
+    QScrollArea* m_task_list{ nullptr };
+    QLabel* m_selected_num{ nullptr };
 
     // Flipping pages
     int                         m_current_page{ 0 };
@@ -171,17 +171,17 @@ private:
     bool                        next{ false };
     Button*                     btn_last_page{ nullptr };
     Button*                     btn_next_page{ nullptr };
-    wxStaticText*               st_page_number{ nullptr };
-    wxBoxSizer*                 m_flipping_page_sizer{ nullptr };
-    wxBoxSizer*                 m_page_sizer{ nullptr };
-    wxPanel*                    m_flipping_panel{ nullptr };
-    wxTimer*                    m_flipping_timer{ nullptr };
+    QLabel*               st_page_number{ nullptr };
+    QBoxLayout*                 m_flipping_page_sizer{ nullptr };
+    QBoxLayout*                 m_page_sizer{ nullptr };
+    QWidget*                    m_flipping_panel{ nullptr };
+    QTimer*                    m_flipping_timer{ nullptr };
     TextInput*                  m_page_num_input{ nullptr };
     Button*                     m_page_num_enter{ nullptr };
 
     // table head
-    wxPanel*                    m_table_head_panel{ nullptr };
-    wxBoxSizer*                 m_table_head_sizer{ nullptr };
+    QWidget*                    m_table_head_panel{ nullptr };
+    QBoxLayout*                 m_table_head_sizer{ nullptr };
     CheckBox*                   m_select_checkbox{ nullptr };
     Button*                     m_task_name{ nullptr };
     Button*                     m_printer_name{ nullptr };
@@ -192,16 +192,16 @@ private:
 
     // ctrl button for all
     int                         m_sel_number;
-    wxPanel*                    m_ctrl_btn_panel{ nullptr };
-    wxBoxSizer*                 m_btn_sizer{ nullptr };
+    QWidget*                    m_ctrl_btn_panel{ nullptr };
+    QBoxLayout*                 m_btn_sizer{ nullptr };
     Button*                     btn_pause_all{ nullptr };
     Button*                     btn_continue_all{ nullptr };
     Button*                     btn_stop_all{ nullptr };
-    wxStaticText*               m_sel_text{ nullptr };
+    QLabel*               m_sel_text{ nullptr };
 
     // tip when no device
-    wxStaticText*               m_tip_text{ nullptr };
-    wxStaticText*               m_loading_text{ nullptr };
+    QLabel*               m_tip_text{ nullptr };
+    QLabel*               m_loading_text{ nullptr };
 };
 
 

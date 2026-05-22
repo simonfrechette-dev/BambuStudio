@@ -7,7 +7,7 @@
 
 #include <boost/thread.hpp>
 
-#include <wx/event.h>
+#include <QEvent>
 
 #include "libslic3r/PrintBase.hpp"
 #include "libslic3r/GCode/ThumbnailData.hpp"
@@ -24,44 +24,58 @@ class DynamicPrintConfig;
 class Model;
 class SLAPrint;
 
-class HelioCompletionEvent : public wxEvent
+class HelioCompletionEvent : public QEvent
 {
 public:
-    HelioCompletionEvent(wxEventType eventType, int winid, std::string in_path, std::string in_tmp_path, bool in_is_successful, std::string in_error_message = "", int ac = 0, std::string mean_impro = "", std::string std_impro = "")
-        : wxEvent(winid, eventType), tmp_path(in_tmp_path), path(in_path), is_successful(in_is_successful), error_message(in_error_message), action(ac), quality_mean_improvement(mean_impro), quality_std_improvement(std_impro){}
-    virtual wxEvent *Clone() const { return new HelioCompletionEvent(*this); }
+    static QEvent::Type staticType()
+    {
+        static QEvent::Type t = static_cast<QEvent::Type>(QEvent::registerEventType());
+        return t;
+    }
+    HelioCompletionEvent(std::string in_path, std::string in_tmp_path, bool in_is_successful,
+                         std::string in_error_message = "", int ac = 0,
+                         std::string mean_impro = "", std::string std_impro = "")
+        : QEvent(staticType())
+        , tmp_path(std::move(in_tmp_path)), path(std::move(in_path))
+        , is_successful(in_is_successful), error_message(std::move(in_error_message))
+        , action(ac), quality_mean_improvement(std::move(mean_impro))
+        , quality_std_improvement(std::move(std_impro)) {}
 
     std::string tmp_path;
     std::string path;
     bool        is_successful;
     std::string error_message;
-    int action; //0-simulation 1-optimization
-    std::string quality_mean_improvement;	
-    std::string quality_std_improvement;	
+    int         action;
+    std::string quality_mean_improvement;
+    std::string quality_std_improvement;
 };
 
-class SlicingStatusEvent : public wxEvent
+class SlicingStatusEvent : public QEvent
 {
 public:
-	SlicingStatusEvent(wxEventType eventType, int winid, const PrintBase::SlicingStatus &status) :
-		wxEvent(winid, eventType), status(std::move(status)) {}
-	virtual wxEvent *Clone() const { return new SlicingStatusEvent(*this); }
-
-	PrintBase::SlicingStatus status;
+    static QEvent::Type staticType()
+    {
+        static QEvent::Type t = static_cast<QEvent::Type>(QEvent::registerEventType());
+        return t;
+    }
+    SlicingStatusEvent(const PrintBase::SlicingStatus &s)
+        : QEvent(staticType()), status(s) {}
+    PrintBase::SlicingStatus status;
 };
 
-class SlicingProcessCompletedEvent : public wxEvent
+class SlicingProcessCompletedEvent : public QEvent
 {
 public:
-	enum StatusType {
-		Finished,
-		Cancelled,
-		Error
-	};
+    static QEvent::Type staticType()
+    {
+        static QEvent::Type t = static_cast<QEvent::Type>(QEvent::registerEventType());
+        return t;
+    }
 
-	SlicingProcessCompletedEvent(wxEventType eventType, int winid, StatusType status, std::exception_ptr exception) :
-		wxEvent(winid, eventType), m_status(status), m_exception(exception) {}
-	virtual wxEvent* Clone() const { return new SlicingProcessCompletedEvent(*this); }
+    enum StatusType { Finished, Cancelled, Error };
+
+    SlicingProcessCompletedEvent(StatusType status, std::exception_ptr exception)
+        : QEvent(staticType()), m_status(status), m_exception(exception) {}
 
 	StatusType 	status()    const { return m_status; }
 	bool 		finished()  const { return m_status == Finished; }
@@ -84,8 +98,7 @@ private:
 };
 
 //BBS: move it to plater.hpp
-//wxDEFINE_EVENT(EVT_SLICING_UPDATE, SlicingStatusEvent);
-
+//
 // Print step IDs for keeping track of the print state.
 enum BackgroundSlicingProcessStep {
     bspsGCodeFinalize, bspsCount,
@@ -112,16 +125,16 @@ public:
 	GUI::PartPlate* get_current_plate() { return m_current_plate; }
 	GCodeProcessorResult* get_current_gcode_result() { return m_gcode_result;}
 
-	// The following wxCommandEvent will be sent to the UI thread / Plater window, when the slicing is finished
+	// The following QEvent will be sent to the UI thread / Plater window, when the slicing is finished
 	// and the background processing will transition into G-code export.
-	// The wxCommandEvent is sent to the UI thread asynchronously without waiting for the event to be processed.
+	// The QEvent is sent to the UI thread asynchronously without waiting for the event to be processed.
 	void set_slicing_completed_event(int event_id) { m_event_slicing_completed_id = event_id; }
-	// The following wxCommandEvent will be sent to the UI thread / Plater window, when the G-code export is finished.
-	// The wxCommandEvent is sent to the UI thread asynchronously without waiting for the event to be processed.
+	// The following QEvent will be sent to the UI thread / Plater window, when the G-code export is finished.
+	// The QEvent is sent to the UI thread asynchronously without waiting for the event to be processed.
 	void set_finished_event(int event_id) { m_event_finished_id = event_id; }
-	// The following wxCommandEvent will be sent to the UI thread / Plater window, when the G-code is being exported to
+	// The following QEvent will be sent to the UI thread / Plater window, when the G-code is being exported to
 	// specified path or uploaded.
-	// The wxCommandEvent is sent to the UI thread asynchronously without waiting for the event to be processed.
+	// The QEvent is sent to the UI thread asynchronously without waiting for the event to be processed.
 	void set_export_began_event(int event_id) { m_event_export_began_id = event_id; }
 
 	// BBS

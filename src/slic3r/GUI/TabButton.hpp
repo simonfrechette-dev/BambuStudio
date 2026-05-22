@@ -6,9 +6,9 @@
 
 class TabButton : public StaticBox
 {
-    wxSize   textSize;
-    wxSize   minSize;
-    wxSize   paddingSize;
+    QSize   textSize;
+    QSize   minSize;
+    QSize   paddingSize;
     ScalableBitmap icon;
     ScalableBitmap newtag_img;
 
@@ -20,17 +20,17 @@ class TabButton : public StaticBox
 public:
     TabButton();
 
-    TabButton(wxWindow *parent, wxString text, ScalableBitmap &icon, long style = 0, int iconSize = 0);
+    TabButton(QWidget *parent, QString text, ScalableBitmap &icon, long style = 0, int iconSize = 0);
 
-    bool Create(wxWindow *parent, wxString text, ScalableBitmap &icon, long style = 0, int iconSize = 0);
+    bool Create(QWidget *parent, QString text, ScalableBitmap &icon, long style = 0, int iconSize = 0);
 
-    void SetLabel(const wxString& label) override;
+    void setText(const QString& label);
 
-    void SetMinSize(const wxSize& size) override;
+    void setMinimumSize(const QSize& size);
     
-    void SetPaddingSize(const wxSize& size);
+    void SetPaddingSize(const QSize& size);
 
-    const wxSize& GetPaddingSize();
+    const QSize& GetPaddingSize();
     
     void SetTextColor(StateColor const &color);
 
@@ -44,23 +44,23 @@ public:
 
     void Rescale();
 
-    void ShowNewTag(bool tag = false) {show_new_tag = tag; Refresh();};
+    void ShowNewTag(bool tag = false) {show_new_tag = tag; update();};
     bool GetShowNewTag() const { return show_new_tag; };
 
 private:
-    void paintEvent(wxPaintEvent& evt);
+    void paintEvent(QPaintEvent& evt);
 
-    void render(wxDC& dc);
+    void render(QPainter& dc);
 
     void messureSize();
 
     // some useful events
-    void mouseDown(wxMouseEvent& event);
-    void mouseReleased(wxMouseEvent& event);
+    void mouseDown(QMouseEvent& event);
+    void mouseReleased(QMouseEvent& event);
 
     void sendButtonEvent();
 
-    DECLARE_EVENT_TABLE()
+    
 };
 
 #endif // !slic3r_GUI_Button_hpp_

@@ -1,3 +1,4 @@
+#include <QString>
 #ifndef slic3r_GLGizmoFuzzySkin_hpp_
 #define slic3r_GLGizmoFuzzySkin_hpp_
 
@@ -38,7 +39,7 @@ protected:
     void render_triangles(const Selection& selection) const override;
     void on_set_state() override;
     void show_tooltip_information(float caption_max, float x, float y);
-    wxString handle_snapshot_action_name(bool shift_down, Button button_down) const override;
+    QString handle_snapshot_action_name(bool shift_down, Button button_down) const override;
 
     std::string get_gizmo_entering_text() const override { return "Entering Paint-on supports"; }
     std::string get_gizmo_leaving_text() const override { return "Leaving Paint-on supports"; }
@@ -76,7 +77,7 @@ private:
 
     // This map holds all translated description texts, so they can be easily referenced during layout calculations
     // etc. When language changes, GUI is recreated and this class constructed again, so the change takes effect.
-    std::map<std::string, wxString> m_desc;
+    std::map<std::string, QString> m_desc;
 };
 } // namespace Slic3r::GUI
 #endif // slic3r_GLGizmoFuzzySkin_hpp_

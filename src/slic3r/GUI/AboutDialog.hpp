@@ -1,80 +1,63 @@
 #ifndef slic3r_GUI_AboutDialog_hpp_
 #define slic3r_GUI_AboutDialog_hpp_
 
-#include <wx/wx.h>
-#include <wx/intl.h>
-#include <wx/html/htmlwin.h>
-
+#include <string>
+#include <vector>
+#include <QPixmap>
 #include "GUI_Utils.hpp"
-#include "wxExtensions.hpp"
 
-namespace Slic3r { 
+namespace Slic3r {
 namespace GUI {
 
-class AboutDialogLogo : public wxPanel
+class AboutDialogLogo : public QWidget
 {
+    Q_OBJECT
 public:
-    AboutDialogLogo(wxWindow* parent);
-    
+    explicit AboutDialogLogo(QWidget* parent = nullptr);
+
+protected:
+    void paintEvent(QPaintEvent *event) override;
+
 private:
-    ScalableBitmap logo;
-    void onRepaint(wxEvent &event);
+    QPixmap m_logo;
 };
-
-
 
 class CopyrightsDialog : public DPIDialog
 {
+    Q_OBJECT
 public:
     CopyrightsDialog();
-    ~CopyrightsDialog() {}
+    ~CopyrightsDialog() override = default;
 
     struct Entry {
-        Entry(const std::string &lib_name, const std::string &copyright, const std::string &link) : 
-            lib_name(lib_name), copyright(copyright), link(link) {}
-
-        std::string     lib_name;
-        std::string     copyright;
-        std::string   	link;
+        Entry(const std::string &lib_name, const std::string &copyright, const std::string &link)
+            : lib_name(lib_name), copyright(copyright), link(link) {}
+        std::string lib_name;
+        std::string copyright;
+        std::string link;
     };
 
 protected:
-    void on_dpi_changed(const wxRect &suggested_rect) override;
-    
+    void on_dpi_changed(const QRect&) override {}
+
 private:
-    wxHtmlWindow*   m_html;
     std::vector<Entry> m_entries;
-
-    void onLinkClicked(wxHtmlLinkEvent &event);
-    void onCloseDialog(wxEvent &);
-
     void fill_entries();
-    wxString get_html_text();
+    QString get_html_text();
 };
-
-
 
 class AboutDialog : public DPIDialog
 {
-    ScalableBitmap  m_logo_bitmap;
-    wxHtmlWindow*   m_html;
-    wxStaticBitmap* m_logo;
-    int             m_copy_rights_btn_id { wxID_ANY };
-    int             m_copy_version_btn_id { wxID_ANY };
+    Q_OBJECT
 public:
     AboutDialog();
+    ~AboutDialog() override = default;
 
 protected:
-    void on_dpi_changed(const wxRect &suggested_rect) override;
-    
-private:
-    void onLinkClicked(wxHtmlLinkEvent &event);
-    void onCloseDialog(wxEvent &);
-    void onCopyrightBtn(wxEvent &);
-    void onCopyToClipboard(wxEvent&);
+    void on_dpi_changed(const QRect&) override {}
 };
 
 } // namespace GUI
 } // namespace Slic3r
 
-#endif
+#endif // slic3r_GUI_AboutDialog_hpp_

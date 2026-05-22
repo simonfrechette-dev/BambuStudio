@@ -1,20 +1,21 @@
 #ifndef slic3r_PhysicalPrinterDialog_hpp_
 #define slic3r_PhysicalPrinterDialog_hpp_
+#include <QWidget>
+#include <QString>
 
 #include <vector>
 
-#include <wx/gdicmn.h>
 
 #include "libslic3r/Preset.hpp"
 #include "GUI_Utils.hpp"
 #include "Widgets/RoundedRectangle.hpp"
 #include "Widgets/Button.hpp"
 
-class wxString;
-class wxTextCtrl;
-class wxStaticText;
+class QString;
+class QLineEdit;
+class QLabel;
 class ScalableButton;
-class wxBoxSizer;
+class QBoxLayout;
 
 namespace Slic3r {
 
@@ -37,16 +38,16 @@ class PhysicalPrinterDialog : public DPIDialog
     ScalableButton*     m_printhost_port_browse_btn         {nullptr};
 
     RoundedRectangle*   m_input_area                        {nullptr};
-    wxStaticText*       m_valid_label                       {nullptr};
-    wxTextCtrl*         m_input_ctrl                        {nullptr};
+    QLabel*       m_valid_label                       {nullptr};
+    QLineEdit*         m_input_ctrl                        {nullptr};
     Button*             m_button_ok                         {nullptr};
     Button*             m_button_cancel                     {nullptr};
 
     void build_printhost_settings(ConfigOptionsGroup* optgroup);
-    void OnOK(wxMouseEvent& event);
+    void OnOK(QMouseEvent& event);
 
 public:
-    PhysicalPrinterDialog(wxWindow* parent);
+    PhysicalPrinterDialog(QWidget* parent);
     ~PhysicalPrinterDialog();
 
     enum ValidationType
@@ -66,7 +67,7 @@ public:
     void        update_printers();
 
 protected:
-    void on_dpi_changed(const wxRect& suggested_rect) override;
+    void on_dpi_changed(const QRect& suggested_rect) override;
     void on_sys_color_changed() override {};
     void check_host_key_valid();
 };

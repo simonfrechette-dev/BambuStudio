@@ -1,55 +1,43 @@
 #include "ErrorMsgStaticText.hpp"
-#include <wx/dcclient.h>
+#include <QPainter>
+#include <QFontMetrics>
 
-ErrorMsgStaticText::ErrorMsgStaticText() {}
-
-ErrorMsgStaticText::ErrorMsgStaticText(wxWindow *      parent,
-                             wxWindowID      id,
-                             const wxPoint & pos,
-                             const wxSize &  size)
+ErrorMsgStaticText::ErrorMsgStaticText(QWidget *parent, int /*id*/,
+                                        const QPoint &pos, const QSize &size)
+    : QWidget(parent)
 {
-    Create(parent, id, pos, size);
-    Bind(wxEVT_PAINT, &ErrorMsgStaticText::paintEvent, this);
+    if (!pos.isNull())  move(pos);
+    if (!size.isEmpty()) setFixedSize(size);
 }
 
-void ErrorMsgStaticText::paintEvent(wxPaintEvent &evt)
+void ErrorMsgStaticText::paintEvent(QPaintEvent *)
 {
-    auto size = GetSize();
-    wxPaintDC dc(this);
-    auto text_height = dc.GetCharHeight();
-    wxString  out_txt = m_msg;
-    wxString  count_txt  = "";
-    int line_count  = 1;
-    int new_line_pos = 0;
-    bool is_ch = false;
+    QPainter p(this);
+    QFontMetrics fm(font());
 
-    if (m_msg[0] > 0x80 && m_msg[1] > 0x80)is_ch = true;
+    // Simple word-wrapped text render
+    const QStringList words = m_msg.split(' ');
+    int x = 0, y = fm.ascent();
+    const int lineH = fm.height();
+    QString line;
 
-    for (int i = 0; i < m_msg.length(); i++) {
-        auto text_size = dc.GetTextExtent(count_txt);
-        if (text_size.x < (size.x)) {
-            count_txt += m_msg[i];
-            if (m_msg[i] == ' ' ||
-                m_msg[i] == ',' ||
-                m_msg[i] == '.' ||
-                m_msg[i] == '\n')
-            {
-                new_line_pos = i;
-            }
-        } else {
-            if (!is_ch)
-            {
-                out_txt[new_line_pos] = '\n';
-                i = new_line_pos;
-            } else {
-                out_txt.insert(i-1,'\n');
-            }
-            count_txt = "";
-            line_count++;
+    auto flushLine = [&]() {
+        if (!line.isEmpty()) {
+            p.drawText(QPoint(0, y), line);
+            y += lineH;
+            line.clear();
+            x = 0;
         }
+    };
+
+    for (const QString &w : words) {
+        const int ww = fm.horizontalAdvance(w + ' ');
+        if (x + ww > width() && !line.isEmpty()) {
+            flushLine();
+        }
+        line += w + ' ';
+        x    += ww;
+        if (y > height()) break;
     }
-    SetSize(wxSize(-1, line_count * text_height));
-    SetMinSize(wxSize(-1, line_count * text_height));
-    SetMaxSize(wxSize(-1, line_count * text_height));
-    dc.DrawText(out_txt, 0, 0);
+    flushLine();
 }

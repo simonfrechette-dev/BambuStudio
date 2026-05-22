@@ -1,10 +1,8 @@
 #ifndef slic3r_PresetComboBoxes_hpp_
 #define slic3r_PresetComboBoxes_hpp_
 
-//#include <wx/bmpcbox.h>
-#include <wx/colourdata.h>
-#include <wx/gdicmn.h>
-#include <wx/clrpicker.h>
+#include <QColor>
+#include <QPushButton>
 
 #include "libslic3r/Preset.hpp"
 #include "wxExtensions.hpp"
@@ -13,13 +11,6 @@
 #include "GUI_Utils.hpp"
 #include "EncodedFilament.hpp"
 
-class wxString;
-class wxTextCtrl;
-class wxStaticText;
-class ScalableButton;
-class wxBoxSizer;
-class wxComboBox;
-class wxStaticBitmap;
 
 namespace Slic3r {
 
@@ -36,7 +27,7 @@ class PresetComboBox : public ::ComboBox // BBS
 {
     bool m_show_all { false };
 public:
-    PresetComboBox(wxWindow* parent, Preset::Type preset_type, const wxSize& size = wxDefaultSize, PresetBundle* preset_bundle = nullptr);
+    PresetComboBox(QWidget * parent, Preset::Type preset_type, const QSize& size = QSize(), PresetBundle* preset_bundle = nullptr);
     ~PresetComboBox();
 
 	enum LabelItemType {
@@ -90,19 +81,19 @@ public:
     void clear_selected_dev_id() { m_selected_dev_id.clear(); }
 
     // BBS
-    wxString get_tooltip(const Preset& preset);
+    QString get_tooltip(const Preset& preset);
 
-    wxString get_preset_item_name(unsigned int index);
+    QString get_preset_item_name(unsigned int index);
 
-    static wxColor different_color(wxColor const & color);
+    static QColor different_color(QColor const & color);
 
-    virtual wxString get_preset_name(const Preset& preset);
+    virtual QString get_preset_name(const Preset& preset);
     Preset::Type     get_type() { return m_type; }
     void             show_all(bool show_all);
     virtual void update();
     virtual void msw_rescale();
     virtual void sys_color_changed();
-    virtual void OnSelect(wxCommandEvent& evt);
+    virtual void OnSelect(QVariant& evt);
 
 protected:
     typedef std::size_t Marker;
@@ -163,16 +154,16 @@ protected:
     static const char* separator_head() { return "--"; }
     static const char* separator_tail() { return " --"; }
 #endif // __linux__
-    static wxString    separator(const std::string& label);
+    static QString    separator(const std::string& label);
 
-    wxBitmap* get_bmp(  std::string bitmap_key, bool wide_icons, const std::string& main_icon_name,
+    QPixmap* get_bmp(  std::string bitmap_key, bool wide_icons, const std::string& main_icon_name,
                         bool is_compatible = true, bool is_system = false, bool is_single_bar = false,
                         const std::string& filament_rgb = "", const std::string& extruder_rgb = "", const std::string& material_rgb = "");
 
-    wxBitmap* get_bmp(  std::string bitmap_key, const std::string& main_icon_name, const std::string& next_icon_name,
+    QPixmap* get_bmp(  std::string bitmap_key, const std::string& main_icon_name, const std::string& next_icon_name,
                         bool is_enabled = true, bool is_compatible = true, bool is_system = false);
 
-    wxBitmap *get_bmp(Preset const &preset);
+    QPixmap *get_bmp(Preset const &preset);
 
 private:
     void fill_width_height();
@@ -186,26 +177,26 @@ private:
 class PlaterPresetComboBox : public PresetComboBox
 {
 public:
-    PlaterPresetComboBox(wxWindow *parent, Preset::Type preset_type);
+    PlaterPresetComboBox(QWidget *parent, Preset::Type preset_type);
     ~PlaterPresetComboBox();
 
     ScalableButton* edit_btn { nullptr };
 
     // BBS
-    wxButton* clr_picker { nullptr };
-    wxColourData m_clrData;
+    QPushButton* clr_picker { nullptr };
+    QColor m_clrData;
 
-    wxColor get_color() { return m_color; }
+    QColor get_color() { return m_color; }
 
     bool switch_to_tab();
     void change_extruder_color();
     void show_add_menu();
     void show_edit_menu();
 
-    wxString get_preset_name(const Preset& preset) override;
+    QString get_preset_name(const Preset& preset) override;
     void update() override;
     void msw_rescale() override;
-    void OnSelect(wxCommandEvent& evt) override;
+    void OnSelect(QVariant& evt) override;
     void update_badge_according_flag();
 
     FilamentColor get_cur_color_info();
@@ -215,7 +206,7 @@ public:
 
 private:
     // BBS
-    wxColor m_color;
+    QColor m_color;
 };
 
 
@@ -229,17 +220,17 @@ class TabPresetComboBox : public PresetComboBox
     bool m_enable_all {false};
 
 public:
-    TabPresetComboBox(wxWindow *parent, Preset::Type preset_type);
+    TabPresetComboBox(QWidget *parent, Preset::Type preset_type);
     ~TabPresetComboBox() {}
     void set_show_incompatible_presets(bool show_incompatible_presets) {
         show_incompatible = show_incompatible_presets;
     }
 
-    wxString get_preset_name(const Preset& preset) override;
+    QString get_preset_name(const Preset& preset) override;
     void update() override;
     void update_dirty();
     void msw_rescale() override;
-    void OnSelect(wxCommandEvent& evt) override;
+    void OnSelect(QVariant& evt) override;
 
     void set_enable_all(bool enable=true) { m_enable_all = enable; }
 
@@ -247,8 +238,8 @@ public:
     Preset::Type        type()      const { return m_type; }
 
 private:
-    std::vector<wxString> m_last_presets;
-    wxString m_last_select_name;
+    std::vector<QString> m_last_presets;
+    QString m_last_select_name;
 };
 
 // ---------------------------------
@@ -258,14 +249,14 @@ private:
 class CalibrateFilamentComboBox : public PlaterPresetComboBox
 {
 public:
-    CalibrateFilamentComboBox(wxWindow *parent);
+    CalibrateFilamentComboBox(QWidget *parent);
     ~CalibrateFilamentComboBox();
 
     void load_tray(const DynamicPrintConfig & config);
 
     void update() override;
     void msw_rescale() override;
-    void OnSelect(wxCommandEvent &evt) override;
+    void OnSelect(QVariant &evt) override;
     const Preset* get_selected_preset() { return m_selected_preset; }
     std::string get_tray_name() { return m_tray_name; }
     std::string get_tag_uid() { return m_tag_uid; }
@@ -281,8 +272,8 @@ private:
     bool m_filament_exist{false};
     bool m_is_compatible{true};
     const Preset* m_selected_preset = nullptr;
-    std::map<wxString, std::pair<std::string, wxBitmap*>> m_nonsys_presets;
-    std::map<wxString, std::pair<std::string, wxBitmap*>> m_system_presets;
+    std::map<QString, std::pair<std::string, QPixmap*>> m_nonsys_presets;
+    std::map<QString, std::pair<std::string, QPixmap*>> m_system_presets;
 };
 
 } // namespace GUI

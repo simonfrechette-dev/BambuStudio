@@ -1,6 +1,8 @@
 #pragma once
 
 #include <vector>
+#include <QDialog>
+#include <QBoxLayout>
 #include "CapsuleButton.hpp"
 #include "libslic3r/PrintConfig.hpp"
 
@@ -30,12 +32,12 @@ class SmartFilamentPanel;
 bool try_pop_up_before_slice(bool is_slice_all, Plater* plater_ref, PartPlate* partplate_ref, bool force_pop_up = false);
 std::vector<FilamentMapMode> resolve_available_auto_modes(Print *print_obj, const std::vector<FilamentMapMode> &requested_modes, bool machine_synced);
 
-class FilamentMapDialog : public wxDialog
+class FilamentMapDialog : public QDialog
 {
     enum PageType { ptAuto, ptManual };
 
 public:
-    FilamentMapDialog(wxWindow *parent,
+    FilamentMapDialog(QWidget *parent,
         const std::vector<std::string>& filament_color,
         const std::vector<std::string>& filament_type,
         const std::vector<int> &filament_map,
@@ -61,22 +63,22 @@ public:
         return {};
     }
 
-    int ShowModal() override;
+    int exec() override;
 
 private:
-    void make_header(wxBoxSizer *sizer, bool only_saving_mode);
-    void make_body(wxBoxSizer                         *sizer,
+    void make_header(QBoxLayout *sizer, bool only_saving_mode);
+    void make_body(QBoxLayout                         *sizer,
                    bool                                only_saving_mode,
                    const std::vector<FilamentMapMode> &modes_to_use,
                    const std::vector<int>             &filaments,
                    const FilamentMapMode               mode,
                    bool                                machine_synced);
-    void make_footer(wxBoxSizer *sizer, const FilamentMapMode mode);
+    void make_footer(QBoxLayout *sizer, const FilamentMapMode mode);
 
-    void on_ok(wxCommandEvent &event);
-    void on_cancle(wxCommandEvent &event);
-    void on_switch_mode(wxCommandEvent &event);
-    void on_smart_filament_checkbox(wxCommandEvent &event);
+    void on_ok();
+    void on_cancle();
+    void on_switch_mode();
+    void on_smart_filament_checkbox();
 
     void update_panel_status(PageType page);
 

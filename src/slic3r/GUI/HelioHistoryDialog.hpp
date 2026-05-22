@@ -1,12 +1,8 @@
 #ifndef slic3r_GUI_HelioHistoryDialog_hpp_
 #define slic3r_GUI_HelioHistoryDialog_hpp_
+#include <QWidget>
+#include <QString>
 
-#include <wx/wx.h>
-#include <wx/dialog.h>
-#include <wx/sizer.h>
-#include <wx/stattext.h>
-#include <wx/button.h>
-#include <wx/scrolwin.h>
 #include <vector>
 #include <chrono>
 
@@ -25,23 +21,23 @@ struct HelioInputDialogTheme;
 class HelioHistoryDialog : public DPIDialog
 {
 public:
-    HelioHistoryDialog(wxWindow* parent = nullptr);
+    HelioHistoryDialog(QWidget* parent = nullptr);
     ~HelioHistoryDialog();
 
-    void on_dpi_changed(const wxRect& suggested_rect) override;
+    void on_dpi_changed(const QRect& suggested_rect) override;
 
 private:
     // UI Components
-    wxScrolledWindow* m_scroll_window{nullptr};
-    wxBoxSizer* m_main_sizer{nullptr};
-    wxBoxSizer* m_content_sizer{nullptr};
+    QScrollArea* m_scroll_window{nullptr};
+    QBoxLayout* m_main_sizer{nullptr};
+    QBoxLayout* m_content_sizer{nullptr};
     Button* m_button_refresh{nullptr};
     Button* m_button_close{nullptr};
 
     // Loading/empty state
     Label* m_loading_label{nullptr};
-    wxPanel* m_empty_state_panel{nullptr};
-    wxPanel* m_content_panel{nullptr};
+    QWidget* m_empty_state_panel{nullptr};
+    QWidget* m_content_panel{nullptr};
 
     // Data
     std::vector<HelioQuery::OptimizationRun> m_optimizations;
@@ -55,24 +51,24 @@ private:
 
     // UI Creation
     void create_ui();
-    void create_header(wxBoxSizer* parent_sizer);
+    void create_header(QBoxLayout* parent_sizer);
     void create_loading_state();
     void create_empty_state();
     void create_content_sections();
 
     // Section creators
-    wxPanel* create_optimization_section(const HelioInputDialogTheme& theme);
-    wxPanel* create_simulation_section(const HelioInputDialogTheme& theme);
-    wxPanel* create_run_card(wxWindow* parent, const HelioQuery::OptimizationRun& run, const HelioInputDialogTheme& theme);
-    wxPanel* create_run_card(wxWindow* parent, const HelioQuery::SimulationRun& run, const HelioInputDialogTheme& theme);
+    QWidget* create_optimization_section(const HelioInputDialogTheme& theme);
+    QWidget* create_simulation_section(const HelioInputDialogTheme& theme);
+    QWidget* create_run_card(QWidget* parent, const HelioQuery::OptimizationRun& run, const HelioInputDialogTheme& theme);
+    QWidget* create_run_card(QWidget* parent, const HelioQuery::SimulationRun& run, const HelioInputDialogTheme& theme);
 
     // Actions
-    void on_refresh(wxMouseEvent& event);
-    void on_close(wxMouseEvent& event);
+    void on_refresh(QMouseEvent& event);
+    void on_close(QMouseEvent& event);
     void on_download_gcode(const std::string& gcode_url, const std::string& run_name);
     void on_view_details_opt(const HelioQuery::OptimizationRun& run);
     void on_view_details_sim(const HelioQuery::SimulationRun& run);
-    void on_helio_completion(wxEvent& event);
+    void on_helio_completion(QEvent& event);
 
     // Data loading
     void load_recent_runs();
@@ -81,11 +77,11 @@ private:
     void show_content();
 
     // Helper functions
-    wxString format_time_ago(const std::chrono::system_clock::time_point& timestamp);
-    wxString format_file_size(int layers);
+    QString format_time_ago(const std::chrono::system_clock::time_point& timestamp);
+    QString format_file_size(int layers);
     std::chrono::system_clock::time_point parse_timestamp_from_name(const std::string& name);
-    wxColour get_status_color(const std::string& status);
-    wxString get_print_outcome_text(const std::string& outcome);
+    QColor get_status_color(const std::string& status);
+    QString get_print_outcome_text(const std::string& outcome);
 };
 
 }} // namespace Slic3r::GUI

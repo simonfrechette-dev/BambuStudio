@@ -2,129 +2,98 @@
 #define slic3r_GUI_StepCtrlBase_hpp_
 
 #include "StaticBox.hpp"
-
-wxDECLARE_EVENT( EVT_STEP_CHANGING, wxCommandEvent );
-wxDECLARE_EVENT( EVT_STEP_CHANGED, wxCommandEvent );
+#include "../QtExtensions.hpp"
+#include <QFont>
+#include <QString>
+#include <vector>
 
 class StepCtrlBase : public StaticBox
 {
+    Q_OBJECT
 protected:
-    wxFont font_tip;
+    QFont      font_tip;
     StateColor clr_bar;
     StateColor clr_step;
     StateColor clr_text;
     StateColor clr_tip;
-    int radius = 7;
+    int radius    = 7;
     int bar_width = 4;
 
-    std::vector<wxString> steps;
-    std::vector<wxString> tips;
-    wxString hint;
-
+    std::vector<QString> steps;
+    std::vector<QString> tips;
+    QString hint;
     int step = -1;
 
-    wxPoint drag_offset;
-    wxPoint pos_thumb;
-
 public:
-    StepCtrlBase(wxWindow *      parent,
-             wxWindowID      id,
-             const wxPoint & pos       = wxDefaultPosition,
-             const wxSize &  size      = wxDefaultSize,
-             long            style     = 0);
+    explicit StepCtrlBase(QWidget *parent = nullptr);
+    ~StepCtrlBase() override;
 
-    ~StepCtrlBase();
+    void SetHint(const QString &h);
+    bool SetTipFont(const QFont &font);
 
-public:
-    void SetHint(wxString hint);
-
-    bool SetTipFont(wxFont const & font);
-
-public:
-    int AppendItem(const wxString &item, wxString const & tip = {});
-
+    int  AppendItem(const QString &item, const QString &tip = {});
     void DeleteAllItems();
-
     unsigned int GetCount() const;
-
     int  GetSelection() const;
-
     void SelectItem(int item);
     void Idle();
+    QString GetItemText(unsigned int item) const;
+    int     GetItemUseText(const QString &txt) const;
+    void    SetItemText(unsigned int item, const QString &value);
 
-    wxString GetItemText(unsigned int item) const;
-    int      GetItemUseText(wxString txt) const;
-    void     SetItemText(unsigned int item, wxString const& value);
+signals:
+    void stepChanging(int item);
+    void stepChanged(int item);
 
 private:
-    // some useful events
     bool sendStepCtrlEvent(bool changing = false);
 };
 
 class StepCtrl : public StepCtrlBase
 {
+    Q_OBJECT
     ScalableBitmap bmp_thumb;
-
 public:
-    StepCtrl(wxWindow *      parent,
-             wxWindowID      id,
-             const wxPoint & pos       = wxDefaultPosition,
-             const wxSize &  size      = wxDefaultSize,
-             long            style     = 0);
+    explicit StepCtrl(QWidget *parent = nullptr);
+    void Rescale();
 
-    virtual void Rescale();
+protected:
+    void doRender(QPainter &painter) override;
+    void mousePressEvent(QMouseEvent *event) override;
+    void mouseMoveEvent(QMouseEvent *event) override;
+    void mouseReleaseEvent(QMouseEvent *event) override;
 
 private:
-    void mouseDown(wxMouseEvent &event);
-    void mouseMove(wxMouseEvent &event);
-    void mouseUp(wxMouseEvent &event);
-    void mouseCaptureLost(wxMouseCaptureLostEvent &event);
-
-    void doRender(wxDC &dc) override;
-
-    DECLARE_EVENT_TABLE()
+    QPoint drag_offset;
+    bool   dragging = false;
 };
 
 class StepIndicator : public StepCtrlBase
 {
+    Q_OBJECT
     ScalableBitmap bmp_ok;
-
 public:
-    StepIndicator(wxWindow *parent,
-             wxWindowID      id,
-             const wxPoint & pos       = wxDefaultPosition,
-             const wxSize &  size      = wxDefaultSize,
-             long            style     = 0);
-
-    virtual void Rescale();
-
+    explicit StepIndicator(QWidget *parent = nullptr);
+    void Rescale();
     void SelectNext();
-private:
-    void doRender(wxDC &dc) override;
-};
 
+protected:
+    void doRender(QPainter &painter) override;
+};
 
 class FilamentStepIndicator : public StepCtrlBase
-
 {
+    Q_OBJECT
     ScalableBitmap bmp_ok;
-    //wxBitmap bmp_extruder;
-    wxString m_slot_information = "";
-
+    QString        m_slot_information;
 public:
-    FilamentStepIndicator(wxWindow* parent,
-        wxWindowID      id,
-        const wxPoint& pos = wxDefaultPosition,
-        const wxSize& size = wxDefaultSize,
-        long            style = 0);
-
-    virtual void Rescale();
-
+    explicit FilamentStepIndicator(QWidget *parent = nullptr);
+    void Rescale();
     void SelectNext();
-    void SetSlotInformation(wxString slot);
-private:
-    void doRender(wxDC& dc) override;
-};
+    void SetSlotInformation(const QString &slot);
 
+protected:
+    void doRender(QPainter &painter) override;
+};
 
 #endif // !slic3r_GUI_StepCtrlBase_hpp_

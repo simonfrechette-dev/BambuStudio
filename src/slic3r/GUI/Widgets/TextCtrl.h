@@ -1,10 +1,10 @@
 #ifdef __WXMSW__
-class TextCtrl : public wxTextCtrl
+class TextCtrl : public QLineEdit
 {
 public:
-    using wxTextCtrl::wxTextCtrl;
-    WXHBRUSH DoMSWControlColor(WXHDC pDC, wxColour colBg, WXHWND hWnd) { return wxTextCtrl::DoMSWControlColor(pDC, wxColour(), hWnd); }
+    using QLineEdit::QLineEdit;
+    WXHBRUSH DoMSWControlColor(WXHDC pDC, QColor colBg, WXHWND hWnd) { return QLineEdit::DoMSWControlColor(pDC, QColor(), hWnd); }
 };
 #else
-typedef wxTextCtrl TextCtrl;
+typedef QLineEdit TextCtrl;
 #endif

@@ -1,18 +1,3 @@
-#include <wx/panel.h>
-#include <wx/bitmap.h>
-#include <wx/image.h>
-#include <wx/sizer.h>
-#include <wx/gbsizer.h>
-#include <wx/webrequest.h>
-#include <wx/control.h>
-#include <wx/dcclient.h>
-#include <wx/display.h>
-#include <wx/mstream.h>
-#include <wx/sstream.h>
-#include <wx/zstream.h>
-#include <wx/window.h>
-#include <wx/dcgraph.h>
-#include <wx/simplebook.h>
 
 #include "Widgets/Label.hpp"
 #include "Widgets/CheckBox.hpp"
@@ -43,22 +28,22 @@ protected:
     Button *m_apply_button;
 
 public:
-    PartSkipConfirmDialog(wxWindow *parent);
+    PartSkipConfirmDialog(QWidget *parent);
     ~PartSkipConfirmDialog();
 
-    void    on_dpi_changed(const wxRect &suggested_rect);
+    void    on_dpi_changed(const QRect &suggested_rect);
     Button *GetConfirmButton();
-    void    SetMsgLabel(wxString msg);
-    void    SetTipLabel(wxString msg);
+    void    SetMsgLabel(QString msg);
+    void    SetTipLabel(QString msg);
     bool    Show(bool show);
 };
 
 class PartSkipDialog : public DPIDialog
 {
 public:
-    PartSkipDialog(wxWindow *parent);
+    PartSkipDialog(QWidget *parent);
     ~PartSkipDialog();
-    void on_dpi_changed(const wxRect &suggested_rect);
+    void on_dpi_changed(const QRect &suggested_rect);
     bool Show(bool show);
 
     void UpdatePartsStateFromPrinter(MachineObject *obj_);
@@ -69,10 +54,10 @@ public:
 
     MachineObject *m_obj{nullptr};
 
-    wxSimplebook *m_simplebook;
-    wxPanel      *m_book_third_panel;
-    wxPanel      *m_book_second_panel;
-    wxPanel      *m_book_first_panel;
+    QStackedWidget *m_simplebook;
+    QWidget      *m_book_third_panel;
+    QWidget      *m_book_second_panel;
+    QWidget      *m_book_first_panel;
 
     SkipPartCanvas   *m_canvas;
     Button           *m_zoom_in_btn;
@@ -81,11 +66,11 @@ public:
     CheckBox         *m_all_checkbox;
     Button           *m_percent_label;
     Label            *m_all_label;
-    wxPanel          *m_line;
-    wxPanel          *m_line_top;
-    wxScrolledWindow *m_list_view;
+    QWidget          *m_line;
+    QWidget          *m_line_top;
+    QScrollArea *m_list_view;
 
-    wxPanel *m_dlg_placeholder;
+    QWidget *m_dlg_placeholder;
     Label   *m_cnt_label;
     Label   *m_tot_label;
 
@@ -94,19 +79,19 @@ public:
     Label          *m_loading_label;
     Label          *m_retry_label;
     ScalableBitmap *m_retry_icon;
-    wxStaticBitmap *m_retry_bitmap;
+    QLabel *m_retry_bitmap;
 
-    wxBoxSizer *m_sizer;
-    wxBoxSizer *m_dlg_sizer;
-    wxBoxSizer *m_dlg_content_sizer;
-    wxBoxSizer *m_dlg_btn_sizer;
-    wxBoxSizer *m_canvas_sizer;
-    wxBoxSizer *m_canvas_btn_sizer;
-    wxBoxSizer *m_list_sizer;
-    wxBoxSizer *m_scroll_sizer;
-    wxBoxSizer *m_book_first_sizer;
-    wxBoxSizer *m_book_second_sizer;
-    wxBoxSizer *m_book_second_btn_sizer;
+    QBoxLayout *m_sizer;
+    QBoxLayout *m_dlg_sizer;
+    QBoxLayout *m_dlg_content_sizer;
+    QBoxLayout *m_dlg_btn_sizer;
+    QBoxLayout *m_canvas_sizer;
+    QBoxLayout *m_canvas_btn_sizer;
+    QBoxLayout *m_list_sizer;
+    QBoxLayout *m_scroll_sizer;
+    QBoxLayout *m_book_first_sizer;
+    QBoxLayout *m_book_second_sizer;
+    QBoxLayout *m_book_second_btn_sizer;
     Button     *m_second_retry_btn;
     AnimaIcon  *m_loading_icon;
 
@@ -138,15 +123,15 @@ private:
     bool is_local_file_existed(const std::vector<string> &local_paths);
 
     void DownloadPartsFile();
-    void OnFileSystemEvent(wxCommandEvent &event);
-    void OnFileSystemResult(wxCommandEvent &event);
+    void OnFileSystemEvent(QEvent &event);
+    void OnFileSystemResult(QEvent &event);
     void fetchUrl(boost::weak_ptr<PrinterFileSystem> wfs);
 
-    void OnZoomIn(wxCommandEvent &event);
-    void OnZoomOut(wxCommandEvent &event);
-    void OnSwitchDrag(wxCommandEvent &event);
-    void OnZoomPercent(wxCommandEvent &event);
-    void UpdatePartsStateFromCanvas(wxCommandEvent &event);
+    void OnZoomIn(QEvent &event);
+    void OnZoomOut(QEvent &event);
+    void OnSwitchDrag(QEvent &event);
+    void OnZoomPercent(QEvent &event);
+    void UpdatePartsStateFromCanvas(QEvent &event);
 
     void UpdateZoomPercent();
     void UpdateCountLabel();
@@ -155,9 +140,9 @@ private:
     bool IsAllChecked();
     bool IsAllCancled();
 
-    void OnRetryButton(wxCommandEvent &event);
-    void OnAllCheckbox(wxCommandEvent &event);
-    void OnApplyDialog(wxCommandEvent &event);
+    void OnRetryButton(QEvent &event);
+    void OnAllCheckbox(QEvent &event);
+    void OnApplyDialog(QEvent &event);
 };
 
 }} // namespace Slic3r::GUI

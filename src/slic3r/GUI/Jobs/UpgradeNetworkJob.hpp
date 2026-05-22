@@ -4,6 +4,9 @@
 #include <boost/filesystem.hpp>
 #include <boost/log/trivial.hpp>
 #include <functional>
+#include <QEvent>
+#include <QWidget>
+#include <QString>
 #include "Job.hpp"
 
 namespace fs = boost::filesystem;
@@ -21,12 +24,17 @@ enum PluginInstallStatus {
 
 typedef std::function<void(int status, int percent, bool& cancel)> InstallProgressFn;
 
+inline const QEvent::Type EVT_UPGRADE_UPDATE_MESSAGE  = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_UPGRADE_NETWORK_SUCCESS = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_DOWNLOAD_NETWORK_FAILED = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_INSTALL_NETWORK_FAILED  = static_cast<QEvent::Type>(QEvent::registerEventType());
+
 class UpgradeNetworkJob : public Job
 {
-    wxWindow *           m_event_handle{nullptr};
+    QWidget *            m_event_handle{nullptr};
     std::function<void()> m_success_fun{nullptr};
-    bool                m_job_finished{ false };
-    int                 m_print_job_completed_id = 0;
+    bool                 m_job_finished{ false };
+    int                  m_print_job_completed_id = 0;
 
     InstallProgressFn pro_fn { nullptr };
 
@@ -43,20 +51,15 @@ public:
         return 100;
     }
 
-    bool is_finished() { return m_job_finished;  }
+    bool is_finished() { return m_job_finished; }
 
     void on_success(std::function<void()> success);
-    void update_status(int st, const wxString &msg);
+    void update_status(int st, const QString &msg);
     void process() override;
     void finalize() override;
-    void set_event_handle(wxWindow* hanle);
+    void set_event_handle(QWidget* handle);
 };
-
-wxDECLARE_EVENT(EVT_UPGRADE_UPDATE_MESSAGE, wxCommandEvent);
-wxDECLARE_EVENT(EVT_UPGRADE_NETWORK_SUCCESS, wxCommandEvent);
-wxDECLARE_EVENT(EVT_DOWNLOAD_NETWORK_FAILED, wxCommandEvent);
-wxDECLARE_EVENT(EVT_INSTALL_NETWORK_FAILED, wxCommandEvent);
 
 }} // namespace Slic3r::GUI
 
-#endif // ARRANGEJOB_HPP
+#endif // __UpgradeNetworkJob_HPP__

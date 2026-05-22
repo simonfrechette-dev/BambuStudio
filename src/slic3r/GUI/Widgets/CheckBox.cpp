@@ -1,127 +1,142 @@
 #include "CheckBox.hpp"
 
-#include "../wxExtensions.hpp"
+#include <QPainter>
+#include <QMouseEvent>
+#include <QFocusEvent>
+#include <QEnterEvent>
 
-CheckBox::CheckBox(wxWindow *parent, int id)
-    : wxBitmapToggleButton(parent, id, wxNullBitmap, wxDefaultPosition, wxDefaultSize, wxBORDER_NONE)
-    , m_on(this, "check_on", 18)
-    , m_half(this, "check_half", 18)
-    , m_off(this, "check_off", 18)
-    , m_on_disabled(this, "check_on_disabled", 18)
-    , m_half_disabled(this, "check_half_disabled", 18)
-    , m_off_disabled(this, "check_off_disabled", 18)
-    , m_on_focused(this, "check_on_focused", 18)
-    , m_half_focused(this, "check_half_focused", 18)
-    , m_off_focused(this, "check_off_focused", 18)
+CheckBox::CheckBox(QWidget *parent, int /*id*/)
+    : QAbstractButton(parent)
+    , m_on(this,            "check_on",           18)
+    , m_half(this,          "check_half",         18)
+    , m_off(this,           "check_off",          18)
+    , m_on_disabled(this,   "check_on_disabled",  18)
+    , m_half_disabled(this, "check_half_disabled",18)
+    , m_off_disabled(this,  "check_off_disabled", 18)
+    , m_on_focused(this,    "check_on_focused",   18)
+    , m_half_focused(this,  "check_half_focused", 18)
+    , m_off_focused(this,   "check_off_focused",  18)
 {
-	//SetBackgroundStyle(wxBG_STYLE_TRANSPARENT);
-	if (parent)
-		SetBackgroundColour(parent->GetBackgroundColour());
-	Bind(wxEVT_TOGGLEBUTTON, [this](auto& e) { m_half_checked = false; update(); e.Skip(); });
-#ifdef __WXOSX__ // State not fully implement on MacOS
-    Bind(wxEVT_SET_FOCUS, &CheckBox::updateBitmap, this);
-    Bind(wxEVT_KILL_FOCUS, &CheckBox::updateBitmap, this);
-    Bind(wxEVT_ENTER_WINDOW, &CheckBox::updateBitmap, this);
-    Bind(wxEVT_LEAVE_WINDOW, &CheckBox::updateBitmap, this);
-#endif
-	SetSize(m_on.GetBmpSize());
-	SetMinSize(m_on.GetBmpSize());
-	update();
+    if (parent)
+        setAutoFillBackground(false);
+    setCheckable(true);
+    const QSize sz = m_on.GetBmpSize();
+    setFixedSize(sz);
+    connect(this, &QAbstractButton::clicked, this, [this]() {
+        m_half_checked = false;
+        m_checked      = !m_checked;
+        update();
+        emit toggled(m_checked);
+    });
 }
 
-void CheckBox::SetValue(bool value)
+void CheckBox::setChecked(bool value)
 {
-    if (wxBitmapToggleButton::GetValue() != value) {
-        wxBitmapToggleButton::SetValue(value);
+    if (m_checked != value) {
+        m_checked = value;
         update();
     }
 }
 
 void CheckBox::SetHalfChecked(bool value)
 {
-	m_half_checked = value;
-	update();
+    m_half_checked = value;
+    update();
 }
 
 void CheckBox::Rescale()
 {
-    m_on.msw_rescale();
-    m_half.msw_rescale();
-    m_off.msw_rescale();
-    m_on_disabled.msw_rescale();
-    m_half_disabled.msw_rescale();
-    m_off_disabled.msw_rescale();
-    m_on_focused.msw_rescale();
-    m_half_focused.msw_rescale();
-    m_off_focused.msw_rescale();
-    SetSize(m_on.GetBmpSize());
-	update();
+    // msw_rescale is no-op on Qt; just resize to the new logical size.
+    const QSize sz = m_on.GetBmpSize();
+    setFixedSize(sz);
+    update();
 }
 
-void CheckBox::update()
+QSize CheckBox::sizeHint() const
 {
-	SetBitmapLabel((m_half_checked ? m_half : GetValue() ? m_on : m_off).bmp());
-    SetBitmapDisabled((m_half_checked ? m_half_disabled : GetValue() ? m_on_disabled : m_off_disabled).bmp());
-#ifdef __WXMSW__
-    SetBitmapFocus((m_half_checked ? m_half_focused : GetValue() ? m_on_focused : m_off_focused).bmp());
-#endif
-    SetBitmapCurrent((m_half_checked ? m_half_focused : GetValue() ? m_on_focused : m_off_focused).bmp());
-#ifdef __WXOSX__
-    wxCommandEvent e(wxEVT_UPDATE_UI);
-    updateBitmap(e);
-#endif
+    return m_on.GetBmpSize();
 }
 
-#ifdef __WXMSW__
-
-CheckBox::State CheckBox::GetNormalState() const { return State_Normal; }
-
-#endif
-
-
-#ifdef __WXOSX__
-
-bool CheckBox::Enable(bool enable)
+const QPixmap &CheckBox::currentPixmap() const
 {
-    bool result = wxBitmapToggleButton::Enable(enable);
-    if (result) {
-        m_disable = !enable;
-        wxCommandEvent e(wxEVT_ACTIVATE);
-        updateBitmap(e);
+    const bool disabled = !isEnabled();
+    const bool focused  = m_focused || m_hovered;
+
+    if (m_half_checked) {
+        if (disabled) return m_half_disabled.bmp();
+        if (focused)  return m_half_focused.bmp();
+        return m_half.bmp();
     }
-    return result;
+    if (m_checked) {
+        if (disabled) return m_on_disabled.bmp();
+        if (focused)  return m_on_focused.bmp();
+        return m_on.bmp();
+    }
+    if (disabled) return m_off_disabled.bmp();
+    if (focused)  return m_off_focused.bmp();
+    return m_off.bmp();
 }
 
-wxBitmap CheckBox::DoGetBitmap(State which) const
+void CheckBox::update_bitmap() { update(); }
+
+void CheckBox::paintEvent(QPaintEvent * /*event*/)
 {
-    if (m_disable) {
-        return wxBitmapToggleButton::DoGetBitmap(State_Disabled);
-    }
-    if (m_focus) {
-        return wxBitmapToggleButton::DoGetBitmap(State_Current);
-    }
-    return wxBitmapToggleButton::DoGetBitmap(which);
+    QPainter p(this);
+    p.drawPixmap(QPoint(0, 0), currentPixmap());
 }
 
-void CheckBox::updateBitmap(wxEvent & evt)
+void CheckBox::changeEvent(QEvent *event)
 {
-    evt.Skip();
-    if (evt.GetEventType() == wxEVT_ENTER_WINDOW) {
-        m_hover = true;
-    } else if (evt.GetEventType() == wxEVT_LEAVE_WINDOW) {
-        m_hover = false;
+    if (event->type() == QEvent::EnabledChange)
+        update();
+    QAbstractButton::changeEvent(event);
+}
+
+void CheckBox::enterEvent(QEnterEvent *event)
+{
+    m_hovered = true;
+    update();
+    QAbstractButton::enterEvent(event);
+}
+
+void CheckBox::leaveEvent(QEvent *event)
+{
+    m_hovered = false;
+    update();
+    QAbstractButton::leaveEvent(event);
+}
+
+void CheckBox::focusInEvent(QFocusEvent *event)
+{
+    m_focused = true;
+    update();
+    QAbstractButton::focusInEvent(event);
+}
+
+void CheckBox::focusOutEvent(QFocusEvent *event)
+{
+    m_focused = false;
+    update();
+    QAbstractButton::focusOutEvent(event);
+}
+
+void CheckBox::mousePressEvent(QMouseEvent *event)
+{
+    if (event->button() == Qt::LeftButton)
+        event->accept();
+    else
+        QAbstractButton::mousePressEvent(event);
+}
+
+void CheckBox::mouseReleaseEvent(QMouseEvent *event)
+{
+    if (event->button() == Qt::LeftButton && rect().contains(event->pos())) {
+        m_half_checked = false;
+        m_checked      = !m_checked;
+        update();
+        emit toggled(m_checked);
+        event->accept();
     } else {
-        if (evt.GetEventType() == wxEVT_SET_FOCUS) {
-            m_focus = true;
-        } else if (evt.GetEventType() == wxEVT_KILL_FOCUS) {
-            m_focus = false;
-        }
-        wxMouseEvent e;
-        if (m_hover)	
-            OnEnterWindow(e);
-        else
-            OnLeaveWindow(e);
+        QAbstractButton::mouseReleaseEvent(event);
     }
 }
-	
-#endif

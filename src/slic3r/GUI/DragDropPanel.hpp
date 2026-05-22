@@ -1,35 +1,32 @@
 #ifndef slic3r_DragDropPanel_hpp_
 #define slic3r_DragDropPanel_hpp_
+#include <QWidget>
+#include <QString>
 
 #include "GUI.hpp"
 #include "GUI_Utils.hpp"
 #include "Widgets/Label.hpp"
 
-#include <wx/simplebook.h>
-#include <wx/dialog.h>
-#include <wx/sizer.h>
-#include <wx/timer.h>
 #include <vector>
 
 
 namespace Slic3r { namespace GUI {
 
-wxDECLARE_EVENT(wxEVT_DRAG_DROP_COMPLETED, wxCommandEvent);
 
 class FilamentMapManualPanel;
 
-wxColor Hex2Color(const std::string& str);
+QColor Hex2Color(const std::string& str);
 
 class ColorPanel;
-class DragDropPanel : public wxPanel
+class DragDropPanel : public QWidget
 {
 public:
-    DragDropPanel(wxWindow *parent, const wxString &label, bool is_auto, bool has_title = true, bool is_sub = false);
+    DragDropPanel(QWidget *parent, const QString &label, bool is_auto, bool has_title = true, bool is_sub = false);
 
-    void AddColorBlock(const wxColour &color, const std::string &type, int filament_id, bool update_ui = true);
+    void AddColorBlock(const QColor &color, const std::string &type, int filament_id, bool update_ui = true);
     void RemoveColorBlock(ColorPanel *panel, bool update_ui = true);
-    void DoDragDrop(ColorPanel *panel, const wxColour &color, const std::string &type, int filament_id);
-    void UpdateLabel(const wxString &label);
+    void DoDragDrop(ColorPanel *panel, const QColor &color, const std::string &type, int filament_id);
+    void UpdateLabel(const QString &label);
 
     std::vector<int> GetAllFilaments() const;
 
@@ -39,8 +36,8 @@ public:
     std::vector<ColorPanel *> get_filament_blocks() const { return m_filament_blocks; }
 
 private:
-    wxBoxSizer *m_sizer;
-    wxGridSizer *m_grid_item_sizer;
+    QBoxLayout *m_sizer;
+    QGridLayout *m_grid_item_sizer;
     Label       *m_title_label = nullptr;
     bool         m_is_auto;
 
@@ -53,33 +50,33 @@ private:
 
 ///////////////   ColorPanel  start ////////////////////////
 // The UI panel of drag item
-class ColorPanel : public wxPanel
+class ColorPanel : public QWidget
 {
 public:
-    ColorPanel(DragDropPanel *parent, const wxColour &color, int filament_id, const std::string& type);
+    ColorPanel(DragDropPanel *parent, const QColor &color, int filament_id, const std::string& type);
 
-    wxColour GetColor() const { return m_color; }
+    QColor GetColor() const { return m_color; }
     int      GetFilamentId() const { return m_filament_id; }
     std::string GetType() const { return m_type; }
 
 private:
-    void OnLeftDown(wxMouseEvent &event);
-    void OnLeftUp(wxMouseEvent &event);
-    void OnPaint(wxPaintEvent &event);
+    void OnLeftDown(QMouseEvent &event);
+    void OnLeftUp(QMouseEvent &event);
+    void OnPaint(QPaintEvent &event);
 
     DragDropPanel *m_parent;
-    wxColor        m_color;
+    QColor        m_color;
     std::string    m_type;
     int            m_filament_id;
 
 };
 
-class SeparatedDragDropPanel : public wxPanel
+class SeparatedDragDropPanel : public QWidget
 {
 public:
-    SeparatedDragDropPanel(wxWindow *parent, const wxString &label, bool use_separation = false);
+    SeparatedDragDropPanel(QWidget *parent, const QString &label, bool use_separation = false);
 
-    void AddColorBlock(const wxColour &color, const std::string &type, int filament_id, bool is_high_flow = false, bool update_ui = true);
+    void AddColorBlock(const QColor &color, const std::string &type, int filament_id, bool is_high_flow = false, bool update_ui = true);
     void RemoveColorBlock(ColorPanel *panel, bool update_ui = true);
 
     std::vector<int> GetAllFilaments() const;
@@ -94,15 +91,15 @@ public:
     void SetUseSeparation(bool use_separation);
     bool IsUseSeparation() const { return m_use_separation; }
     void ClearAllBlocks();
-    void UpdateLabel(const wxString &label);
+    void UpdateLabel(const QString &label);
 
 private:
     void UpdateLayout();
 
-    wxBoxSizer   *m_main_sizer;
-    wxPanel      *m_content_panel;
-    wxBoxSizer   *m_content_sizer;
-    wxStaticText *m_label;
+    QBoxLayout   *m_main_sizer;
+    QWidget      *m_content_panel;
+    QBoxLayout   *m_content_sizer;
+    QLabel *m_label;
 
     DragDropPanel *m_high_flow_panel;
     DragDropPanel *m_standard_panel;

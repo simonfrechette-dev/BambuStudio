@@ -1,6 +1,7 @@
 #pragma once
 #include <nlohmann/json.hpp>
 #include "slic3r/Utils/json_diff.hpp"
+#include <QString>
 
 #include "DevDefs.h"
 #include "DevFirmware.h"
@@ -33,7 +34,7 @@ public:
     std::string GetUpgradeProgressStr() const { return m_upgrade_progress; }
     int         GetUpgradeProgressInt() const;
     std::string GetUpgradeMessageStr() const { return m_upgrade_message; }
-    wxString    GetUpgradeErrCodeStr() const;
+    QString     GetUpgradeErrCodeStr() const;
 
 public:
     // ctrls

@@ -5,9 +5,6 @@
 #include "libslic3r/libslic3r.h"
 
 #include "PresetHints.hpp"
-
-#include <wx/intl.h> 
-
 #include "GUI.hpp"
 #include "format.hpp"
 #include "I18N.hpp"

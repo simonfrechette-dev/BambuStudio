@@ -1,13 +1,8 @@
 #ifndef slic3r_GUI_SafetyOptionsDialog_hpp_
 #define slic3r_GUI_SafetyOptionsDialog_hpp_
+#include <QWidget>
+#include <QString>
 
-#include <wx/wx.h>
-#include <wx/font.h>
-#include <wx/colour.h>
-#include <wx/string.h>
-#include <wx/sizer.h>
-#include <wx/dialog.h>
-#include <wx/tipwin.h>
 
 #include "GUI_Utils.hpp"
 #include "wxExtensions.hpp"
@@ -26,7 +21,7 @@ class SafetyOptionsDialog : public DPIDialog
 {
 protected:
     // settings
-    wxScrolledWindow* m_scrollwindow;
+    QScrollArea* m_scrollwindow;
 
     CheckBox*    m_cb_open_door;
     CheckBox*    m_cb_idel_heating_protection;
@@ -34,31 +29,31 @@ protected:
     Label*       m_text_idel_heating_protection;
     Label*       m_text_idel_heating_protection_caption;
     SwitchBoard* m_open_door_switch_board;
-    wxPanel*    m_idel_heating_container { nullptr };
+    QWidget*    m_idel_heating_container { nullptr };
 
     // toast for idle heating unavailable
-    wxPopupWindow *m_idel_heating_toast{nullptr};
-    wxTimer      m_idel_heating_toast_timer;
+    QWidget *m_idel_heating_toast{nullptr};
+    QTimer      m_idel_heating_toast_timer;
     bool         m_idel_protect_unavailable { false };
 
-    wxBoxSizer* create_settings_group(wxWindow* parent);
+    QBoxLayout* create_settings_group(QWidget* parent);
     bool print_halt = false;
 
 public:
-    SafetyOptionsDialog(wxWindow* parent);
+    SafetyOptionsDialog(QWidget* parent);
     ~SafetyOptionsDialog();
-    void on_dpi_changed(const wxRect &suggested_rect) override;
+    void on_dpi_changed(const QRect &suggested_rect) override;
 
     MachineObject *obj { nullptr };
 
     void             update_options(MachineObject *obj_);
     void             update_machine_obj(MachineObject *obj_);
-    bool             Show(bool show) override;
+    void setVisible(bool show) override;
 
 private:
     void updateOpenDoorCheck(MachineObject *obj);
     void updateIdelHeatingProtect(MachineObject *obj);
-    void show_idel_heating_toast(const wxString &text);
+    void show_idel_heating_toast(const QString &text);
 };
 
 }} // namespace Slic3r::GUI

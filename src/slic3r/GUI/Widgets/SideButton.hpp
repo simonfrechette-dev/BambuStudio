@@ -1,93 +1,79 @@
 #ifndef slic3r_GUI_SideButton_hpp_
 #define slic3r_GUI_SideButton_hpp_
 
-#include <wx/stattext.h>
-#include <wx/vlbox.h>
-#include <wx/combo.h>
-#include "../wxExtensions.hpp"
+#include "../QtExtensions.hpp"
+#include "StateColor.hpp"
 #include "StateHandler.hpp"
 
+#include <QWidget>
+#include <QColor>
+#include <QString>
+#include <vector>
 
-class SideButton : public wxWindow
+class SideButton : public QWidget
 {
+    Q_OBJECT
 public:
-
-    enum EHorizontalOrientation : unsigned char
-    {
+    enum EHorizontalOrientation : unsigned char {
         HO_Left,
         HO_Center,
         HO_Right,
         Num_Horizontal_Orientations
     };
 
-    SideButton(wxWindow* parent, wxString text, wxString icon = "", long style = 0, int iconSize = 0);
+    SideButton(QWidget *parent, const QString &text,
+               const QString &icon = {}, long style = 0, int iconSize = 0);
 
     void SetCornerRadius(double radius);
-
-    //BBS set enable array
-    void SetCornerEnable(const std::vector<bool>& enable);
-
+    void SetCornerEnable(const std::vector<bool> &enable);
     void SetTextLayout(EHorizontalOrientation orient, int margin = 15);
-
     void SetLayoutStyle(int style);
-
-    void SetLabel(const wxString& label);
-
-    bool SetForegroundColour(wxColour const & colour) override;
-
-    bool SetBackgroundColour(wxColour const & color) override;
-
-    bool SetBottomColour(wxColour const &color);
-
-    void SetMinSize(const wxSize& size) override;
-    
-    void SetBorderColor(StateColor const & color);
-
-    void SetForegroundColor(StateColor const &color);
-
-    void SetBackgroundColor(StateColor const &color);
-
+    void setText(const QString &label);
+    void setForegroundColour(QColor colour);
+    void setBackgroundColour(QColor color);
+    bool SetBottomColour(QColor color);
+    void SetMinSize(const QSize &size);
+    void SetBorderColor(const StateColor &color);
+    void SetForegroundColor(const StateColor &color);
+    void SetBackgroundColor(const StateColor &color);
     bool Enable(bool enable = true);
-
     void Rescale();
+    void SetExtraSize(const QSize &size);
+    void SetIconOffset(int offset);
 
-    void SetExtraSize(const wxSize& size);
+    QSize sizeHint() const override;
 
-    void SetIconOffset(const int offset);
+signals:
+    void clicked();
+
+protected:
+    void paintEvent(QPaintEvent *event) override;
+    void mousePressEvent(QMouseEvent *event) override;
+    void mouseReleaseEvent(QMouseEvent *event) override;
+    void changeEvent(QEvent *event) override;
 
 private:
-    wxSize textSize;
-    wxSize minSize;
+    void measureSize();
+
+    QString        m_text;
+    QSize          textSize;
+    QSize          minSize;
     ScalableBitmap icon;
-    double radius;
-    wxSize extra_size;
-    int icon_offset;
+    double         radius       = 0.0;
+    QSize          extra_size;
+    int            icon_offset  = 0;
+    int            layout_style = 0;
     std::vector<bool> radius_enable;
 
-    StateHandler    state_handler;
-    StateColor      text_color;
-    StateColor      border_color;
-    StateColor      background_color;
-    wxColour        bottom_color;
+    StateHandler state_handler;
+    StateColor   text_color;
+    StateColor   border_color;
+    StateColor   background_color;
+    QColor       bottom_color;
+    bool         pressedDown = false;
 
-    bool pressedDown = false;
-    int  layout_style = 0;
-
-    EHorizontalOrientation text_orientation;
-    int text_margin;
-
-
-    void paintEvent(wxPaintEvent& evt);
-
-    void dorender(wxDC& dc, wxDC& text_dc);
-
-    void messureSize();
-
-    void mouseDown(wxMouseEvent& event);
-    void mouseReleased(wxMouseEvent& event);
-
-    void sendButtonEvent();
-
-	DECLARE_EVENT_TABLE()
+    EHorizontalOrientation text_orientation = HO_Center;
+    int text_margin = 15;
 };
-#endif // !slic3r_GUI_Button_hpp_
+
+#endif // !slic3r_GUI_SideButton_hpp_

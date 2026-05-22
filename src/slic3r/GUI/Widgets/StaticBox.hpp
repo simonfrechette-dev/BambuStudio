@@ -1,27 +1,20 @@
 #ifndef slic3r_GUI_StaticBox_hpp_
 #define slic3r_GUI_StaticBox_hpp_
 
-#include "../wxExtensions.hpp"
+#include "../QtExtensions.hpp"
 #include "StateHandler.hpp"
 
-#include <wx/window.h>
+#include <QWidget>
+#include <QPainter>
+#include <QPen>
 
-class StaticBox : public wxWindow
+class StaticBox : public QWidget
 {
+    Q_OBJECT
 public:
-    StaticBox();
+    explicit StaticBox(QWidget *parent = nullptr, Qt::WindowFlags f = Qt::WindowFlags());
 
-    StaticBox(wxWindow* parent,
-             wxWindowID      id        = wxID_ANY,
-             const wxPoint & pos       = wxDefaultPosition,
-             const wxSize &  size      = wxDefaultSize,
-             long style = 0);
-
-    bool Create(wxWindow* parent,
-        wxWindowID      id        = wxID_ANY,
-        const wxPoint & pos       = wxDefaultPosition,
-        const wxSize &  size      = wxDefaultSize,
-        long style = 0);
+    bool init(QWidget *parent, Qt::WindowFlags f = Qt::WindowFlags());
 
     void SetCornerRadius(double radius);
 
@@ -29,40 +22,36 @@ public:
 
     void SetBorderColor(StateColor const & color);
 
-    void SetBorderColorNormal(wxColor const &color);
+    void SetBorderColorNormal(QColor const &color);
 
-    void SetBorderStyle(wxPenStyle style);
+    void SetBorderStyle(Qt::PenStyle style);
 
     void SetBackgroundColor(StateColor const &color);
 
-    void SetBackgroundColorNormal(wxColor const &color);
+    void SetBackgroundColorNormal(QColor const &color);
 
     void SetBackgroundColor2(StateColor const &color);
 
-    static wxColor GetParentBackgroundColor(wxWindow * parent);
+    static QColor GetParentBackgroundColor(QWidget *parent);
 
     void ShowBadge(bool show);
 
 protected:
-    void eraseEvent(wxEraseEvent& evt);
+    void paintEvent(QPaintEvent *event) override;
 
-    void paintEvent(wxPaintEvent& evt);
+    void render(QPainter &painter);
 
-    void render(wxDC& dc);
-
-    virtual void doRender(wxDC& dc);
+    virtual void doRender(QPainter &painter);
 
 protected:
-    double radius;
-    int border_width = 1;
-    wxPenStyle border_style = wxPENSTYLE_SOLID;
-    StateHandler state_handler;
-    StateColor   border_color;
-    StateColor   background_color;
-    StateColor   background_color2;
+    double         radius       = 8;
+    int            border_width = 1;
+    Qt::PenStyle   border_style = Qt::SolidLine;
+    StateHandler   state_handler;
+    StateColor     border_color;
+    StateColor     background_color;
+    StateColor     background_color2;
     ScalableBitmap badge;
-
-    DECLARE_EVENT_TABLE()
 };
 
 #endif // !slic3r_GUI_StaticBox_hpp_

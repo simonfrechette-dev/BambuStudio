@@ -1,372 +1,159 @@
 #include "AxisCtrlButton.hpp"
-#include "Label.hpp"
-#include "libslic3r/libslic3r.h"
+#include <QPainter>
+#include <QPainterPath>
+#include <QMouseEvent>
+#include <cmath>
 
-#include <wx/dcclient.h>
-#include <wx/dcgraph.h>
-
-StateColor blank_bg(StateColor(std::make_pair(wxColour("#FFFFFF"), (int)StateColor::Normal)));
-static const wxColour BUTTON_BG_COL = wxColour("#EEEEEE");
-static const wxColour BUTTON_IN_BG_COL = wxColour("#CECECE");
-
-static const wxColour bd = wxColour(0, 174, 66);
-static const wxColour text_num_color   = wxColour("#898989");
-static const wxColour BUTTON_PRESS_COL = wxColour(172, 172, 172);
-static const double sqrt2 = std::sqrt(2);
-
-BEGIN_EVENT_TABLE(AxisCtrlButton, wxPanel)
-EVT_LEFT_DOWN(AxisCtrlButton::mouseDown)
-EVT_LEFT_UP(AxisCtrlButton::mouseReleased)
-EVT_MOTION(AxisCtrlButton::mouseMoving)
-EVT_PAINT(AxisCtrlButton::paintEvent)
-END_EVENT_TABLE()
-
-#define OUTER_SIZE      FromDIP(105)
-#define INNER_SIZE      FromDIP(58)
-#define HOME_SIZE       FromDIP(23)
-#define BLANK_SIZE      FromDIP(24)
-#define GAP_SIZE        FromDIP(4)
-
-AxisCtrlButton::AxisCtrlButton(wxWindow *parent, ScalableBitmap &icon, long stlye)
-    : wxWindow(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, stlye)
-    , r_outer(OUTER_SIZE)
-    , r_inner(INNER_SIZE)
-    , r_home(HOME_SIZE)
-    , r_blank(BLANK_SIZE)
-    , gap(GAP_SIZE)
-    , last_pos(UNDEFINED)
-    , current_pos(UNDEFINED) // don't change init value
-    , text_color(std::make_pair(0x6B6B6B, (int) StateColor::Disabled), std::make_pair(*wxBLACK, (int) StateColor::Normal))
-	, state_handler(this)
+AxisCtrlButton::AxisCtrlButton(QWidget *parent, ScalableBitmap &icon, long /*style*/)
+    : QWidget(parent)
+    , state_handler(this)
+    , m_icon(icon)
 {
-    m_icon = icon;
-	wxWindow::SetBackgroundColour(parent->GetBackgroundColour());
-
-    border_color.append(bd, StateColor::Hovered);
-
-    background_color.append(BUTTON_BG_COL, StateColor::Disabled);
-    background_color.append(BUTTON_PRESS_COL, StateColor::Pressed);
-    background_color.append(BUTTON_BG_COL, StateColor::Hovered);
-    background_color.append(BUTTON_BG_COL, StateColor::Normal);
-    background_color.append(BUTTON_BG_COL, StateColor::Enabled);
-
-    inner_background_color.append(BUTTON_IN_BG_COL, StateColor::Disabled);
-    inner_background_color.append(BUTTON_PRESS_COL, StateColor::Pressed);
-    inner_background_color.append(BUTTON_IN_BG_COL, StateColor::Hovered);
-    inner_background_color.append(BUTTON_IN_BG_COL, StateColor::Normal);
-    inner_background_color.append(BUTTON_IN_BG_COL, StateColor::Enabled);
-
-    state_handler.attach({ &border_color, &background_color });
-    state_handler.update_binds();
+    setMinimumSize(120, 120);
+    updateParams();
 }
 
-void AxisCtrlButton::updateParams() {
-    r_outer = OUTER_SIZE;
-    r_inner = INNER_SIZE;
-    r_home = HOME_SIZE;
-    r_blank = BLANK_SIZE;
-    gap = GAP_SIZE;
+void AxisCtrlButton::SetMinSize(const QSize &sz) { minSize = sz; setMinimumSize(sz); updateParams(); }
+void AxisCtrlButton::SetTextColor(const StateColor &c)        { text_color = c; }
+void AxisCtrlButton::SetBorderColor(const StateColor &c)      { border_color = c; }
+void AxisCtrlButton::SetBackgroundColor(const StateColor &c)  { background_color = c; }
+void AxisCtrlButton::SetInnerBackgroundColor(const StateColor &c) { inner_background_color = c; }
+void AxisCtrlButton::SetBitmap(ScalableBitmap &bmp)           { m_icon = bmp; update(); }
+void AxisCtrlButton::Rescale()                                { updateParams(); update(); }
+
+void AxisCtrlButton::updateParams()
+{
+    const QSize sz = size().isEmpty() ? QSize(120, 120) : size();
+    center   = QPoint(sz.width() / 2, sz.height() / 2);
+    r_outer  = std::min(sz.width(), sz.height()) / 2.0 - 2;
+    r_inner  = r_outer * 0.5;
+    r_home   = r_inner * 0.45;
+    r_blank  = r_outer * 0.15;
+    gap      = 2.0;
 }
 
-void AxisCtrlButton::SetMinSize(const wxSize& size)
+AxisCtrlButton::CurrentPos AxisCtrlButton::posFromPoint(const QPoint &pt) const
 {
-	wxSize cur_size = GetSize();
-    if (size.GetWidth() > 0 && size.GetHeight() > 0) {
-        stretch = std::min((double)size.GetWidth() / cur_size.x,(double)size.GetHeight() / cur_size.y);
-		minSize = size;
-        updateParams();
+    const double dx = pt.x() - center.x();
+    const double dy = pt.y() - center.y();
+    const double dist = std::sqrt(dx * dx + dy * dy);
+
+    if (dist <= r_home) return INNER_HOME;
+    if (dist <= r_inner) {
+        const double angle = std::atan2(dy, dx) * 180.0 / PI;
+        if (angle > -45 && angle <= 45)   return INNER_RIGHT;
+        if (angle > 45  && angle <= 135)  return INNER_DOWN;
+        if (angle > 135 || angle <= -135) return INNER_LEFT;
+        return INNER_UP;
     }
-    else if (size.GetWidth() > 0) {
-		stretch = (double)size.GetWidth() / cur_size.x;
-		minSize.x = size.x;
-        updateParams();
+    if (dist <= r_outer) {
+        const double angle = std::atan2(dy, dx) * 180.0 / PI;
+        if (angle > -45 && angle <= 45)   return OUTER_RIGHT;
+        if (angle > 45  && angle <= 135)  return OUTER_DOWN;
+        if (angle > 135 || angle <= -135) return OUTER_LEFT;
+        return OUTER_UP;
     }
-    else if (size.GetHeight() > 0) {
-		stretch = (double)size.GetHeight() / cur_size.y;
-		minSize.y = size.y;
-        updateParams();
-    }
-    else {
-		stretch = 1.0;
-        minSize = wxSize(228, 228);
-    }
-    wxWindow::SetMinSize(minSize);
-    center = wxPoint(minSize.x / 2, minSize.y / 2);
+    return UNDEFINED;
 }
 
-void AxisCtrlButton::SetTextColor(StateColor const &color)
+void AxisCtrlButton::paintEvent(QPaintEvent *)
 {
-    text_color = color;
-    state_handler.update_binds();
-    Refresh();
-}
+    updateParams();
+    QPainter p(this);
+    p.setRenderHint(QPainter::Antialiasing);
 
-void AxisCtrlButton::SetBorderColor(StateColor const& color)
-{
-    border_color = color;
-    state_handler.update_binds();
-    Refresh();
-}
+    const int states = state_handler.states();
 
-void AxisCtrlButton::SetBackgroundColor(StateColor const& color)
-{
-    background_color = color;
-    state_handler.update_binds();
-    Refresh();
-}
+    // Outer ring
+    const QColor bgOuter = background_color.count() > 0
+        ? background_color.colorForStates(states)
+        : QColor(220, 220, 220);
+    p.setBrush(bgOuter);
+    p.setPen(border_color.count() > 0 ? QPen(border_color.colorForStates(states), 1) : QPen(Qt::NoPen));
+    p.drawEllipse(center, (int)r_outer, (int)r_outer);
 
-void AxisCtrlButton::SetInnerBackgroundColor(StateColor const& color)
-{
-    inner_background_color = color;
-    state_handler.update_binds();
-    Refresh();
-}
+    // Blank gap ring (erase inner area)
+    p.setBrush(Qt::white);
+    p.setPen(Qt::NoPen);
+    p.drawEllipse(center, (int)(r_inner + gap), (int)(r_inner + gap));
 
-void AxisCtrlButton::SetBitmap(ScalableBitmap &bmp)
-{
-    if (&bmp  && (& bmp.bmp()) && (bmp.bmp().IsOk())) {
-        m_icon = bmp;
-    }
-}
+    // Inner ring
+    const QColor bgInner = inner_background_color.count() > 0
+        ? inner_background_color.colorForStates(states)
+        : QColor(200, 200, 200);
+    p.setBrush(bgInner);
+    p.drawEllipse(center, (int)r_inner, (int)r_inner);
 
-void AxisCtrlButton::Rescale() {
-	Refresh();
-}
-
-void AxisCtrlButton::paintEvent(wxPaintEvent& evt)
-{
-    // depending on your system you may need to look at double-buffered dcs
-    wxPaintDC dc(this);
-    wxGCDC gcdc(dc);
-    render(gcdc);
-}
-
-/*
- * Here we do the actual rendering. I put it in a separate
- * method so that it can work no matter what type of DC
- * (e.g. wxPaintDC or wxClientDC) is used.
- */
-void AxisCtrlButton::render(wxDC& dc)
-{
-    wxGraphicsContext* gc = dc.GetGraphicsContext();
-
-    int states = state_handler.states();
-	wxSize size = GetSize();
-
-    gc->PushState();
-    gc->Translate(center.x, center.y);
-
-	//draw the outer ring
-    wxGraphicsPath outer_path = gc->CreatePath();
-    outer_path.AddCircle(0, 0, r_outer);
-    outer_path.AddCircle(0, 0, r_inner);
-    gc->SetPen(StateColor::darkModeColorFor(BUTTON_BG_COL));
-    gc->SetBrush(StateColor::darkModeColorFor(BUTTON_BG_COL));
-    gc->DrawPath(outer_path);
-
-	//draw the inner ring
-    wxGraphicsPath inner_path = gc->CreatePath();
-    inner_path.AddCircle(0, 0, r_inner);
-    inner_path.AddCircle(0, 0, r_blank);
-    gc->SetPen(StateColor::darkModeColorFor(BUTTON_IN_BG_COL));
-    gc->SetBrush(StateColor::darkModeColorFor(BUTTON_IN_BG_COL));
-	gc->DrawPath(inner_path);
-
-	//draw an arc in corresponding position
-	if (current_pos != CurrentPos::UNDEFINED) {
-		wxGraphicsPath path = gc->CreatePath();
-		if (current_pos < 4) {
-			path.AddArc(0, 0, r_outer, (5 - 2 * current_pos) * PI / 4, (7 - 2 * current_pos) * PI / 4, true);
-			path.AddArc(0, 0, r_inner, (7 - 2 * current_pos) * PI / 4, (5 - 2 * current_pos) * PI / 4, false);
-			path.CloseSubpath();
-			gc->SetBrush(wxBrush(background_color.colorForStates(states)));
-		}
-		else if (current_pos < 8) {
-			path.AddArc(0, 0, r_inner, (5 - 2 * current_pos) * PI / 4, (7 - 2 * current_pos) * PI / 4, true);
-			path.AddArc(0, 0, r_blank, (7 - 2 * current_pos) * PI / 4, (5 - 2 * current_pos) * PI / 4, false);
-			path.CloseSubpath();
-			gc->SetBrush(wxBrush(inner_background_color.colorForStates(states)));
-        }
-		gc->SetPen(wxPen(border_color.colorForStates(states),2));
-		gc->DrawPath(path);
-	}
-
-	//draw rectangle gap
-	gc->SetPen(blank_bg.colorForStates(StateColor::Normal));
-	gc->SetBrush(blank_bg.colorForStates(StateColor::Normal));
-	gc->PushState();
-	gc->Rotate(-PI / 4);
-	gc->DrawRectangle(-sqrt2 * size.x / 2, -sqrt2 * gap / 2, sqrt2 * size.x, sqrt2 * gap);
-	gc->Rotate(-PI / 2);
-	gc->DrawRectangle(-sqrt2 * size.x / 2, -sqrt2 * gap / 2, sqrt2 * size.x, sqrt2 * gap);
-	gc->PopState();
-
-	// draw the home circle
-    wxGraphicsPath home_path = gc->CreatePath();
-    home_path.AddCircle(0, 0, r_home);
-    home_path.CloseSubpath();
-    gc->PushState();
-    if (current_pos == 8) {
-        gc->SetPen(wxPen(border_color.colorForStates(states), 2));
-        gc->SetBrush(wxBrush(background_color.colorForStates(states)));
-    } else {
-        gc->SetPen(StateColor::darkModeColorFor(BUTTON_BG_COL));
-        gc->SetBrush(StateColor::darkModeColorFor(BUTTON_BG_COL));
-    }
-    gc->DrawPath(home_path);
-
-    if (m_icon.bmp().IsOk()) {
-        gc->DrawBitmap(m_icon.bmp(), -1 * m_icon.GetBmpWidth() / 2, -1 * m_icon.GetBmpHeight() / 2, m_icon.GetBmpWidth(), m_icon.GetBmpHeight());
-    }
-    gc->PopState();
-
-	//draw linear border of the arc
-	if (current_pos != CurrentPos::UNDEFINED) {
-        gc->PushState();
-        gc->SetPen(wxPen(border_color.colorForStates(states), 2));
-
-        if (current_pos == 8) {
-            wxGraphicsPath line_path = gc->CreatePath();
-            line_path.AddCircle(0, 0, r_home);
-            gc->StrokePath(line_path);
+    // Hover highlight
+    if (current_pos != UNDEFINED && current_pos != INNER_HOME) {
+        p.setBrush(QColor(0, 174, 66, 60));
+        p.setPen(Qt::NoPen);
+        if (current_pos < INNER_UP) {
+            p.drawEllipse(center, (int)r_outer, (int)r_outer);
         } else {
-            wxGraphicsPath line_path1 = gc->CreatePath();
-            wxGraphicsPath line_path2 = gc->CreatePath();
-            if (current_pos < 4) {
-                line_path1.MoveToPoint(r_inner, -sqrt2 * gap / 2);
-                line_path1.AddLineToPoint(r_outer, -sqrt2 * gap / 2);
-                line_path2.MoveToPoint(-r_inner, -sqrt2 * gap / 2);
-                line_path2.AddLineToPoint(-r_outer, -sqrt2 * gap / 2);
-            } else if (current_pos < 8) {
-                line_path1.MoveToPoint(r_blank, -sqrt2 * gap / 2);
-                line_path1.AddLineToPoint(r_inner, -sqrt2 * gap / 2);
-                line_path2.MoveToPoint(-r_blank, -sqrt2 * gap / 2);
-                line_path2.AddLineToPoint(-r_inner, -sqrt2 * gap / 2);
-            }
-            gc->Rotate(-(1 + 2 * current_pos) * PI / 4);
-            gc->StrokePath(line_path1);
-            gc->Rotate(PI / 2);
-            gc->StrokePath(line_path2);
+            p.drawEllipse(center, (int)r_inner, (int)r_inner);
         }
-        gc->PopState();
-	}
+    }
 
-	//draw text
-    if (!IsEnabled())
-        gc->SetFont(Label::Body_12, text_color.colorForStates(StateColor::Disabled));
-    else
-	    gc->SetFont(Label::Head_12, text_color.colorForStates(states));
-	wxDouble w, h;
-	gc->GetTextExtent("Y", &w, &h);
-	gc->DrawText(wxT("Y"), -w / 2, -r_outer + (r_outer - r_inner) / 2 - h / 2);
-	gc->GetTextExtent("-X", &w, &h);
-	gc->DrawText(wxT("-X"), -r_outer + (r_outer - r_inner) / 2 - w / 2, - h / 2);
-	gc->GetTextExtent("-Y", &w, &h);
-	gc->DrawText(wxT("-Y"), -w / 2, r_outer - (r_outer - r_inner) / 2 - h / 2);
-	gc->GetTextExtent("X", &w, &h);
-	gc->DrawText(wxT("X"), r_outer - (r_outer - r_inner) / 2 - w / 2, -h / 2);
+    // Home circle
+    p.setBrush(current_pos == INNER_HOME ? QColor(0, 174, 66) : QColor(180, 180, 180));
+    p.setPen(Qt::NoPen);
+    p.drawEllipse(center, (int)r_home, (int)r_home);
 
-	gc->SetFont(Label::Body_12, text_num_color);
+    // Icon in home zone
+    if (m_icon.bmp().IsOk()) {
+        const QSize isz = m_icon.GetBmpSize();
+        p.drawPixmap(QPoint(center.x() - isz.width() / 2,
+                            center.y() - isz.height() / 2),
+                     m_icon.bmp());
+    }
 
-	gc->PushState();
-	gc->Rotate(PI / 4);
-	gc->GetTextExtent("+10", &w, &h);
-	gc->DrawText(wxT("+10"), sqrt2 * gap, -r_outer + (r_outer - r_inner) / 2 - h / 2);
-	gc->GetTextExtent("+1", &w, &h);
-	gc->DrawText(wxT("+1"), sqrt2 * gap, -r_inner + (r_inner - r_blank) / 2 - h / 2);
-	gc->GetTextExtent("-1", &w, &h);
-	gc->DrawText(wxT("-1"), sqrt2 * gap, r_inner - (r_inner - r_blank) / 2 - h / 2);
-	gc->GetTextExtent("-10", &w, &h);
-	gc->DrawText(wxT("-10"), sqrt2 * gap, r_outer - (r_outer - r_inner) / 2 - h / 2);
-	gc->PopState();
-
-
-	gc->PopState();
+    // Arrows for outer sectors
+    static const QString arrows[] = { "↑", "←", "↓", "→" };
+    static const QPoint offsets[] = { {0,-1}, {-1,0}, {0,1}, {1,0} };
+    p.setFont(QFont{});
+    p.setPen(Qt::black);
+    const double arrowR = (r_inner + gap + r_outer) / 2;
+    for (int i = 0; i < 4; ++i) {
+        const double angle = (i * 90 - 90) * PI / 180.0;
+        const int ax = center.x() + (int)(arrowR * std::cos(angle));
+        const int ay = center.y() + (int)(arrowR * std::sin(angle));
+        p.drawText(QRect(ax - 8, ay - 8, 16, 16), Qt::AlignCenter, arrows[i]);
+    }
 }
 
-void AxisCtrlButton::mouseDown(wxMouseEvent& event)
+void AxisCtrlButton::mousePressEvent(QMouseEvent *event)
 {
-    event.Skip();
-    pressedDown = true;
-    SetFocus();
-    CaptureMouse();
+    if (event->button() == Qt::LeftButton) {
+        pressedDown = true;
+        last_pos = posFromPoint(event->pos());
+        current_pos = last_pos;
+        update();
+        event->accept();
+    } else {
+        QWidget::mousePressEvent(event);
+    }
 }
 
-void AxisCtrlButton::mouseReleased(wxMouseEvent& event)
+void AxisCtrlButton::mouseReleaseEvent(QMouseEvent *event)
 {
-    event.Skip();
-    if (pressedDown) {
+    if (event->button() == Qt::LeftButton && pressedDown) {
         pressedDown = false;
-        ReleaseMouse();
-        if (wxRect({ 0, 0 }, GetSize()).Contains(event.GetPosition()))
-            sendButtonEvent();
+        const auto pos = posFromPoint(event->pos());
+        current_pos = UNDEFINED;
+        update();
+        if (pos != UNDEFINED && rect().contains(event->pos()))
+            emit buttonClicked((int)pos);
+        event->accept();
+    } else {
+        pressedDown = false;
+        QWidget::mouseReleaseEvent(event);
     }
 }
 
-void AxisCtrlButton::mouseMoving(wxMouseEvent& event)
+void AxisCtrlButton::mouseMoveEvent(QMouseEvent *event)
 {
-    if (pressedDown)
-        return;
-	wxPoint mouse_pos(event.GetX(), event.GetY());
-	wxPoint transformed_mouse_pos = mouse_pos - center;
-	double r_temp = transformed_mouse_pos.x * transformed_mouse_pos.x + transformed_mouse_pos.y * transformed_mouse_pos.y;
-	if (r_temp > r_outer * r_outer) {
-		current_pos = CurrentPos::UNDEFINED;
-	}
-	else if (r_temp > r_inner * r_inner) {
-		if (transformed_mouse_pos.y < transformed_mouse_pos.x - gap && transformed_mouse_pos.y < -transformed_mouse_pos.x - gap)
-		{
-			current_pos = CurrentPos::OUTER_UP;
-		}
-		else if (transformed_mouse_pos.y > transformed_mouse_pos.x + gap && transformed_mouse_pos.y < -transformed_mouse_pos.x - gap)
-		{
-			current_pos = CurrentPos::OUTER_LEFT;
-		}
-		else if (transformed_mouse_pos.y > transformed_mouse_pos.x + gap && transformed_mouse_pos.y > -transformed_mouse_pos.x + gap)
-		{
-			current_pos = CurrentPos::OUTER_DOWN;
-		}
-		else if (transformed_mouse_pos.y < transformed_mouse_pos.x - gap && transformed_mouse_pos.y > -transformed_mouse_pos.x + gap)
-		{
-			current_pos = CurrentPos::OUTER_RIGHT;
-		}
-        else {
-            current_pos = CurrentPos::UNDEFINED;
-        }
-	}
-	else if (r_temp > r_blank * r_blank) {
-		if (transformed_mouse_pos.y < transformed_mouse_pos.x - gap && transformed_mouse_pos.y < -transformed_mouse_pos.x - gap)
-		{
-			current_pos = CurrentPos::INNER_UP;
-		}
-		else if (transformed_mouse_pos.y > transformed_mouse_pos.x + gap && transformed_mouse_pos.y < -transformed_mouse_pos.x - gap)
-		{
-			current_pos = CurrentPos::INNER_LEFT;
-		}
-		else if (transformed_mouse_pos.y > transformed_mouse_pos.x + gap && transformed_mouse_pos.y > -transformed_mouse_pos.x + gap)
-		{
-			current_pos = CurrentPos::INNER_DOWN;
-		}
-		else if (transformed_mouse_pos.y < transformed_mouse_pos.x - gap && transformed_mouse_pos.y > -transformed_mouse_pos.x + gap)
-		{
-			current_pos = CurrentPos::INNER_RIGHT;
-		}
-        else {
-            current_pos = CurrentPos::UNDEFINED;
-        }
-    } else if (r_temp <= r_home * r_home) {
-        current_pos = INNER_HOME;
-    }
-	if (last_pos != current_pos) {
-		last_pos = current_pos;
-		Refresh();
-	}
-}
-
-void AxisCtrlButton::sendButtonEvent()
-{
-    wxCommandEvent event(wxEVT_COMMAND_BUTTON_CLICKED, GetId());
-    event.SetEventObject(this);
-    event.SetInt(current_pos);
-    GetEventHandler()->ProcessEvent(event);
+    const auto pos = posFromPoint(event->pos());
+    if (pos != current_pos) { current_pos = pos; update(); }
+    QWidget::mouseMoveEvent(event);
 }

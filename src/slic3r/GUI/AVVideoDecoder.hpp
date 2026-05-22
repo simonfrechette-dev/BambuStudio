@@ -8,11 +8,8 @@ extern "C" {
     #include <libswscale/swscale.h>
 }
 #include <vector>
-#include <wx/bitmap.h>
-#include <wx/gdicmn.h>
-#include <wx/image.h>
 
-class wxBitmap;
+class QPixmap;
 
 class AVVideoDecoder
 {
@@ -30,9 +27,9 @@ public:
 
     void close();
 
-    bool toWxImage(wxImage &image, wxSize const &size);
+    bool toWxImage(QImage &image, QSize const &size);
 
-    bool toWxBitmap(wxBitmap &bitmap, wxSize const & size);
+    bool toWxBitmap(QPixmap &bitmap, QSize const & size);
 
 private:
     AVCodecContext *codec_ctx_ = nullptr;

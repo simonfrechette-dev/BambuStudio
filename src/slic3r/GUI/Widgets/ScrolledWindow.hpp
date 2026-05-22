@@ -1,45 +1,45 @@
 #pragma once
-#include <wx/wxprec.h>
-#ifndef WX_PRECOMP
-#include <wx/wx.h>
-#endif
+#include <QScrollArea>
+#include <QWidget>
+#include <QColor>
 
-#include <wx/splitter.h>
-#include "Scrollbar.hpp"
-
-class MyScrollbar;
-
-class ScrolledWindow : public wxScrolled<wxWindow>
+/**
+ * wxScrolled<QWidget> equivalent.
+ * Wraps QScrollArea but exposes the same public API used by BambuStudio.
+ * Content is placed inside getPanel() (the scroll area's viewport widget).
+ */
+class ScrolledWindow : public QScrollArea
 {
+    Q_OBJECT
 public:
-    ScrolledWindow(wxWindow *parent, wxWindowID id, wxPoint position, wxSize size, long style, int marginWidth = 0, int scrollbarWidth = 4, int tipLength = 0);
-    void OnMouseWheel(wxMouseEvent &event);
-    void SetTipColor(wxColour color);
-    void Refresh();
-    void SetBackgroundColour(wxColour color);
+    explicit ScrolledWindow(QWidget *parent,
+                            int marginWidth    = 0,
+                            int scrollbarWidth = 4,
+                            int tipLength      = 0);
 
-    void         SetMarginColor(wxColour color);
-    void         SetScrollbarColor(wxColour color);
-    void         SetScrollbarTip(int len);
-    virtual void SetVirtualSize(int x, int y);
-    virtual void SetVirtualSize(wxSize &size);
-    wxPanel *    GetPanel() { return m_userPanel; }
-    // wxSplitterWindow* GetVerticalSplitter() { return m_verticalSplitter; }
-    // wxSplitterWindow* GetHorizontalSplitter() { return m_horizontalSplitter; }
-    bool         IsBothDirections() { return m_bothDirections; }
-    virtual void SetScrollbars(int pixelsPerUnitX, int pixelsPerUnitY, int noUnitsX, int noUnitsY, int xPos = 0, int yPos = 0, bool noRefresh = false);
+    // Returns the inner content widget — add child widgets here.
+    QWidget *GetPanel() { return m_panel; }
+
+    void SetTipColor(QColor) {}
+    void SetMarginColor(QColor) {}
+    void SetScrollbarColor(QColor) {}
+    void SetScrollbarTip(int) {}
+
+    void Refresh() { update(); }
+    void SetBackgroundColour(QColor color);
+
+    void SetVirtualSize(int x, int y);
+    void SetVirtualSize(QSize size);
+
+    bool IsBothDirections() const { return m_bothDirections; }
+
+    // Compatibility shim: unit-based virtual size setter (like wxScrolled::SetScrollbars).
+    void SetScrollbars(int pixelsPerUnitX, int pixelsPerUnitY,
+                       int noUnitsX,       int noUnitsY,
+                       int xPos = 0,       int yPos = 0,
+                       bool /*noRefresh*/ = false);
 
 private:
-    wxPanel *    m_userPanel; // the panel targeted by the scrolled window
-    wxWindow *   m_scroll_win;
-    MyScrollbar *m_rightScrollbar;
-    MyScrollbar *m_bottomScrollbar;
-    // wxSplitterWindow* m_verticalSplitter;
-    wxWindow *        m_verticalSplitter;
-    wxSplitterWindow *m_horizontalSplitter;
-    int               m_marginWidth;
-    bool              m_bothDirections;
-
-    void OnSize(wxSizeEvent &WXUNUSED(event));
-    void OnScroll(wxScrollWinEvent &event);
+    QWidget *m_panel;
+    bool     m_bothDirections;
 };

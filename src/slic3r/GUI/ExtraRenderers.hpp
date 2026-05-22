@@ -1,191 +1,123 @@
 #ifndef slic3r_GUI_ExtraRenderers_hpp_
 #define slic3r_GUI_ExtraRenderers_hpp_
 
+// Qt port of ExtraRenderers.hpp
+// Original used wxDataViewCustomRenderer; ported to QStyledItemDelegate stubs.
+
 #include <functional>
-
-#include <wx/dataview.h>
-
-#if wxUSE_MARKUP && wxCHECK_VERSION(3, 1, 1)
-    #define SUPPORTS_MARKUP
-#endif
+#include <QString>
+#include <QPixmap>
+#include <QStyledItemDelegate>
 
 // ----------------------------------------------------------------------------
-// DataViewBitmapText: helper class used by BitmapTextRenderer
+// DataViewBitmapText: helper data container (text + bitmap for tree items)
 // ----------------------------------------------------------------------------
 
-class DataViewBitmapText : public wxObject
+class DataViewBitmapText
 {
 public:
-    DataViewBitmapText( const wxString &text = wxEmptyString,
-                        const wxBitmap& bmp = wxNullBitmap) :
+    DataViewBitmapText(const QString &text = QString(),
+                       const QPixmap& bmp = QPixmap()) :
         m_text(text),
         m_bmp(bmp)
-    { }
+    {}
 
     DataViewBitmapText(const DataViewBitmapText &other)
-        : wxObject(),
-        m_text(other.m_text),
-        m_bmp(other.m_bmp)
-    { }
+        : m_text(other.m_text),
+          m_bmp(other.m_bmp)
+    {}
 
-    void SetText(const wxString &text)      { m_text = text; }
-    wxString GetText() const                { return m_text; }
-    void SetBitmap(const wxBitmap &bmp)     { m_bmp = bmp; }
-    const wxBitmap &GetBitmap() const       { return m_bmp; }
+    void SetText(const QString &text)       { m_text = text; }
+    QString GetText() const                 { return m_text; }
+    void SetBitmap(const QPixmap &bmp)      { m_bmp = bmp; }
+    const QPixmap &GetBitmap() const        { return m_bmp; }
 
     bool IsSameAs(const DataViewBitmapText& other) const {
-        return m_text == other.m_text && m_bmp.IsSameAs(other.m_bmp);
+        return m_text == other.m_text;
     }
 
-    bool operator==(const DataViewBitmapText& other) const {
-        return IsSameAs(other);
-    }
-
-    bool operator!=(const DataViewBitmapText& other) const {
-        return !IsSameAs(other);
-    }
+    bool operator==(const DataViewBitmapText& other) const { return IsSameAs(other); }
+    bool operator!=(const DataViewBitmapText& other) const { return !IsSameAs(other); }
 
 private:
-    wxString    m_text;
-    wxBitmap    m_bmp;
-
-    wxDECLARE_DYNAMIC_CLASS(DataViewBitmapText);
+    QString  m_text;
+    QPixmap  m_bmp;
 };
-DECLARE_VARIANT_OBJECT(DataViewBitmapText)
 
 // ----------------------------------------------------------------------------
-// BitmapTextRenderer
+// BitmapTextRenderer — Qt stub (QStyledItemDelegate)
 // ----------------------------------------------------------------------------
-#if ENABLE_NONCUSTOM_DATA_VIEW_RENDERING
-class BitmapTextRenderer : public wxDataViewRenderer
-#else
-class BitmapTextRenderer : public wxDataViewCustomRenderer
-#endif //ENABLE_NONCUSTOM_DATA_VIEW_RENDERING
+
+class BitmapTextRenderer : public QStyledItemDelegate
 {
+    Q_OBJECT
 public:
-    BitmapTextRenderer(bool use_markup = false,
-        wxDataViewCellMode mode =
-//#ifdef __WXOSX__
-//        wxDATAVIEW_CELL_INERT
-//#else
-        wxDATAVIEW_CELL_EDITABLE
-//#endif
+    explicit BitmapTextRenderer(bool use_markup = false, QObject* parent = nullptr)
+        : QStyledItemDelegate(parent) {}
 
-        , int align = wxDVR_DEFAULT_ALIGNMENT
-#if ENABLE_NONCUSTOM_DATA_VIEW_RENDERING
-    );
-#else
-    ) :
-    wxDataViewCustomRenderer(wxT("DataViewBitmapText"), mode, align)
-    {
-        EnableMarkup(use_markup);
-    }
-#endif //ENABLE_NONCUSTOM_DATA_VIEW_RENDERING
+    ~BitmapTextRenderer() override = default;
 
-    ~BitmapTextRenderer();
+    void EnableMarkup(bool enable = true) {}
 
-    void EnableMarkup(bool enable = true);
+    bool WasCanceled() const { return m_was_unusable_symbol; }
+    void set_can_create_editor_ctrl_function(std::function<bool()> can_create_fn) { can_create_editor_ctrl = can_create_fn; }
 
-    bool SetValue(const wxVariant& value) override;
-    bool GetValue(wxVariant& value) const override;
-#if ENABLE_NONCUSTOM_DATA_VIEW_RENDERING && wxUSE_ACCESSIBILITY
-    virtual wxString GetAccessibleDescription() const override;
-#endif // wxUSE_ACCESSIBILITY && ENABLE_NONCUSTOM_DATA_VIEW_RENDERING
-
-    virtual bool Render(wxRect cell, wxDC* dc, int state) override;
-    virtual wxSize GetSize() const override;
-
-    bool        HasEditorCtrl() const override
-    {
-//#ifdef __WXOSX__
-//        return false;
-//#else
-        return true;
-//#endif
-    }
-    wxWindow*   CreateEditorCtrl(wxWindow* parent, wxRect labelRect, const wxVariant& value) override;
-    bool        GetValueFromEditorCtrl(wxWindow* ctrl, wxVariant& value) override;
-    bool        WasCanceled() const { return m_was_unusable_symbol; }
-
-    void        set_can_create_editor_ctrl_function(std::function<bool()> can_create_fn) { can_create_editor_ctrl = can_create_fn; }
+    void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const override;
+    QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const override;
+    QWidget *createEditor(QWidget *parent, const QStyleOptionViewItem &option, const QModelIndex &index) const override;
+    void setEditorData(QWidget *editor, const QModelIndex &index) const override;
+    void setModelData(QWidget *editor, QAbstractItemModel *model, const QModelIndex &index) const override;
 
 private:
-    DataViewBitmapText  m_value;
-    bool                m_was_unusable_symbol{ false };
-
-    std::function<bool()>    can_create_editor_ctrl { nullptr };
-
-#ifdef SUPPORTS_MARKUP
-    #ifdef wxHAS_GENERIC_DATAVIEWCTRL
-    class wxItemMarkupText* m_markupText { nullptr };;
-    #else
-    bool is_markupText {false};
-    #endif
-#endif // SUPPORTS_MARKUP
+    DataViewBitmapText          m_value;
+    bool                        m_was_unusable_symbol{ false };
+    std::function<bool()>       can_create_editor_ctrl{ nullptr };
 };
 
-
 // ----------------------------------------------------------------------------
-// BitmapChoiceRenderer
+// BitmapChoiceRenderer — Qt stub (QStyledItemDelegate)
 // ----------------------------------------------------------------------------
 
-class BitmapChoiceRenderer : public wxDataViewCustomRenderer
+class BitmapChoiceRenderer : public QStyledItemDelegate
 {
+    Q_OBJECT
 public:
-    BitmapChoiceRenderer(wxDataViewCellMode mode =
-//#ifdef __WXOSX__
-//        wxDATAVIEW_CELL_INERT
-//#else
-        wxDATAVIEW_CELL_EDITABLE
-//#endif
-        , int align = wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL
-    ) : wxDataViewCustomRenderer(wxT("DataViewBitmapText"), mode, align) {}
+    explicit BitmapChoiceRenderer(QObject* parent = nullptr)
+        : QStyledItemDelegate(parent) {}
 
-    bool SetValue(const wxVariant& value) override;
-    bool GetValue(wxVariant& value) const override;
+    void set_can_create_editor_ctrl_function(std::function<bool()> can_create_fn) { can_create_editor_ctrl = can_create_fn; }
+    void set_default_extruder_idx(std::function<int()> default_extruder_idx_fn)   { get_default_extruder_idx = default_extruder_idx_fn; }
+    void set_has_default_extruder(std::function<bool()> has_default_extruder_fn)  { has_default_extruder = has_default_extruder_fn; }
 
-    virtual bool Render(wxRect cell, wxDC* dc, int state) override;
-    virtual wxSize GetSize() const override;
-
-    bool        HasEditorCtrl() const override { return true; }
-    wxWindow*   CreateEditorCtrl(wxWindow* parent, wxRect labelRect, const wxVariant& value) override;
-    bool        GetValueFromEditorCtrl(wxWindow* ctrl, wxVariant& value) override;
-
-    void        set_can_create_editor_ctrl_function(std::function<bool()> can_create_fn) { can_create_editor_ctrl = can_create_fn; }
-    void        set_default_extruder_idx(std::function<int()> default_extruder_idx_fn)   { get_default_extruder_idx = default_extruder_idx_fn; }
-    void        set_has_default_extruder(std::function<bool()> has_default_extruder_fn) { has_default_extruder = has_default_extruder_fn; }
+    void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const override;
+    QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const override;
+    QWidget *createEditor(QWidget *parent, const QStyleOptionViewItem &option, const QModelIndex &index) const override;
+    void setEditorData(QWidget *editor, const QModelIndex &index) const override;
+    void setModelData(QWidget *editor, QAbstractItemModel *model, const QModelIndex &index) const override;
 
 private:
-    DataViewBitmapText      m_value;
-    std::function<bool()>   can_create_editor_ctrl  { nullptr };
-    std::function<int()>    get_default_extruder_idx{ nullptr };
-    std::function<bool()>   has_default_extruder{ nullptr };
+    DataViewBitmapText          m_value;
+    std::function<bool()>       can_create_editor_ctrl{ nullptr };
+    std::function<int()>        get_default_extruder_idx{ nullptr };
+    std::function<bool()>       has_default_extruder{ nullptr };
 };
 
-
-
 // ----------------------------------------------------------------------------
-// TextRenderer
+// TextRenderer — Qt stub (QStyledItemDelegate)
 // ----------------------------------------------------------------------------
 
-class TextRenderer : public wxDataViewCustomRenderer
+class TextRenderer : public QStyledItemDelegate
 {
+    Q_OBJECT
 public:
-    TextRenderer(wxDataViewCellMode mode = wxDATAVIEW_CELL_INERT
-        , int align = wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL
-    ) : wxDataViewCustomRenderer(wxT("string"), mode, align) {}
+    explicit TextRenderer(QObject* parent = nullptr)
+        : QStyledItemDelegate(parent) {}
 
-    bool SetValue(const wxVariant& value) override;
-    bool GetValue(wxVariant& value) const override;
-
-    virtual bool Render(wxRect cell, wxDC* dc, int state) override;
-    virtual wxSize GetSize() const override;
-
-    bool        HasEditorCtrl() const override { return false; }
+    void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const override;
+    QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const override;
 
 private:
-    wxString    m_value;
+    QString m_value;
 };
-
 
 #endif // slic3r_GUI_ExtraRenderers_hpp_

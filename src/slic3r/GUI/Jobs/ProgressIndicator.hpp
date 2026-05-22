@@ -3,7 +3,7 @@
 
 #include <string>
 #include <functional>
-#include <wx/string.h>
+#include <QString>
 
 namespace Slic3r {
 
@@ -19,7 +19,7 @@ public:
     virtual ~ProgressIndicator() = default;
     
     virtual void clear_percent() = 0;
-    virtual void show_error_info(wxString msg, int code, wxString description, wxString extra) = 0;
+    virtual void show_error_info(const QString& msg, int code, const QString& description, const QString& extra) = 0;
     virtual void set_range(int range) = 0;
     virtual void set_cancel_callback(CancelFn = CancelFn()) = 0;
     virtual void set_progress(int pr) = 0;

@@ -1,3 +1,4 @@
+#include <QMouseEvent>
 #ifndef slic3r_GLGizmoSVG_hpp_
 #define slic3r_GLGizmoSVG_hpp_
 
@@ -82,7 +83,7 @@ protected:
     /// </summary>
     /// <param name="mouse_event">Information about mouse</param>
     /// <returns>Propagete normaly return false.</returns>
-    bool         on_mouse(const wxMouseEvent &mouse_event) override;
+    bool         on_mouse(const QMouseEvent &mouse_event) override;
     virtual void on_update(const UpdateData& data) override;
     virtual void on_render() override;
     virtual void on_render_for_picking() override;
@@ -114,8 +115,8 @@ private:
     void volume_transformation_changed();
 
     // process mouse event
-    bool   on_mouse_for_rotation(const wxMouseEvent &mouse_event);
-    bool   on_mouse_for_translate(const wxMouseEvent &mouse_event);
+    bool   on_mouse_for_rotation(const QMouseEvent &mouse_event);
+    bool   on_mouse_for_translate(const QMouseEvent &mouse_event);
 
 private:
     struct GuiCfg;

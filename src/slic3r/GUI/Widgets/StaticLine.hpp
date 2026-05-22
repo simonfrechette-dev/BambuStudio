@@ -1,36 +1,36 @@
 #ifndef slic3r_GUI_StaticLine_hpp_
 #define slic3r_GUI_StaticLine_hpp_
 
-#include "../wxExtensions.hpp"
-#include "wx/window.h"
+#include "../QtExtensions.hpp"
+#include <QWidget>
+#include <QColor>
+#include <QString>
 
-class StaticLine : public wxWindow
+class StaticLine : public QWidget
 {
+    Q_OBJECT
 public:
-    StaticLine(wxWindow *parent, bool vertical = false, const wxString &label = {}, const wxString &icon = {});
+    StaticLine(QWidget *parent, bool vertical = false,
+               const QString &label = {}, const QString &icon = {});
 
-public:
-    void SetLabel(const wxString& label) override;
-
-    void SetIcon(const wxString& icon);
-
-    void SetLineColour(wxColour color);
-    
+    void setText(const QString &label);
+    void SetIcon(const QString &icon);
+    void SetLineColour(QColor color);
     void Rescale();
 
+    QSize sizeHint() const override;
+
+protected:
+    void paintEvent(QPaintEvent *event) override;
+
 private:
-    wxColour       lineColor;
-    bool vertical;
+    void measureSize();
+    void render(QPainter &painter);
+
+    QColor         lineColor;
+    bool           m_vertical;
+    QString        m_text;
     ScalableBitmap icon;
-
-private:
-    void paintEvent(wxPaintEvent& evt);
-
-    void messureSize();
-
-    void render(wxDC &dc);
-
-    DECLARE_EVENT_TABLE()
 };
 
 #endif // !slic3r_GUI_StaticLine_hpp_

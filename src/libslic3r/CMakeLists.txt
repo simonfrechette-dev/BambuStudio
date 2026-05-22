@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.5...3.31)
 project(libslic3r)
 
 include(PrecompiledHeader)
@@ -505,6 +505,7 @@ endif ()
 add_library(libslic3r STATIC ${lisbslic3r_sources}
     "${CMAKE_CURRENT_BINARY_DIR}/libslic3r_version.h"
     ${OpenVDBUtils_SOURCES})
+set_target_properties(libslic3r PROPERTIES OUTPUT_NAME slic3r)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${lisbslic3r_sources})
 
 if (SLIC3R_STATIC)
@@ -525,6 +526,7 @@ add_library(libslic3r_cgal STATIC
     MeshBoolean.hpp MeshBoolean.cpp
     TryCatchSignal.hpp TryCatchSignal.cpp
     Triangulation.hpp Triangulation.cpp)
+set_target_properties(libslic3r_cgal PROPERTIES OUTPUT_NAME slic3r_cgal)
 target_include_directories(libslic3r_cgal PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 
 # Reset compile options of libslic3r_cgal. Despite it being linked privately, CGAL options
@@ -550,7 +552,10 @@ if (CMAKE_COMPILER_IS_GNUCC AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 14.1)
     set_property(TARGET libslic3r_cgal PROPERTY CXX_EXTENSIONS OFF)
 endif()
 
-target_link_libraries(libslic3r_cgal PRIVATE ${_cgal_tgt} libigl mcut)
+target_link_libraries(libslic3r_cgal PRIVATE ${_cgal_tgt} libigl mcut Boost::log)
+if(NOT SLIC3R_STATIC)
+    target_compile_definitions(libslic3r_cgal PRIVATE BOOST_LOG_DYN_LINK)
+endif()
 
 if (MSVC AND "${CMAKE_SIZEOF_VOID_P}" STREQUAL "4") # 32 bit MSVC workaround
     target_compile_definitions(libslic3r_cgal PRIVATE CGAL_DO_NOT_USE_MPZF)
@@ -568,11 +573,7 @@ find_package(OpenCASCADE REQUIRED)
 target_include_directories(libslic3r PUBLIC ${OpenCASCADE_INCLUDE_DIR})
 
 set(OCCT_LIBS
-    TKXDESTEP
-    TKSTEP
-    TKSTEP209
-    TKSTEPAttr
-    TKSTEPBase
+    TKDESTEP
     TKXCAF
     TKXSBase
     TKVCAF
@@ -601,7 +602,7 @@ target_link_libraries(libslic3r
     noise::noise
     libnest2d
     admesh
-    cereal
+    cereal::cereal
     libigl
     miniz
     boost_libs
@@ -620,7 +621,8 @@ target_link_libraries(libslic3r
     ${OCCT_LIBS}
     Clipper2
     mcut
-    opencv_world
+    opencv_core
+    opencv_imgproc
     ${_cgal_tgt}
     assimp::assimp
     )

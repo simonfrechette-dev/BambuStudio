@@ -12,44 +12,36 @@ class Button;
 class StepMeshDialog : public Slic3r::GUI::DPIDialog
 {
 public:
-    StepMeshDialog(wxWindow* parent, Slic3r::Step& file, double linear_init, double angle_init);
+    StepMeshDialog(QWidget* parent, Slic3r::Step& file, double linear_init, double angle_init);
     ~StepMeshDialog() override;
-    void on_dpi_changed(const wxRect& suggested_rect) override;
+    void on_dpi_changed(const QRect& suggested_rect) override;
     inline double get_linear_defletion() {
-        double value;
-        if (m_linear_last.ToDouble(&value)) {
-            return value;
-        }else {
-            return m_last_linear;
-        }
+        bool ok; double value = m_linear_last.toDouble(&ok);
+        return ok ? value : m_last_linear;
     }
     inline double get_angle_defletion() {
-        double value;
-        if (m_angle_last.ToDouble(&value)) {
-            return value;
-        } else {
-            return m_last_angle;
-        }
+        bool ok; double value = m_angle_last.toDouble(&ok);
+        return ok ? value : m_last_angle;
     }
     inline bool get_split_compound_value() {
-        return m_split_compound_checkbox->GetValue();
+        return m_split_compound_checkbox->isChecked();
     }
 private:
     Slic3r::Step& m_file;
     Button* m_button_ok = nullptr;
     Button* m_button_cancel = nullptr;
-    wxCheckBox* m_checkbox = nullptr;
-    wxCheckBox* m_split_compound_checkbox = nullptr;
-    wxString m_linear_last;
-    wxString m_angle_last;
-    wxStaticText* mesh_face_number_text;
+    QCheckBox* m_checkbox = nullptr;
+    QCheckBox* m_split_compound_checkbox = nullptr;
+    QString m_linear_last;
+    QString m_angle_last;
+    QLabel* mesh_face_number_text;
     double m_last_linear = 0.003;
     double m_last_angle = 0.5;
     unsigned int m_mesh_number = 0;
     boost::thread* m_task {nullptr};
-    bool validate_number_range(const wxString& value, double min, double max);
+    bool validate_number_range(const QString& value, double min, double max);
     void update_mesh_number_text();
-    void on_task_done(wxCommandEvent& event);
+    void on_task_done(QEvent& event);
     void stop_task();
 };
 

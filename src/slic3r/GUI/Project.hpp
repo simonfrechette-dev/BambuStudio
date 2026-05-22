@@ -1,102 +1,70 @@
 #ifndef slic3r_Project_hpp_
 #define slic3r_Project_hpp_
 
-#include "Tabbook.hpp"
-#include "wx/artprov.h"
-#include "wx/cmdline.h"
-#include "wx/notifmsg.h"
-#include "wx/settings.h"
-#include "wx/webview.h"
-
-#if wxUSE_WEBVIEW_EDGE
-#include "wx/msw/webview_edge.h"
-#endif
-
-#include "wx/numdlg.h"
-#include "wx/infobar.h"
-#include "wx/filesys.h"
-#include "wx/fs_arc.h"
-#include "wx/fs_mem.h"
-#include "wx/stdpaths.h"
-#include <wx/panel.h>
-#include <wx/tbarbase.h>
-#include "wx/textctrl.h"
-#include <wx/timer.h>
-
-#include "nlohmann/json.hpp"
-#include "slic3r/Utils/json_diff.hpp"
+// Phase 4 TODO: Qt port of ProjectPanel
 
 #include <map>
 #include <vector>
-#include <memory>
-#include "Event.hpp"
-#include "libslic3r/ProjectTask.hpp"
-#include "wxExtensions.hpp"
+#include <string>
+#include <QWidget>
+#include <QString>
+#include <nlohmann/json.hpp>
 
-#define AUFILE_GREY700 wxColour(107, 107, 107)
-#define AUFILE_GREY500 wxColour(158, 158, 158)
-#define AUFILE_GREY300 wxColour(238, 238, 238)
-#define AUFILE_GREY200 wxColour(248, 248, 248)
-#define AUFILE_BRAND wxColour(0, 174, 66)
-#define AUFILE_BRAND_TRANSPARENT wxColour(215, 232, 222)
-//#define AUFILE_PICTURES_SIZE wxSize(FromDIP(300), FromDIP(300))
-//#define AUFILE_PICTURES_PANEL_SIZE wxSize(FromDIP(300), FromDIP(340))
-#define AUFILE_PICTURES_SIZE wxSize(FromDIP(168), FromDIP(168))
-#define AUFILE_PICTURES_PANEL_SIZE wxSize(FromDIP(168), FromDIP(208))
-#define AUFILE_SIZE wxSize(FromDIP(168), FromDIP(168))
-#define AUFILE_PANEL_SIZE wxSize(FromDIP(168), FromDIP(208))
-#define AUFILE_TEXT_HEIGHT FromDIP(40)
-#define AUFILE_ROUNDING FromDIP(5)
+using json = nlohmann::json;
 
-namespace Slic3r { namespace GUI {
+namespace Slic3r {
+namespace GUI {
 
-struct project_file{
-    std::string filepath;
-    std::string filename;
-    std::string size;
-};
+// Event ID replacing wxDECLARE_EVENT(EVT_PROJECT_RELOAD, QEvent)
+static constexpr int EVT_PROJECT_RELOAD = 10400;
 
-class ProjectPanel : public wxPanel
+class ProjectPanel : public QWidget
 {
-private:
-    bool       m_web_init_completed = {false};
-    bool       m_reload_already = {false};
-
-    wxWebView* m_browser = {nullptr};
-    wxString   m_project_home_url;
-    wxString   m_root_dir;
-    std::map<std::string, std::string> m_model_id_map;
-    static inline int m_sequence_id = 8000;
-    json       m_last_payload = json::object();
-
+    Q_OBJECT
 public:
-    ProjectPanel(wxWindow *parent, wxWindowID id = wxID_ANY, const wxPoint &pos = wxDefaultPosition, const wxSize &size = wxDefaultSize, long style = wxTAB_TRAVERSAL);
-    ~ProjectPanel();
-
-    
-    void onWebNavigating(wxWebViewEvent& evt);
-    void on_reload(wxCommandEvent& evt);
-    void on_size(wxSizeEvent& event);
-    void on_navigated(wxWebViewEvent& event);
-    void OnNewWindow(wxWebViewEvent &evt);
+    explicit ProjectPanel(QWidget* parent = nullptr);
+    ~ProjectPanel() override = default;
 
     void msw_rescale();
     void update_model_data();
     void clear_model_info();
 
-    bool Show(bool show);
-    void OnScriptMessage(wxWebViewEvent& evt);
-    void RunScript(std::string content);
+    bool isVisible() const;
+    void OnScriptMessage(const QString& msg);
+    void RunScript(const std::string& content);
     bool is_editing_page() const;
 
-    std::map<std::string, std::vector<json>> Reload(wxString aux_path);
+    std::map<std::string, std::vector<json>> Reload(const QString& aux_path);
     std::string formatBytes(unsigned long bytes);
-    std::string get_model_id(std::string desgin_id);
-    wxString to_base64(std::string path);
+    std::string get_model_id(std::string design_id);
+    QString to_base64(const std::string& path);
     void save_project();
+
+protected:
+    void showEvent(QShowEvent* e) override;
+
+private slots:
+    void refresh_info();
+
+private:
+    // Info labels (filled by refresh_info)
+    QLabel* m_lbl_name     { nullptr };
+    QLabel* m_lbl_path     { nullptr };
+    QLabel* m_lbl_objects  { nullptr };
+    QLabel* m_lbl_print    { nullptr };
+    QLabel* m_lbl_filament { nullptr };
+    QLabel* m_lbl_printer  { nullptr };
+
+    bool   m_web_init_completed = false;
+    bool   m_reload_already     = false;
+    QString m_project_home_url;
+    QString m_root_dir;
+    std::map<std::string, std::string> m_model_id_map;
+    static inline int m_sequence_id = 8000;
+    json m_last_payload = json::object();
 };
 
-wxDECLARE_EVENT(EVT_PROJECT_RELOAD, wxCommandEvent);
-}} // namespace Slic3r::GUI
+} // namespace GUI
+} // namespace Slic3r
 
-#endif
+#endif // slic3r_Project_hpp_

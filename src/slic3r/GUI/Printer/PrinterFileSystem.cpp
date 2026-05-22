@@ -13,9 +13,13 @@
 #include <boost/uuid/detail/md5.hpp>
 #include <boost/regex.hpp>
 
-#include <wx/mstream.h>
 
 #include "nlohmann/json.hpp"
+#include <QMetaObject>
+#include <QThread>
+#include <QCoreApplication>
+#include <QImage>
+#include <QDateTime>
 
 #include <cstring>
 
@@ -33,20 +37,9 @@ std::string last_system_error() {
         std::system_category()).message().c_str());
 }
 
-wxDEFINE_EVENT(EVT_STATUS_CHANGED, wxCommandEvent);
-wxDEFINE_EVENT(EVT_MODE_CHANGED, wxCommandEvent);
-wxDEFINE_EVENT(EVT_FILE_CHANGED, wxCommandEvent);
-wxDEFINE_EVENT(EVT_SELECT_CHANGED, wxCommandEvent);
-wxDEFINE_EVENT(EVT_THUMBNAIL, wxCommandEvent);
-wxDEFINE_EVENT(EVT_DOWNLOAD, wxCommandEvent);
-wxDEFINE_EVENT(EVT_RAMDOWNLOAD, wxCommandEvent);
-wxDEFINE_EVENT(EVT_MEDIA_ABILITY_CHANGED, wxCommandEvent);
-wxDEFINE_EVENT(EVT_UPLOADING, wxCommandEvent);
-wxDEFINE_EVENT(EVT_UPLOAD_CHANGED, wxCommandEvent);
 
-wxDEFINE_EVENT(EVT_FILE_CALLBACK, wxCommandEvent);
 
-static wxBitmap default_thumbnail;
+Q_GLOBAL_STATIC(QPixmap, default_thumbnail)
 
 static std::map<int, std::string> error_messages = {
      {PrinterFileSystem::ERROR_PIPE, L("Reconnecting the printer, the operation cannot be completed immediately, please try again later.")},
@@ -78,37 +71,37 @@ private:
 PrinterFileSystem::PrinterFileSystem()
     : BambuLib(StaticBambuLib::get(this))
 {
-    if (!default_thumbnail.IsOk()) {
+    if (default_thumbnail->isNull()) {
         Slic3r::GUI::BitmapCache c;
         auto thumbnail = c.load_svg("printer_file", 0, 0);
-        if (thumbnail && thumbnail->IsOk()) {
-            default_thumbnail = *thumbnail;
+        if (thumbnail && !thumbnail->isNull()) {
+            *default_thumbnail = *thumbnail;
 #ifdef __APPLE__
-            default_thumbnail = wxBitmap(default_thumbnail.ConvertToImage(), -1, 1);
+            // default_thumbnail rescale removed (Qt port)
 #endif
         }
     }
     m_session.owner = this;
 #ifdef PRINTER_FILE_SYSTEM_TEST
-    auto time = wxDateTime::Now();
-    wxString path = "D:\\work\\pic\\";
+    auto time = QDateTime::currentDateTime();
+    QString path = "D:\\work\\pic\\";
     for (int i = 0; i < 10; ++i) {
-        auto name = wxString::Format(L"gcode-%02d.3mf", i + 1);
-        m_file_list.push_back({name.ToUTF8().data(), "", time.GetTicks(), 26937, i < 5 ? FF_DOWNLOAD : 0, default_thumbnail});
-        std::ifstream ifs((path + name).ToUTF8().data(), std::ios::binary);
+        auto name = QString::asprintf("gcode-%02d.3mf", i + 1);
+        m_file_list.push_back({name.toStdString(), "", (time_t)time.toSecsSinceEpoch(), 26937, i < 5 ? FF_DOWNLOAD : 0, *default_thumbnail});
+        std::ifstream ifs((path + name).toStdString(), std::ios::binary);
         if (ifs)
             ParseThumbnail(m_file_list.back(), ifs);
-        time.Add(wxDateSpan::Days(-1));
+        time = time.addDays(-1);
     }
     m_file_list.swap(m_file_list_cache[{F_MODEL, ""}]);
-    time = wxDateTime::Now();
+    time = QDateTime::currentDateTime();
     for (int i = 0; i < 100; ++i) {
-        auto name = wxString::Format(L"img-%03d.jpg", i + 1);
-        wxImage im(path + name);
-        m_file_list.push_back({name.ToUTF8().data(), "", time.GetTicks(), 26937, i < 20 ? FF_DOWNLOAD : 0, i > 3 ? im : default_thumbnail});
-        time.Add(wxDateSpan::Days(-1));
+        auto name = QString::asprintf("img-%03d.jpg", i + 1);
+        QImage im(path + name);
+        m_file_list.push_back({name.toStdString(), "", (time_t)time.toSecsSinceEpoch(), 26937, i < 20 ? FF_DOWNLOAD : 0, i > 3 ? QPixmap::fromImage(im) : *default_thumbnail});
+        time = time.addDays(-1);
     }
-    m_file_list[0].thumbnail = default_thumbnail;
+    m_file_list[0].thumbnail = *default_thumbnail;
     m_file_list.swap(m_file_list_cache[{F_TIMELAPSE, ""}]);
 #endif
 }
@@ -199,7 +192,7 @@ void PrinterFileSystem::ListAllFiles()
             return 0;
         m_file_list.swap(list);
         for (auto & file : m_file_list)
-            file.thumbnail = default_thumbnail;
+            file.thumbnail = *default_thumbnail;
         std::sort(m_file_list.begin(), m_file_list.end());
         auto iter1 = m_file_list.begin();
         auto end1  = m_file_list.end();
@@ -214,7 +207,7 @@ void PrinterFileSystem::ListAllFiles()
                 if (iter1->path == iter2->path && iter1->name == iter2->name) {
                     iter1->thumbnail = iter2->thumbnail;
                     iter1->flags     = iter2->flags;
-                    if (!iter1->thumbnail.IsOk())
+                    if (!iter1->thumbnail.isNull() == false)
                         iter1->flags &= ~FF_THUMNAIL;
                     iter1->download   = iter2->download;
                     iter1->local_path = iter2->local_path;
@@ -344,7 +337,7 @@ void PrinterFileSystem::DownloadRamFile(int index, const std::string &local_path
                 download->ofs.open(download->local_path, std::ios::binary);
                 if (!download->ofs) {
                     download->error = last_system_error();
-                    BOOST_LOG_TRIVIAL(info) << "DownloadImageFromRam open error:" << wxString::FromUTF8(download->error);
+                    BOOST_LOG_TRIVIAL(info) << "DownloadImageFromRam open error:" << download->error;
                     return FILE_OPEN_ERR;
                 }
             }
@@ -352,7 +345,7 @@ void PrinterFileSystem::DownloadRamFile(int index, const std::string &local_path
             download->ofs.write(reinterpret_cast<const char *>(data), size);
             if (!download->ofs) {
                 download->error = last_system_error();
-                BOOST_LOG_TRIVIAL(info) << "DownloadImageFromRam write error: " << wxString::FromUTF8(download->error);
+                BOOST_LOG_TRIVIAL(info) << "DownloadImageFromRam write error: " << download->error;
                 return FILE_READ_WRITE_ERR;
             }
 
@@ -725,18 +718,18 @@ void PrinterFileSystem::BuildGroups()
     m_group_month.clear();
     if (m_file_list.empty())
         return;
-    wxDateTime t = wxDateTime((time_t) m_file_list.front().time);
+    auto t_epoch = (time_t) m_file_list.front().time; std::tm t_val = *std::localtime(&t_epoch); std::tm *t = &t_val;
     m_group_year.push_back(0);
     m_group_month.push_back(0);
     for (size_t i = 0; i < m_file_list.size(); ++i) {
-        wxDateTime s = wxDateTime((time_t) m_file_list[i].time);
-        if (s.GetYear() != t.GetYear()) {
+        auto s_epoch = (time_t) m_file_list[i].time; std::tm s_val = *std::localtime(&s_epoch); std::tm *s = &s_val;
+        if (s->tm_year != t->tm_year) {
             m_group_year.push_back(m_group_month.size());
             m_group_month.push_back(i);
-        } else if (s.GetMonth() != t.GetMonth()) {
+        } else if (s->tm_mon != t->tm_mon) {
             m_group_month.push_back(i);
         }
-        t = s;
+        t_val = s_val; t = &t_val;
     }
 }
 
@@ -836,7 +829,7 @@ void PrinterFileSystem::DownloadNextFile()
                 download->ofs.open(download->local_path, std::ios::binary);
                 if (!download->ofs) {
                     download->error = last_system_error();
-                    BOOST_LOG_TRIVIAL(info) << "PrinterFileSystem::DownloadNextFile open error: " << wxString::FromUTF8(download->error);
+                    BOOST_LOG_TRIVIAL(info) << "PrinterFileSystem::DownloadNextFile open error: " << download->error;
                     return FILE_OPEN_ERR;
                 }
             }
@@ -847,7 +840,7 @@ void PrinterFileSystem::DownloadNextFile()
             download->ofs.write((char const *) data, size);
             if (!download->ofs) {
                 download->error = last_system_error();
-                BOOST_LOG_TRIVIAL(info) << "PrinterFileSystem::DownloadNextFile write error: " << wxString::FromUTF8(download->error);
+                BOOST_LOG_TRIVIAL(info) << "PrinterFileSystem::DownloadNextFile write error: " << download->error;
                 return FILE_READ_WRITE_ERR;
             }
             download->boost_md5.process_bytes(data, size);
@@ -1050,7 +1043,7 @@ void PrinterFileSystem::UpdateFocusThumbnail2(std::shared_ptr<std::vector<File>>
         SUB_FILE, req, [type, files](json const &resp, File &file, unsigned char const *data) -> int {
             // in work thread, continue recv
             // receive data
-            wxString        mimetype  = resp.value("mimetype", "");
+            std::string     mimetype  = resp.value("mimetype", "");
             std::string     thumbnail = resp.value("thumbnail", "");
             std::string     path      = resp.value("path", "");
             boost::uint32_t size      = resp.value("size", 0);
@@ -1076,7 +1069,7 @@ void PrinterFileSystem::UpdateFocusThumbnail2(std::shared_ptr<std::vector<File>>
                     file.local_path = std::string((char *) data, size);
                 ParseThumbnail(file);
             } else {
-                if (mimetype.empty()) {
+                if (mimetype.empty()) { // std::string
                     if (subpath.empty()) subpath = thumbnail;
                     auto n = subpath.find_last_of('.');
                     if (n != std::string::npos)
@@ -1089,10 +1082,10 @@ void PrinterFileSystem::UpdateFocusThumbnail2(std::shared_ptr<std::vector<File>>
                     data = reinterpret_cast<unsigned char const *>(iter->local_path.c_str());
                     size = iter->local_path.size();
                 }
-                wxMemoryInputStream mis(data, size);
-                mimetype.Replace("jpg", "jpeg");
-                file.thumbnail = wxImage(mis, mimetype);
-                if (!file.thumbnail.IsOk()) {
+                                // jpg→jpeg for Qt mime matching
+                { auto pos = mimetype.find("jpg"); if (pos != std::string::npos) mimetype.replace(pos, 3, "jpeg"); }
+                { QImage img; img.loadFromData(static_cast<const uchar*>(data), size, mimetype.c_str()); file.thumbnail = QPixmap::fromImage(img); }
+                if (file.thumbnail.isNull()) {
                     BOOST_LOG_TRIVIAL(info) << "PrinterFileSystem: parse thumbnail failed" << size << mimetype;
                 }
             }
@@ -1121,7 +1114,7 @@ void PrinterFileSystem::UpdateFocusThumbnail2(std::shared_ptr<std::vector<File>>
                         iter2->metadata = file.metadata;
                 } else {
                     iter->flags |= FF_THUMNAIL; // DOTO: retry on fail
-                    if (file.thumbnail.IsOk()) {
+                    if (file.thumbnail.isNull() == false) {
                         iter->thumbnail = file.thumbnail;
                         int index       = iter - m_file_list.begin();
                         SendChangedEvent(EVT_THUMBNAIL, index, file.name);
@@ -1189,9 +1182,9 @@ void PrinterFileSystem::FileRemoved(std::pair<FileType, std::string> type, size_
     file_index.first.erase(file_index.first.begin() + index);
 }
 
-struct CallbackEvent : wxCommandEvent
+struct CallbackEvent
 {
-    CallbackEvent(std::function<void(void)> const &callback, boost::weak_ptr<PrinterFileSystem> owner) : wxCommandEvent(EVT_FILE_CALLBACK), callback(callback), owner(owner) {}
+    CallbackEvent(std::function<void(void)> const &callback, boost::weak_ptr<PrinterFileSystem> owner) : callback(callback), owner(owner) {}
     ~CallbackEvent(){ if (!owner.expired()) callback(); }
     std::function<void(void)> const callback;
     boost::weak_ptr<PrinterFileSystem> owner;
@@ -1199,33 +1192,38 @@ struct CallbackEvent : wxCommandEvent
 
 void PrinterFileSystem::PostCallback(std::function<void(void)> const& callback)
 {
-    wxCommandEvent *e = new CallbackEvent(callback, boost::weak_ptr(shared_from_this()));
-    wxQueueEvent(this, e);
+    auto owner = boost::weak_ptr(shared_from_this());
+    QMetaObject::invokeMethod(qApp, [callback, owner]() { if (auto p = owner.lock()) callback(); }, Qt::QueuedConnection);
 }
 
-void PrinterFileSystem::SendChangedEvent(wxEventType type, size_t index, std::string const &str, long extra)
+void PrinterFileSystem::SendChangedEvent(int type, size_t index, std::string const &str, long extra)
 {
-    wxCommandEvent event(type);
-    event.SetEventObject(this);
-    event.SetInt(index);
-    if (!str.empty())
-        event.SetString(wxString::FromUTF8(str.c_str()));
-    else if (auto iter = error_messages.find(extra); iter != error_messages.end())
-        event.SetString(_L(iter->second.c_str()));
-    else if (extra > CONTINUE && extra != ERROR_CANCEL)
-        event.SetString(wxString::Format(_L("Error code: %d"), int(extra)));
-    event.SetExtraLong(extra);
-    if (wxThread::IsMain())
-        ProcessEventLocally(event);
+    // Qt signals emitted by type id
+    auto doEmit = [this, type, index, str, extra]() {
+        switch(type) {
+            case 1: emit statusChanged(index, str, extra); break;
+            case 2: emit modeChanged(index, str, extra); break;
+            case 3: emit fileChanged(index, str, extra); break;
+            case 4: emit selectChanged(index, str, extra); break;
+            case 5: emit thumbnailReady(index, str, extra); break;
+            case 6: emit downloadChanged(index, str, extra); break;
+            case 7: emit ramDownloadChanged(index, str, extra); break;
+            case 8: emit mediaAbilityChanged(index, str, extra); break;
+            case 9: emit uploading(index, str, extra); break;
+            case 10: emit uploadChanged(index, str, extra); break;
+        }
+    };
+    if (QThread::currentThread() == QCoreApplication::instance()->thread())
+        doEmit();
     else
-        wxPostEvent(this, event);
+        QMetaObject::invokeMethod(this, doEmit, Qt::QueuedConnection);
 }
 
 void PrinterFileSystem::DumpLog(void * thiz, int, tchar const *msg)
 {
 
 #if !BBL_RELEASE_TO_PUBLIC
-    BOOST_LOG_TRIVIAL(info) << "PrinterFileSystem: " << wxString(msg).ToUTF8().data();
+    BOOST_LOG_TRIVIAL(info) << "PrinterFileSystem: " << msg;
 #endif
 
     static_cast<PrinterFileSystem*>(thiz)->Bambu_FreeLogMsg(msg);
@@ -1283,9 +1281,9 @@ void PrinterFileSystem::RequestUploadFile()
             if (result != SUCCESS && result != CONTINUE && result != FILE_EXIST) {
                 std::string error_msg = "";
                 if (result == ERROR_CANCEL) {
-                    error_msg = _L("User cancels task.").ToStdString();
+                    error_msg = _L("User cancels task.").toStdString();
                 } else if (result == FILE_READ_WRITE_ERR || result == FILE_OPEN_ERR) {
-                    error_msg = _L("Failed to read file, please try again.").ToStdString();
+                    error_msg = _L("Failed to read file, please try again.").toStdString();
                 }
                 BOOST_LOG_TRIVIAL(info) << "PrinterFileSystem::UploadFile error: " << result;
                 SendChangedEvent(EVT_UPLOAD_CHANGED, FF_UPLOADCANCEL, error_msg, result);
@@ -1580,7 +1578,7 @@ void PrinterFileSystem::RecvMessageThread()
             // OutputDebugStringA("\n");
 
 #if !BBL_RELEASE_TO_PUBLIC
-            BOOST_LOG_TRIVIAL(info) << "PrinterFileSystem::SendRequest >>>:" << wxString::FromUTF8(msg);
+            BOOST_LOG_TRIVIAL(info) << "PrinterFileSystem::SendRequest >>>:" << msg;
 #endif
             l.unlock();
             int n = Bambu_SendMessage(m_session.tunnel, CTRL_TYPE, msg.c_str(), msg.length());
@@ -1623,7 +1621,7 @@ void PrinterFileSystem::HandleResponse(boost::unique_lock<boost::mutex> &l, Bamb
     // OutputDebugStringA("\n");
 
 #if !BBL_RELEASE_TO_PUBLIC
-    BOOST_LOG_TRIVIAL(info) << "PrinterFileSystem::HandleResponse <<<: \n" << wxString::FromUTF8(msg);
+    BOOST_LOG_TRIVIAL(info) << "PrinterFileSystem::HandleResponse <<<: \n" << msg;
 #endif
 
     std::istringstream iss(msg);

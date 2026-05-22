@@ -1,4 +1,5 @@
 #ifndef slic3r_GUI_CalibrationWizardPresetPage_hpp_
+#include <QRadioButton>
 #define slic3r_GUI_CalibrationWizardPresetPage_hpp_
 
 #include "CalibrationWizardPage.hpp"
@@ -19,15 +20,15 @@ enum FlowRatioCaliSource {
 
 class CalibrationPresetPage;
 
-class CaliPresetCaliStagePanel : public wxPanel
+class CaliPresetCaliStagePanel : public QWidget
 {
 public:
-    CaliPresetCaliStagePanel(wxWindow* parent,
-        wxWindowID id = wxID_ANY,
-        const wxPoint& pos = wxDefaultPosition,
-        const wxSize& size = wxDefaultSize,
-        long style = wxTAB_TRAVERSAL);
-    void create_panel(wxWindow* parent);
+    CaliPresetCaliStagePanel(QWidget* parent,
+        int id = -1,
+        const QPoint& pos = QPoint(),
+        const QSize& size = QSize(),
+        long style = 0);
+    void create_panel(QWidget* parent);
 
     void msw_rescale();
 
@@ -39,100 +40,100 @@ public:
     void set_flow_ratio_calibration_type(FlowRatioCalibrationType type);
 protected:
     CaliPresetStage m_stage;
-    wxBoxSizer*   m_top_sizer;
-    wxRadioButton* m_complete_radioBox;
-    wxRadioButton* m_fine_radioBox;
+    QBoxLayout*   m_top_sizer;
+    QRadioButton* m_complete_radioBox;
+    QRadioButton* m_fine_radioBox;
     TextInput *    flow_ratio_input;
-    wxPanel*       input_panel;
+    QWidget*       input_panel;
     float m_flow_ratio_value;
     CalibrationPresetPage* m_stage_panel_parent;
 };
 
-class CaliComboBox : public wxPanel
+class CaliComboBox : public QWidget
 {
 public:
-    CaliComboBox(wxWindow *parent,
-        wxString title,
-        wxArrayString values,
+    CaliComboBox(QWidget *parent,
+        QString title,
+        QStringList values,
         int default_index = 0,  // default delected id
-        std::function<void(wxCommandEvent &)> on_value_change = nullptr,
-        wxWindowID id = wxID_ANY,
-        const wxPoint& pos = wxDefaultPosition,
-        const wxSize& size = wxDefaultSize,
-        long style = wxTAB_TRAVERSAL);
+        std::function<void(QEvent &)> on_value_change = nullptr,
+        int id = -1,
+        const QPoint& pos = QPoint(),
+        const QSize& size = QSize(),
+        long style = 0);
 
     int get_selection() const;
-    wxString get_value() const;
-    void set_values(const wxArrayString& values);
+    QString get_value() const;
+    void set_values(const QStringList& values);
 
 private:
-    wxBoxSizer* m_top_sizer;
-    wxString m_title;
+    QBoxLayout* m_top_sizer;
+    QString m_title;
     ComboBox* m_combo_box;
-    std::function<void(wxCommandEvent&)> m_on_value_change_call_back;
+    std::function<void(QEvent&)> m_on_value_change_call_back;
 };
 
-class CaliPresetWarningPanel : public wxPanel
+class CaliPresetWarningPanel : public QWidget
 {
 public:
-    CaliPresetWarningPanel(wxWindow* parent,
-        wxWindowID id = wxID_ANY,
-        const wxPoint& pos = wxDefaultPosition,
-        const wxSize& size = wxDefaultSize,
-        long style = wxTAB_TRAVERSAL);
+    CaliPresetWarningPanel(QWidget* parent,
+        int id = -1,
+        const QPoint& pos = QPoint(),
+        const QSize& size = QSize(),
+        long style = 0);
 
-    void create_panel(wxWindow* parent);
+    void create_panel(QWidget* parent);
 
-    void set_warning(wxString text);
+    void set_warning(QString text);
 
-    void set_color(wxColour color);
+    void set_color(QColor color);
 
 protected:
-    wxBoxSizer*   m_top_sizer;
+    QBoxLayout*   m_top_sizer;
     Label* m_warning_text;
 };
 
-class CaliPresetTipsPanel : public wxPanel
+class CaliPresetTipsPanel : public QWidget
 {
 public:
-    CaliPresetTipsPanel(wxWindow* parent,
-        wxWindowID id = wxID_ANY,
-        const wxPoint& pos = wxDefaultPosition,
-        const wxSize& size = wxDefaultSize,
-        long style = wxTAB_TRAVERSAL);
+    CaliPresetTipsPanel(QWidget* parent,
+        int id = -1,
+        const QPoint& pos = QPoint(),
+        const QSize& size = QSize(),
+        long style = 0);
 
-    void create_panel(wxWindow* parent);
+    void create_panel(QWidget* parent);
 
     void set_params(int nozzle_temp, int bed_temp, float max_volumetric);
     void get_params(int& nozzle_temp, int& bed_temp, float& max_volumetric);
 protected:
-    wxBoxSizer*     m_top_sizer;
+    QBoxLayout*     m_top_sizer;
     TextInput*      m_nozzle_temp;
     Label*   m_bed_temp;
     TextInput*      m_max_volumetric_speed;
 };
 
-class CaliPresetCustomRangePanel : public wxPanel
+class CaliPresetCustomRangePanel : public QWidget
 {
 public:
-    CaliPresetCustomRangePanel(wxWindow* parent,
+    CaliPresetCustomRangePanel(QWidget* parent,
         int input_value_nums = 3,
-        wxWindowID id = wxID_ANY,
-        const wxPoint& pos = wxDefaultPosition,
-        const wxSize& size = wxDefaultSize,
-        long style = wxTAB_TRAVERSAL);
+        int id = -1,
+        const QPoint& pos = QPoint(),
+        const QSize& size = QSize(),
+        long style = 0);
 
-    void create_panel(wxWindow* parent);
+    void create_panel(QWidget* parent);
 
     void msw_rescale();
 
-    void set_unit(wxString unit);
-    void set_titles(wxArrayString titles);
-    void set_values(wxArrayString values);
-    wxArrayString get_values();
+    void set_unit(QString unit);
+    void set_titles(QStringList titles);
+    void set_values(QStringList values);
+    QStringList get_values();
 
 protected:
-    wxBoxSizer*     m_top_sizer;
+    QBoxLayout*     m_top_sizer;
     int                       m_input_value_nums;
     std::vector<Label*> m_title_texts;
     std::vector<TextInput*>    m_value_inputs;
@@ -177,22 +178,22 @@ struct CaliFilamentInfo
 class CalibrationPresetPage : public CalibrationWizardPage
 {
 public:
-    CalibrationPresetPage(wxWindow* parent,
+    CalibrationPresetPage(QWidget* parent,
         CalibMode cali_mode,
         bool custom_range = false,
-        wxWindowID id = wxID_ANY,
-        const wxPoint& pos = wxDefaultPosition,
-        const wxSize& size = wxDefaultSize,
-        long style = wxTAB_TRAVERSAL);
+        int id = -1,
+        const QPoint& pos = QPoint(),
+        const QSize& size = QSize(),
+        long style = 0);
 
-    void create_page(wxWindow* parent);
+    void create_page(QWidget* parent);
 
-    void update_print_status_msg(wxString msg, bool is_warning);
-    wxString format_text(wxString& m_msg);
+    void update_print_status_msg(QString msg, bool is_warning);
+    QString format_text(QString& m_msg);
     void stripWhiteSpace(std::string& str);
-    void update_priner_status_msg(wxString msg, bool is_warning);
+    void update_priner_status_msg(QString msg, bool is_warning);
     void update(MachineObject* obj) override;
-    void update_flow_ratio_type(FlowRatioCalibrationType type) { if(curr_obj) curr_obj->GetCalib()->SetFlowRatioCalibType(type); }
+    void update_flow_ratio_type(FlowRatioCalibrationType type);
 
     void on_device_connected(MachineObject* obj) override;
 
@@ -237,7 +238,7 @@ public:
     Preset* get_print_preset();
     std::string get_print_preset_name();
 
-    wxArrayString get_custom_range_values();
+    QStringList get_custom_range_values();
     CalibMode     get_pa_cali_method();
 
     CaliPresetPageStatus get_page_status() { return m_page_status; }
@@ -250,10 +251,10 @@ public:
     ExtruderType get_extruder_type(int extruder_id) const;
 
 protected:
-    void create_selection_panel(wxWindow* parent);
-    void create_filament_list_panel(wxWindow* parent);
-    wxSizer* create_ams_items_sizer(wxPanel* ams_preview_panel, std::vector<AMSPreview*> &ams_preview_list, std::vector<AMSinfo> &ams_info, ExtruderRole role);
-    wxSizer* create_slot_items_sizer(wxPanel* slot_items_panel, FilamentComboBoxList& filament_comboBox_list, ExtruderRole extuder_role);
+    void create_selection_panel(QWidget* parent);
+    void create_filament_list_panel(QWidget* parent);
+    QLayout* create_ams_items_sizer(QWidget* ams_preview_panel, std::vector<AMSPreview*> &ams_preview_list, std::vector<AMSinfo> &ams_info, ExtruderRole role);
+    QLayout* create_slot_items_sizer(QWidget* slot_items_panel, FilamentComboBoxList& filament_comboBox_list, ExtruderRole extuder_role);
 
     void manage_filament_radio_btn(ExtruderRole extuder_role);
 
@@ -261,13 +262,13 @@ protected:
 
     void update_nozzle_id_combox();
 
-    void on_select_nozzle(wxCommandEvent& evt);
-    void on_select_plate_type(wxCommandEvent& evt);
+    void on_select_nozzle(QEvent& evt);
+    void on_select_plate_type(QEvent& evt);
 
-    void on_choose_ams(wxCommandEvent& event);
-    void on_choose_ext_spool(wxCommandEvent& event);
+    void on_choose_ams(QEvent& event);
+    void on_choose_ext_spool(QEvent& event);
 
-    void on_select_tray(wxCommandEvent& event);
+    void on_select_tray(QEvent& event);
 
     void on_switch_ams(std::string ams_id = "");
 
@@ -297,29 +298,29 @@ protected:
     bool is_blocking_printing();
     bool need_check_sdcard(MachineObject* obj);
 
-    void disable_bowden_extuder_auto_dyn_cali(wxWindow* cali_panel);
-    std::vector<std::pair<wxString, int>> make_nozzles_info(const DevNozzle& r_nozzle, const std::map<int, DevNozzle>& nozzle_map, const NozzleDiameterType& nozzle_diameter, const std::vector<NozzleFlowType>& nozzle_flows);
+    void disable_bowden_extuder_auto_dyn_cali(QWidget* cali_panel);
+    std::vector<std::pair<QString, int>> make_nozzles_info(const DevNozzle& r_nozzle, const std::map<int, DevNozzle>& nozzle_map, const NozzleDiameterType& nozzle_diameter, const std::vector<NozzleFlowType>& nozzle_flows);
 
-    std::map<std::string, std::pair<bool, wxString>> m_tips_map;
+    std::map<std::string, std::pair<bool, QString>> m_tips_map;
     void init_filament_list_tips();
-    wxString get_filament_tips();
+    QString get_filament_tips();
 
     CaliPresetPageStatus  get_status() { return m_page_status; }
 
     CaliPageStepGuide* m_step_panel{ nullptr };
     CaliComboBox *            m_pa_cali_method_combox{nullptr};
     CaliPresetCaliStagePanel* m_cali_stage_panel { nullptr };
-    wxPanel*                  m_selection_panel { nullptr };
-    wxPanel*                  m_filament_from_panel { nullptr };
+    QWidget*                  m_selection_panel { nullptr };
+    QWidget*                  m_filament_from_panel { nullptr };
     Label*             m_filament_list_tips{ nullptr };
-    wxPanel*                  m_filament_list_panel { nullptr };
+    QWidget*                  m_filament_list_panel { nullptr };
     CaliPresetWarningPanel*   m_warning_panel{nullptr};
     CaliPresetWarningPanel*   m_error_panel { nullptr };
     CaliPresetCustomRangePanel* m_custom_range_panel { nullptr };
     CaliPresetTipsPanel*      m_tips_panel { nullptr };
     CaliPageSendingPanel*     m_sending_panel { nullptr };
 
-    wxBoxSizer* m_top_sizer;
+    QBoxLayout* m_top_sizer;
 
     // m_selection_panel widgets
     ComboBox*       m_comboBox_nozzle_dia;
@@ -332,27 +333,27 @@ protected:
     void update_extruder_filament_combobox(ExtruderRole role, const std::string &ams_id);
 
     // multi_extruder
-    void create_multi_extruder_filament_list_panel(wxWindow *parent);
-    void on_select_nozzle_volume_type(wxCommandEvent &evt, size_t extruder_id);
+    void create_multi_extruder_filament_list_panel(QWidget *parent);
+    void on_select_nozzle_volume_type(QEvent &evt, size_t extruder_id);
 
     Button *m_btn_sync{nullptr};
     Label* m_sync_button_text;
 
-    wxPanel*    m_single_nozzle_info_panel{nullptr};
-    wxPanel*    m_multi_nozzle_info_panel{nullptr};
-    wxPanel*    m_multi_exutrder_filament_list_panel{nullptr};
+    QWidget*    m_single_nozzle_info_panel{nullptr};
+    QWidget*    m_multi_nozzle_info_panel{nullptr};
+    QWidget*    m_multi_exutrder_filament_list_panel{nullptr};
 
     ComboBox * m_left_comboBox_nozzle_dia;
     ComboBox * m_right_comboBox_nozzle_dia;
     ComboBox * m_left_comboBox_nozzle_volume;
     ComboBox * m_right_comboBox_nozzle_volume;
 
-    wxPanel*    m_single_ams_preview_panel{nullptr};
-    wxPanel*    m_main_ams_preview_panel{nullptr};
-    wxPanel*    m_deputy_ams_preview_panel{nullptr};
-    wxPanel*    m_single_ams_items_panel{nullptr};
-    wxPanel*    m_main_ams_items_panel{nullptr};
-    wxPanel*    m_deputy_ams_items_panel{nullptr};
+    QWidget*    m_single_ams_preview_panel{nullptr};
+    QWidget*    m_main_ams_preview_panel{nullptr};
+    QWidget*    m_deputy_ams_preview_panel{nullptr};
+    QWidget*    m_single_ams_items_panel{nullptr};
+    QWidget*    m_main_ams_items_panel{nullptr};
+    QWidget*    m_deputy_ams_items_panel{nullptr};
 
     std::vector<AMSPreview *> m_single_ams_preview_list;
     std::vector<AMSPreview *> m_main_ams_preview_list;
@@ -366,14 +367,14 @@ protected:
     std::vector<NozzleVolumeType> m_extruder_nozzle_types;
     bool                          m_main_extruder_on_left{true};
 
-    wxBoxSizer* m_multi_extruder_ams_panel_sizer;
-    wxBoxSizer *       m_multi_exturder_ams_sizer;
-    wxStaticBoxSizer * m_main_sizer;
-    wxStaticBoxSizer * m_deputy_sizer;
-    wxStaticBoxSizer * m_left_nozzle_volume_type_sizer;
-    wxStaticBoxSizer * m_right_nozzle_volume_type_sizer;
-    wxPanel*           m_main_filament_cali_panel;
-    wxPanel*           m_deputy_filament_cali_panel;
+    QBoxLayout* m_multi_extruder_ams_panel_sizer;
+    QBoxLayout *       m_multi_exturder_ams_sizer;
+    QVBoxLayout * m_main_sizer;
+    QVBoxLayout * m_deputy_sizer;
+    QVBoxLayout * m_left_nozzle_volume_type_sizer;
+    QVBoxLayout * m_right_nozzle_volume_type_sizer;
+    QWidget*           m_main_filament_cali_panel;
+    QWidget*           m_deputy_filament_cali_panel;
 
     Label*          m_nozzle_diameter_tips{nullptr};
 
@@ -394,13 +395,13 @@ protected:
 class MaxVolumetricSpeedPresetPage : public CalibrationPresetPage
 {
 public:
-    MaxVolumetricSpeedPresetPage(wxWindow *     parent,
+    MaxVolumetricSpeedPresetPage(QWidget *     parent,
                                  CalibMode      cali_mode,
                                  bool           custom_range = false,
-                                 wxWindowID     id           = wxID_ANY,
-                                 const wxPoint &pos          = wxDefaultPosition,
-                                 const wxSize & size         = wxDefaultSize,
-                                 long           style        = wxTAB_TRAVERSAL);
+                                 int     id           = -1,
+                                 const QPoint &pos          = QPoint(),
+                                 const QSize & size         = QSize(),
+                                 long           style        = 0);
 };
 
 }} // namespace Slic3r::GUI

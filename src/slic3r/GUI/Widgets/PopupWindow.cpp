@@ -1,120 +1,47 @@
 #include "PopupWindow.hpp"
 
-static wxWindow *GetTopParent(wxWindow *pWindow)
+#include <QEvent>
+#include <QFocusEvent>
+#include <QApplication>
+
+void PopupWindow::init()
 {
-    wxWindow *pWin = pWindow;
-    while (pWin->GetParent()) {
-        pWin = pWin->GetParent();
-        if (auto top = dynamic_cast<wxNonOwnedWindow*>(pWin))
-            return top;
+    setWindowFlags(Qt::Popup | Qt::FramelessWindowHint);
+    setFrameShape(QFrame::NoFrame);
+}
+
+void PopupWindow::Popup(QWidget *anchor)
+{
+    if (anchor) {
+        const QPoint pt = anchor->mapToGlobal(QPoint(0, anchor->height()));
+        move(pt);
     }
-    return pWin;
+    show();
+    raise();
+    activateWindow();
 }
 
-bool PopupWindow::Create(wxWindow *parent, int style)
+void PopupWindow::Dismiss()
 {
-    if (!wxPopupTransientWindow::Create(parent, style))
-        return false;
-#ifdef __WXGTK__
-    GetTopParent(parent)->Bind(wxEVT_ACTIVATE, &PopupWindow::topWindowActivate, this);
-#endif
-#ifdef __WXOSX__
-    if (style & wxPU_CONTAINS_CONTROLS)
-    for (auto evt : {wxEVT_LEFT_DOWN, wxEVT_LEFT_UP, wxEVT_LEFT_DCLICK, wxEVT_MOTION, wxEVT_MOUSEWHEEL})
-        Bind(evt, &PopupWindow::OnMouseEvent2, this);
-#endif
-    return true;
+    hide();
 }
 
-PopupWindow::~PopupWindow()
+bool PopupWindow::event(QEvent *e)
 {
-#ifdef __WXGTK__
-    GetTopParent(this)->Unbind(wxEVT_ACTIVATE, &PopupWindow::topWindowActivate, this);
-#endif
-#ifdef __WXMSW__
-    GetTopParent(this)->Unbind(wxEVT_ACTIVATE, &PopupWindow::topWindowActivate, this);
-    GetTopParent(this)->Unbind(wxEVT_ICONIZE, &PopupWindow::topWindowIconize, this);
-    GetTopParent(this)->Unbind(wxEVT_SHOW, &PopupWindow::topWindowShow, this);
-#endif
-}
-
-#ifdef __WXOSX__
-
-static wxEvtHandler * HitTest(wxWindow * parent, wxMouseEvent &evt)
-{
-    auto pt = evt.GetPosition();
-    const wxWindowList &children = parent->GetChildren();
-    for (auto w : children) {
-        if (!w->IsShown()) continue;
-        wxRect rc { w->GetPosition(), w->GetSize() };
-        if (rc.Contains(pt)) {
-            evt.SetPosition(pt - rc.GetTopLeft());
-            if (auto child = HitTest(w, evt))
-                return child;
-            return w;
-        }
+    // Qt::Popup windows dismiss on click-outside automatically,
+    // but we also want to dismiss when the top-level window loses focus.
+    if (e->type() == QEvent::WindowDeactivate ||
+        e->type() == QEvent::Hide) {
+        // don't recurse
+        if (e->type() == QEvent::WindowDeactivate)
+            Dismiss();
     }
-    return nullptr;
+    return QFrame::event(e);
 }
 
-void PopupWindow::OnMouseEvent2(wxMouseEvent &evt)
+void PopupWindow::focusOutEvent(QFocusEvent *e)
 {
-    auto child = ::HitTest(this, evt);
-    if (evt.GetEventType() == wxEVT_MOTION) {
-        auto h = child ? child : this;
-        if (hovered != h) {
-            wxMouseEvent leave(wxEVT_LEAVE_WINDOW);
-            leave.SetEventObject(hovered);
-            leave.SetId(static_cast<wxWindow*>(hovered)->GetId());
-            hovered->ProcessEventLocally(leave);
-            hovered = h;
-            wxMouseEvent enter(wxEVT_ENTER_WINDOW);
-            enter.SetEventObject(hovered);
-            enter.SetId(static_cast<wxWindow*>(hovered)->GetId());
-            hovered->ProcessEventLocally(enter);
-        }
-    }
-    if (child) {
-        child->ProcessEventLocally(evt);
-    } else {
-        evt.Skip();
-    }
+    QFrame::focusOutEvent(e);
+    // Qt::Popup already handles auto-hide, but keep this for subclasses
+    // that might use other window flags.
 }
-
-#endif
-
-#ifdef __WXGTK__
-void PopupWindow::topWindowActivate(wxActivateEvent &event)
-{
-    event.Skip();
-}
-#endif
-
-#ifdef __WXMSW__
-void PopupWindow::BindUnfocusEvent()
-{
-    GetTopParent(this)->Bind(wxEVT_ACTIVATE, &PopupWindow::topWindowActivate, this);
-    GetTopParent(this)->Bind(wxEVT_ICONIZE, &PopupWindow::topWindowIconize, this);
-    GetTopParent(this)->Bind(wxEVT_SHOW, &PopupWindow::topWindowShow, this);
-}
-
-void PopupWindow::topWindowActivate(wxActivateEvent &event)
-{
-    if (!event.GetActive())
-        Dismiss();
-}
-
-void PopupWindow::topWindowIconize(wxIconizeEvent &event)
-{
-    event.Skip();
-    if (event.IsIconized())
-        Dismiss();
-}
-
-void PopupWindow::topWindowShow(wxShowEvent &event)
-{
-    event.Skip();
-    if (!event.IsShown())
-        Dismiss();
-}
-#endif

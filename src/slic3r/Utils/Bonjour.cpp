@@ -11,7 +11,6 @@
 #include <boost/system/error_code.hpp>
 #include <boost/endian/conversion.hpp>
 #include <boost/asio.hpp>
-#include <boost/date_time/posix_time/posix_time_duration.hpp>
 #include <boost/format.hpp>
 
 using boost::optional;
@@ -629,7 +628,7 @@ void Bonjour::priv::lookup_perform()
 	auto self = this;
 
 	try {
-		boost::asio::io_service io_service;
+		boost::asio::io_context io_service;
 		udp::socket socket(io_service);
 		socket.open(udp::v4());
 		socket.set_option(udp::socket::reuse_address(true));
@@ -638,7 +637,7 @@ void Bonjour::priv::lookup_perform()
 
 		bool expired = false;
 		bool retry = false;
-		asio::deadline_timer timer(io_service);
+		asio::steady_timer timer(io_service);
 		retries--;
 		std::function<void(const error_code &)> timer_handler = [&](const error_code &error) {
 			if (retries == 0 || error) {
@@ -649,12 +648,12 @@ void Bonjour::priv::lookup_perform()
 			} else {
 				retry = true;
 				retries--;
-				timer.expires_from_now(boost::posix_time::seconds(timeout));
+				timer.expires_after(boost::asio::chrono::seconds(timeout));
 				timer.async_wait(timer_handler);
 			}
 		};
 
-		timer.expires_from_now(boost::posix_time::seconds(timeout));
+		timer.expires_after(boost::asio::chrono::seconds(timeout));
 		timer.async_wait(timer_handler);
 
 		udp::endpoint recv_from;

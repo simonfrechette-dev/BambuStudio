@@ -1,8 +1,8 @@
 #ifndef slic3r_wgtFilaManagerPanel_h_
 #define slic3r_wgtFilaManagerPanel_h_
+#include <QWidget>
+#include <QString>
 
-#include <wx/panel.h>
-#include <wx/webview.h>
 #include "nlohmann/json.hpp"
 #include <chrono>
 #include <functional>
@@ -14,24 +14,24 @@ namespace Slic3r { namespace GUI {
 
 #define FM_PROTOCOL_VERSION "1.0"
 
-class wgtFilaManagerPanel : public wxPanel
+class wgtFilaManagerPanel : public QWidget
 {
 public:
-    wgtFilaManagerPanel(wxWindow* parent,
-                        wxWindowID id   = wxID_ANY,
-                        const wxPoint& pos  = wxDefaultPosition,
-                        const wxSize& size  = wxDefaultSize,
-                        long style = wxTAB_TRAVERSAL);
+    wgtFilaManagerPanel(QWidget* parent,
+                        int id   = -1,
+                        const QPoint& pos  = QPoint(),
+                        const QSize& size  = QSize(),
+                        long style = 0);
     ~wgtFilaManagerPanel();
 
     void msw_rescale();
     void on_sys_color_changed();
-    bool Show(bool show) override;
+    void setVisible(bool show) override;
 
 private:
     /* ===== Bridge lifecycle ===== */
     void InitBridge();
-    void OnWebMsg(wxWebViewEvent& evt);
+    void OnWebMsg(QEvent& evt);
 
     /* ===== C++ → JS channel ===== */
     void SendMsg(nlohmann::json msg);
@@ -56,8 +56,8 @@ private:
     }
 
     /* ===== State ===== */
-    wxWebView*               m_browser       { nullptr };
-    wxString                 m_home_url;
+    QWidget*               m_browser       { nullptr };
+    QString                 m_home_url;
     bool                     m_bridge_ready  { false };
     std::vector<std::string> m_msg_queue;
 };

@@ -1,484 +1,230 @@
-#include <wx/dc.h>
-#include <wx/pen.h>
-
 #include "StepCtrl.hpp"
 #include "Label.hpp"
+#include <QPainter>
+#include <QPainterPath>
+#include <QFontMetrics>
+#include <QMouseEvent>
 
-wxDEFINE_EVENT( EVT_STEP_CHANGING, wxCommandEvent );
-wxDEFINE_EVENT( EVT_STEP_CHANGED, wxCommandEvent );
+// ============================================================
+// StepCtrlBase
+// ============================================================
 
-BEGIN_EVENT_TABLE(StepCtrl, StepCtrlBase)
-EVT_LEFT_DOWN(StepCtrl::mouseDown)
-EVT_MOTION(StepCtrl::mouseMove)
-EVT_LEFT_UP(StepCtrl::mouseUp)
-EVT_MOUSE_CAPTURE_LOST(StepCtrl::mouseCaptureLost)
-END_EVENT_TABLE()
-
-StepCtrlBase::StepCtrlBase(wxWindow *      parent,
-                   wxWindowID      id,
-                   const wxPoint & pos,
-                   const wxSize &  size,
-                   long            style)
-    : StaticBox(parent, id, pos, size, style)
-    , font_tip(Label::Body_14)
-    , clr_bar(0xACACAC)
-    , clr_step(0xACACAC)
-    , clr_text(std::make_pair(0x00AE42, (int) StateColor::Checked),
-            std::make_pair(0x6B6B6B, (int) StateColor::Normal))
-    , clr_tip(0x828280)
+StepCtrlBase::StepCtrlBase(QWidget *parent) : StaticBox(parent)
 {
-    SetFont(Label::Body_14);
-    border_color     = StateColor(*wxLIGHT_GREY);
-    StaticBox::radius = 0;
-    //wxString reason;
-    //IsTransparentBackgroundSupported(&reason);
+    font_tip = Label::Body_12;
+    setMinimumSize(200, 40);
 }
+StepCtrlBase::~StepCtrlBase() = default;
 
-StepCtrlBase::~StepCtrlBase()
-{
-}
+void StepCtrlBase::SetHint(const QString &h) { hint = h; update(); }
+bool StepCtrlBase::SetTipFont(const QFont &f) { font_tip = f; update(); return true; }
 
-int StepCtrlBase::GetSelection() const { return step; }
-
-void StepCtrlBase::SelectItem(int item)
-{
-    if (item == step || item < -1 || item >= steps.size() || !sendStepCtrlEvent(true))
-        return;
-    step = item;
-    sendStepCtrlEvent();
-    Refresh();
-}
-
-void StepCtrlBase::Idle()
-{
-    if (step != -1) {
-        step = -1;
-        sendStepCtrlEvent();
-        Refresh();
-    }
-}
-
-bool StepCtrlBase::SetTipFont(wxFont const& font)
-{
-    font_tip = font;
-    return true;
-}
-
-void StepCtrlBase::SetHint(wxString hint) {
-    this->hint = hint;
-}
-
-int StepCtrlBase::AppendItem(const wxString &item, wxString const & tip)
+int StepCtrlBase::AppendItem(const QString &item, const QString &tip)
 {
     steps.push_back(item);
     tips.push_back(tip);
-    return steps.size() - 1;
+    update();
+    return (int)steps.size() - 1;
 }
-
-void StepCtrlBase::DeleteAllItems()
+void StepCtrlBase::DeleteAllItems() { steps.clear(); tips.clear(); step = -1; update(); }
+unsigned int StepCtrlBase::GetCount() const { return (unsigned)steps.size(); }
+int  StepCtrlBase::GetSelection() const { return step; }
+void StepCtrlBase::Idle() { step = -1; update(); }
+void StepCtrlBase::SelectItem(int item)
 {
-    steps.clear();
-    tips.clear();
-    if (step >= 0) {
-        step = -1;
-        sendStepCtrlEvent();
+    if (item < 0 || item >= (int)steps.size()) return;
+    if (sendStepCtrlEvent(true)) {
+        step = item;
+        sendStepCtrlEvent(false);
+        update();
     }
 }
-
-unsigned int StepCtrlBase::GetCount() const { return steps.size(); }
-
-wxString StepCtrlBase::GetItemText(unsigned int item) const
+QString StepCtrlBase::GetItemText(unsigned int item) const
 {
-    return item < steps.size() ? steps[item] : wxString{};
+    return item < steps.size() ? steps[item] : QString{};
 }
-
-int StepCtrlBase::GetItemUseText(wxString txt) const
+int StepCtrlBase::GetItemUseText(const QString &txt) const
 {
-    for(int i = 0; i < steps.size(); i++){
-        if (steps[i] == txt) {
-            return i;
-        }
-        else {
-            continue;
-        }
-    }
-    return 0;
+    for (int i = 0; i < (int)steps.size(); ++i)
+        if (steps[i] == txt) return i;
+    return -1;
 }
-
-void StepCtrlBase::SetItemText(unsigned int item, wxString const &value)
+void StepCtrlBase::SetItemText(unsigned int item, const QString &v)
 {
-    if (item >= steps.size()) return;
-    steps[item] = value;
+    if (item < steps.size()) { steps[item] = v; update(); }
 }
-
 bool StepCtrlBase::sendStepCtrlEvent(bool changing)
 {
-    wxCommandEvent event(changing ? EVT_STEP_CHANGING : EVT_STEP_CHANGED, GetId());
-    event.SetEventObject(this);
-    event.SetInt(step);
-    GetEventHandler()->ProcessEvent(event);
+    if (changing) emit stepChanging(step);
+    else          emit stepChanged(step);
     return true;
 }
 
-/* StepCtrl */
+// ============================================================
+// StepCtrl
+// ============================================================
 
-StepCtrl::StepCtrl(wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size, long style)
-    : StepCtrlBase(parent, id, pos, size, style)
-    , bmp_thumb(this, "step_thumb", 36)
+StepCtrl::StepCtrl(QWidget *parent) : StepCtrlBase(parent)
 {
-    StaticBox::border_width = 3;
-    radius = radius * bmp_thumb.GetBmpHeight() / 36;
-    bar_width = bar_width * bmp_thumb.GetBmpHeight() / 36;
+    bmp_thumb = ScalableBitmap(this, "step_thumb", 16);
+    setMouseTracking(true);
 }
 
-void StepCtrl::Rescale()
-{
-    bmp_thumb.msw_rescale();
-    radius    = radius * bmp_thumb.GetBmpHeight() / 36;
-    bar_width = bar_width * bmp_thumb.GetBmpHeight() / 36;
-}
+void StepCtrl::Rescale() { bmp_thumb = ScalableBitmap(this, "step_thumb", 16); update(); }
 
-void StepCtrl::mouseDown(wxMouseEvent &event)
+void StepCtrl::doRender(QPainter &p)
 {
-    wxPoint pt;
-    event.GetPosition(&pt.x, &pt.y);
-    wxSize size      = GetSize();
-    int    itemWidth = size.x / steps.size();
-    wxRect rcBar     = {0, (size.y - 60) / 2, size.x, 60};
-    int    circleX   = itemWidth / 2 + itemWidth * step;
-    wxRect rcThumb   = {{circleX, size.y / 2}, bmp_thumb.GetBmpSize()};
-    rcThumb.x -= rcThumb.width / 2;
-    rcThumb.y -= rcThumb.height / 2;
-    if (rcThumb.Contains(pt)) {
-        pos_thumb   = wxPoint{circleX, size.y / 2};
-        drag_offset = pos_thumb - pt;
-        if (!HasCapture())
-            CaptureMouse();
-    } else if (rcBar.Contains(pt)) {
-        if (pt.x < circleX) {
-            if (step > 0) SelectItem(step - 1);
-        } else {
-            if (step < steps.size() - 1) SelectItem(step + 1);
-        }
-    }
-}
-
-void StepCtrl::mouseMove(wxMouseEvent &event)
-{
-    if (pos_thumb == wxPoint{0, 0}) return;
-    wxPoint pt;
-    event.GetPosition(&pt.x, &pt.y);
-    pos_thumb.x = pt.x + drag_offset.x;
-    wxSize size      = GetSize();
-    int    itemWidth = size.x / steps.size();
-    int    index     = pos_thumb.x / itemWidth;
-    if (index < 0)
-        index = 0;
-    else if (index >= steps.size())
-        index = steps.size() - 1;
-    if (index != pos_thumb.y) {
-        pos_thumb.y = index;
-        Refresh();
-    }
-}
-
-void StepCtrl::mouseUp(wxMouseEvent &event)
-{
-    if (pos_thumb == wxPoint{0, 0}) return;
-    wxSize size      = GetSize();
-    int    itemWidth = size.x / steps.size();
-    int    index     = pos_thumb.x / itemWidth;
-    if (index < 0)
-        index = 0;
-    else if (index >= steps.size())
-        index = steps.size() - 1;
-    pos_thumb = {0, 0};
-    SelectItem(index);
-    if (HasCapture())
-        ReleaseMouse();
-}
-
-void StepCtrl::mouseCaptureLost(wxMouseCaptureLostEvent &event)
-{
-    wxMouseEvent evt;
-    mouseUp(evt);
-}
-
-void StepCtrl::doRender(wxDC &dc)
-{
+    StaticBox::doRender(p);
     if (steps.empty()) return;
-    StaticBox::doRender(dc);
 
-    wxSize size   = GetSize();
-    int    states = state_handler.states();
+    p.setRenderHint(QPainter::Antialiasing);
+    const QRect rc = rect();
+    const int n = (int)steps.size();
+    const int itemW = rc.width() / n;
+    const int barY  = rc.height() / 2;
 
-    int    itemWidth = size.x / steps.size();
-    wxRect rcBar     = {itemWidth / 2, (size.y - bar_width) / 2, size.x - itemWidth, bar_width};
+    // Background bar
+    p.setPen(Qt::NoPen);
+    p.setBrush(QColor(220, 220, 220));
+    p.drawRoundedRect(QRect(0, barY - bar_width / 2, rc.width(), bar_width), bar_width / 2, bar_width / 2);
 
-    dc.SetPen(wxPen(clr_bar.colorForStates(states)));
-    dc.SetBrush(wxBrush(clr_bar.colorForStates(states)));
-    dc.DrawRectangle(rcBar);
-    int circleX = itemWidth / 2;
-    int circleY = size.y / 2;
-    dc.SetPen(wxPen(clr_step.colorForStates(states)));
-    dc.SetBrush(wxBrush(clr_step.colorForStates(states)));
-    if (!hint.empty()) {
-        dc.SetFont(font_tip);
-        dc.SetTextForeground(clr_tip.colorForStates(states));
-        wxSize sz = dc.GetTextExtent(hint);
-        dc.DrawText(hint, dc.GetCharWidth(), circleY - FromDIP(20) - sz.y);
+    // Filled portion
+    if (step >= 0) {
+        const int filled = (step + 1) * itemW;
+        QColor fc = clr_bar.count() > 0 ? clr_bar.colorForStates(StateColor::Normal) : QColor(0, 0xae, 0x42);
+        p.setBrush(fc);
+        p.drawRoundedRect(QRect(0, barY - bar_width / 2, filled, bar_width), bar_width / 2, bar_width / 2);
     }
-    for (int i = 0; i < steps.size(); ++i) {
-        bool check = (pos_thumb == wxPoint{0, 0} ? step : pos_thumb.y) == i;
-        dc.DrawEllipse(circleX - radius, circleY - radius, radius * 2, radius * 2);
-        dc.SetFont(GetFont());
-        dc.SetTextForeground(clr_text.colorForStates(states | (check ? StateColor::Checked : 0)));
-        wxSize sz = dc.GetTextExtent(steps[i]);
-        dc.DrawText(steps[i], circleX - sz.x / 2, circleY + 20);
-        if (check) {
-            dc.SetFont(font_tip);
-            dc.SetTextForeground(clr_tip.colorForStates(states));
-            wxSize sz = dc.GetTextExtent(tips[i]);
-            dc.DrawText(tips[i], circleX - sz.x / 2, circleY - 20 - sz.y);
-            sz = bmp_thumb.GetBmpSize();
-            dc.DrawBitmap(bmp_thumb.bmp(), circleX - sz.x / 2, circleY - sz.y / 2);
+
+    // Step circles
+    QFont f = Label::Body_12;
+    p.setFont(f);
+    QFontMetrics fm(f);
+    for (int i = 0; i < n; ++i) {
+        const int cx = itemW * i + itemW / 2;
+        const bool done = (i <= step);
+        const QColor cc = done ? QColor(0, 0xae, 0x42) : QColor(180, 180, 180);
+        p.setPen(Qt::NoPen);
+        p.setBrush(cc);
+        p.drawEllipse(QPoint(cx, barY), radius, radius);
+        p.setPen(done ? Qt::white : Qt::black);
+        const QString num = QString::number(i + 1);
+        const QRect tr = fm.boundingRect(num);
+        p.drawText(QPoint(cx - tr.width() / 2, barY + tr.height() / 2 - fm.descent()), num);
+        // Label
+        p.setPen(QColor(60, 60, 60));
+        p.setFont(font_tip);
+        p.drawText(QRect(itemW * i, barY + radius + 2, itemW, 20), Qt::AlignCenter, steps[i]);
+        p.setFont(f);
+    }
+}
+
+void StepCtrl::mousePressEvent(QMouseEvent *e)
+{
+    if (e->button() == Qt::LeftButton) { dragging = true; drag_offset = e->pos(); }
+    StaticBox::mousePressEvent(e);
+}
+void StepCtrl::mouseMoveEvent(QMouseEvent *) {}
+void StepCtrl::mouseReleaseEvent(QMouseEvent *e)
+{
+    if (dragging) {
+        dragging = false;
+        const int n = (int)steps.size();
+        if (n > 0) {
+            const int itemW = rect().width() / n;
+            int idx = e->pos().x() / itemW;
+            if (idx >= 0 && idx < n) SelectItem(idx);
         }
-        circleX += itemWidth;
     }
+    StaticBox::mouseReleaseEvent(e);
 }
 
-/* StepIndicator */
+// ============================================================
+// StepIndicator
+// ============================================================
 
-StepIndicator::StepIndicator(wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size, long style)
-    : StepCtrlBase(parent, id, pos, size, style)
-    , bmp_ok(this, "step_ok", 12)
+StepIndicator::StepIndicator(QWidget *parent) : StepCtrlBase(parent)
 {
-    SetFont(Label::Body_12);
-    font_tip = Label::Body_10;
-    clr_bar = 0xE1E1E1;
-    clr_step = StateColor(
-            std::make_pair(0xACACAC, (int) StateColor::Disabled),
-            std::make_pair(0x00AE42, 0));
-    clr_text = StateColor(
-            std::make_pair(0xACACAC, (int) StateColor::Disabled),
-            std::make_pair(0x323A3D, (int) StateColor::Checked),
-            std::make_pair(0x6B6B6B, 0));
-    clr_tip = *wxWHITE;
-    StaticBox::border_width = 0;
-    radius    = bmp_ok.GetBmpHeight() / 2;
-    bar_width = bmp_ok.GetBmpHeight() / 20;
-    if (bar_width < 2) bar_width = 2;
+    bmp_ok = ScalableBitmap(this, "step_ok", 16);
 }
-
-void StepIndicator::Rescale()
-{
-    bmp_ok.msw_rescale();
-    radius    = bmp_ok.GetBmpHeight() / 2;
-    bar_width = bmp_ok.GetBmpHeight() / 20;
-    if (bar_width < 2) bar_width = 2;
-}
-
+void StepIndicator::Rescale() { bmp_ok = ScalableBitmap(this, "step_ok", 16); update(); }
 void StepIndicator::SelectNext() { SelectItem(step + 1); }
 
-
-void StepIndicator::doRender(wxDC &dc)
+void StepIndicator::doRender(QPainter &p)
 {
+    StaticBox::doRender(p);
     if (steps.empty()) return;
+    p.setRenderHint(QPainter::Antialiasing);
+    const QRect rc = rect();
+    const int n    = (int)steps.size();
+    const int itemW = rc.width() / n;
+    const int barY  = rc.height() / 2;
 
-    StaticBox::doRender(dc);
+    p.setPen(Qt::NoPen);
+    p.setBrush(QColor(220, 220, 220));
+    p.drawRoundedRect(QRect(0, barY - bar_width / 2, rc.width(), bar_width), bar_width / 2, bar_width / 2);
 
-    wxSize size   = GetSize();
-
-    int    states = state_handler.states();
-    if (!IsEnabled()) {
-        states = clr_step.Disabled;
-    }
-
-    int textWidth = size.x - radius * 5;
-    dc.SetFont(GetFont());
-    wxString firstLine;
-    if (step == 0) dc.SetFont(GetFont().Bold());
-    wxSize   firstLineSize = Label::split_lines(dc, textWidth, steps.front(), firstLine);
-    wxString lastLine;
-    if (step == steps.size() - 1) dc.SetFont(GetFont().Bold());
-    wxSize   lastLineSize = Label::split_lines(dc, textWidth, steps.back(), lastLine);
-    int      firstPadding = std::max(0, firstLineSize.y / 2 - radius);
-    int      lastPadding  = std::max(0, lastLineSize.y / 2 - radius);
-
-    wxRect rcBar = {radius * 2 - bar_width / 2, radius * 2 + firstPadding, bar_width, size.y - radius * 6 - firstPadding - lastPadding};
-    int    itemWidth = steps.size() == 1 ? size.y : rcBar.height / (steps.size() - 1);
-
-    // Draw thin bar stick
-    dc.SetPen(wxPen(clr_bar.colorForStates(states)));
-    dc.SetBrush(wxBrush(clr_bar.colorForStates(states)));
-    dc.DrawRectangle(rcBar);
-
-    int circleX = radius * 2;
-    int circleY = radius * 3 + firstPadding;
-    dc.SetPen(wxPen(clr_step.colorForStates(states)));
-    dc.SetBrush(wxBrush(clr_step.colorForStates(states)));
-    for (int i = 0; i < steps.size(); ++i) {
-        bool disabled = step > i;
-        bool checked = step == i;
-        // Draw circle point & texts in it
-        dc.DrawEllipse(circleX - radius, circleY - radius, radius * 2, radius * 2);
-        // Draw content ( icon or text ) in circle
-        if (disabled) {
-            wxSize sz = bmp_ok.GetBmpSize();
-            dc.DrawBitmap(bmp_ok.bmp(), circleX - radius, circleY - radius);
-        } else {
-            dc.SetFont(font_tip);
-            dc.SetTextForeground(clr_tip.colorForStates(states));
-            auto tip = tips[i];
-            if (tip.IsEmpty()) tip.append(1, wchar_t(L'0' + i + 1));
-            wxSize sz = dc.GetTextExtent(tip);
-            dc.DrawText(tip, circleX - sz.x / 2, circleY - sz.y / 2 + 1);
+    QFontMetrics fm(font_tip);
+    for (int i = 0; i < n; ++i) {
+        const int cx = itemW * i + itemW / 2;
+        const bool done = (i < step);
+        const bool cur  = (i == step);
+        QColor cc = done ? QColor(0, 0xae, 0x42) : (cur ? QColor(50, 120, 250) : QColor(180, 180, 180));
+        p.setPen(Qt::NoPen);
+        p.setBrush(cc);
+        p.drawEllipse(QPoint(cx, barY), radius, radius);
+        if (done && bmp_ok.bmp().IsOk()) {
+            const QSize  sz = bmp_ok.GetBmpSize();
+            p.drawPixmap(QPoint(cx - sz.width() / 2, barY - sz.height() / 2), bmp_ok.bmp());
         }
-        // Draw step text
-        dc.SetTextForeground(clr_text.colorForStates(states
-                | (disabled ? StateColor::Disabled : checked ? StateColor::Checked : 0)));
-        dc.SetFont(checked ? GetFont().Bold() : GetFont());
-        wxString text;
-        wxSize textSize;
-        if (i == 0) {
-            text = firstLine;
-            textSize = firstLineSize;
-        } else if (i == steps.size() - 1) {
-            text = lastLine;
-            textSize = lastLineSize;
-        } else {
-            textSize = Label::split_lines(dc, textWidth, steps[i], text);
-        }
-        dc.DrawText(text, circleX + radius * 3, circleY - (textSize.y / 2));
-        circleY += itemWidth;
+        p.setPen(QColor(60, 60, 60));
+        p.setFont(font_tip);
+        p.drawText(QRect(itemW * i, barY + radius + 2, itemW, 20), Qt::AlignCenter, steps[i]);
     }
 }
 
+// ============================================================
+// FilamentStepIndicator
+// ============================================================
 
-/* FilamentStepIndicator */
-
-FilamentStepIndicator::FilamentStepIndicator(wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style)
-    : StepCtrlBase(parent, id, pos, size, style)
-    , bmp_ok(this, "step_ok", 12)
+FilamentStepIndicator::FilamentStepIndicator(QWidget *parent) : StepCtrlBase(parent)
 {
-    static Slic3r::GUI::BitmapCache cache;
-    //bmp_extruder = *cache.load_png("filament_load_extruder", FromDIP(300), FromDIP(200), false, false);
-    SetFont(Label::Body_12);
-    font_tip = Label::Body_12;
-    clr_bar = 0xE1E1E1;
-    clr_step = StateColor(
-        std::make_pair(0xACACAC, (int)StateColor::Disabled),
-        std::make_pair(0x00AE42, 0));
-    clr_text = StateColor(
-        std::make_pair(0xACACAC, (int)StateColor::Disabled),
-        std::make_pair(0x323A3D, (int)StateColor::Checked),
-        std::make_pair(0x6B6B6B, 0));
-    clr_tip = *wxWHITE;
-    StaticBox::border_width = 0;
-    radius = 9;
-    bar_width = 0;
+    bmp_ok = ScalableBitmap(this, "step_ok", 16);
 }
-
-void FilamentStepIndicator::Rescale()
-{
-    bmp_ok.msw_rescale();
-    radius = bmp_ok.GetBmpHeight() / 2;
-    bar_width = bmp_ok.GetBmpHeight() / 20;
-    if (bar_width < 2) bar_width = 2;
-}
-
+void FilamentStepIndicator::Rescale() { bmp_ok = ScalableBitmap(this, "step_ok", 16); update(); }
 void FilamentStepIndicator::SelectNext() { SelectItem(step + 1); }
-
-
-void FilamentStepIndicator::doRender(wxDC& dc)
+void FilamentStepIndicator::SetSlotInformation(const QString &slot)
 {
-
-
-    if (steps.empty()) return;
-
-    StaticBox::doRender(dc);
-
-    wxSize size = GetSize();
-
-    int    states = state_handler.states();
-    if (!IsEnabled()) {
-        states = clr_step.Disabled;
-    }
-
-    dc.SetFont(::Label::Head_16);
-    dc.SetTextForeground(wxColour(0, 174, 66));
-    int circleX = 20;
-    int circleY = 20;
-    wxSize sz = dc.GetTextExtent(L"Loading");
-    dc.DrawText(L"Loading", circleX, circleY);
-
-    dc.SetFont(::Label::Body_13);
-
-    //dc.DrawBitmap(bmp_extruder, FromDIP(250), circleY);
-    circleY += sz.y;
-
-    int textWidth = size.x - radius * 5;
-    dc.SetFont(GetFont());
-    wxString firstLine;
-    if (step == 0) dc.SetFont(GetFont().Bold());
-    wxSize   firstLineSize = Label::split_lines(dc, textWidth, steps.front(), firstLine);
-    wxString lastLine;
-    if (step == steps.size() - 1) dc.SetFont(GetFont().Bold());
-    wxSize   lastLineSize = Label::split_lines(dc, textWidth, steps.back(), lastLine);
-    int      firstPadding = std::max(0, firstLineSize.y / 2 - radius);
-    int      lastPadding = std::max(0, lastLineSize.y / 2 - radius);
-
-    int    itemWidth = radius * 3;
-
-    // Draw thin bar stick
-    dc.SetPen(wxPen(clr_bar.colorForStates(states)));
-    dc.SetBrush(wxBrush(clr_bar.colorForStates(states)));
-    //dc.DrawRectangle(rcBar);
-
-    circleX += radius;
-    circleY += radius * 3 + firstPadding;
-    dc.SetPen(wxPen(clr_step.colorForStates(states)));
-    dc.SetBrush(wxBrush(clr_step.colorForStates(states)));
-    for (int i = 0; i < steps.size(); ++i) {
-        bool disabled = step > i;
-        bool checked = step == i;
-        // Draw circle point & texts in it
-        dc.DrawEllipse(circleX - radius, circleY - radius, radius * 2, radius * 2);
-        // Draw content ( icon or text ) in circle
-        if (disabled) {
-            wxSize sz = bmp_ok.GetBmpSize();
-            dc.DrawBitmap(bmp_ok.bmp(), circleX - sz.x / 2, circleY - sz.y / 2);
-        }
-        else {
-            dc.SetFont(font_tip);
-            dc.SetTextForeground(clr_tip.colorForStates(states));
-            auto tip = tips[i];
-            if (tip.IsEmpty()) tip.append(1, wchar_t(L'0' + i + 1));
-            wxSize sz = dc.GetTextExtent(tip);
-            dc.DrawText(tip, circleX - sz.x / 2, circleY - sz.y / 2 + 1);
-        }
-        // Draw step text
-        dc.SetTextForeground(clr_text.colorForStates(states
-            | (disabled ? StateColor::Disabled : checked ? StateColor::Checked : 0)));
-        dc.SetFont(checked ? GetFont().Bold() : GetFont());
-        wxString text;
-        wxSize textSize;
-        if (i == 0) {
-            text = firstLine;
-            textSize = firstLineSize;
-        }
-        else if (i == steps.size() - 1) {
-            text = lastLine;
-            textSize = lastLineSize;
-        }
-        else {
-            textSize = Label::split_lines(dc, textWidth, steps[i], text);
-        }
-        dc.DrawText(text, circleX + radius * 1.5, circleY - (textSize.y / 2));
-        circleY += itemWidth;
-    }
+    m_slot_information = slot; update();
 }
 
-void FilamentStepIndicator::SetSlotInformation(wxString slot) {
-    this->m_slot_information = slot;
+void FilamentStepIndicator::doRender(QPainter &p)
+{
+    // Same as StepIndicator but with slot info overlaid
+    StepIndicator tmp(parentWidget()); // proxy — just delegate to base rendering
+    StaticBox::doRender(p);
+    p.setRenderHint(QPainter::Antialiasing);
+    const QRect rc = rect();
+    const int n    = (int)steps.size();
+    if (n == 0) return;
+    const int itemW = rc.width() / n;
+    const int barY  = rc.height() / 2;
+
+    QFontMetrics fm(font_tip);
+    for (int i = 0; i < n; ++i) {
+        const int cx = itemW * i + itemW / 2;
+        const bool done = (i < step);
+        QColor cc = done ? QColor(0, 0xae, 0x42) : (i == step ? QColor(50, 120, 250) : QColor(180, 180, 180));
+        p.setPen(Qt::NoPen);
+        p.setBrush(cc);
+        p.drawEllipse(QPoint(cx, barY), radius, radius);
+        p.setPen(QColor(60, 60, 60));
+        p.setFont(font_tip);
+        p.drawText(QRect(itemW * i, barY + radius + 2, itemW, 20), Qt::AlignCenter, steps[i]);
+    }
+    if (!m_slot_information.isEmpty()) {
+        p.setPen(QColor(90, 90, 90));
+        p.setFont(Label::Body_10);
+        p.drawText(rc, Qt::AlignBottom | Qt::AlignHCenter, m_slot_information);
+    }
 }

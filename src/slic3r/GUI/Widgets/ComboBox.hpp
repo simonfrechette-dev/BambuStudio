@@ -7,110 +7,85 @@
 #define CB_NO_DROP_ICON DD_NO_CHECK_ICON
 #define CB_NO_TEXT DD_NO_TEXT
 
-class ComboBox : public wxWindowWithItems<TextInput, wxItemContainer>
+class ComboBox : public TextInput
 {
+    Q_OBJECT
     typedef DropDown::Item Item;
-    std::vector<Item>      items;
 
-    DropDown               drop;
-    bool     drop_down = false;
-    bool     text_off = false;
-    bool     is_replace_text_to_image = false;
-    bool     m_keep_drop_arrow = false;  // When true, item icon goes to icon_1, keeping drop_down arrow
-    wxString replace_text;
-    wxString image_for_text;
+    std::vector<Item> items;
+    DropDown          drop;
+    bool              drop_down  = false;
+    bool              text_off   = false;
+    bool              m_keep_drop_arrow = false;
+    QString           replace_text;
+    QString           image_for_text;
 
 public:
-    ComboBox(wxWindow *      parent,
-             wxWindowID      id,
-             const wxString &value     = wxEmptyString,
-             const wxPoint & pos       = wxDefaultPosition,
-             const wxSize &  size      = wxDefaultSize,
-             int             n         = 0,
-             const wxString  choices[] = NULL,
-             long            style     = 0);
+    ComboBox(QWidget *parent, const QString &value = {},
+             int n = 0, const QString choices[] = nullptr, long style = 0);
 
-    DropDown & GetDropDown() { return drop; }
+    DropDown &GetDropDown() { return drop; }
 
-    // When true, item icon is shown as icon_1 (secondary), preserving drop_down arrow.
-    // Note: item bitmaps are set via raw wxBitmap (not ScalableBitmap), so they won't
-    // auto-rescale on DPI change. Caller should recreate items after DPI change.
     void SetKeepDropArrow(bool keep) { m_keep_drop_arrow = keep; }
 
-    virtual bool SetFont(wxFont const & font) override;
+    bool setFont(const QFont &font);
 
-public:
-    int Append(const wxString &item, const wxBitmap &bitmap = wxNullBitmap, int item_style = 0);
-    int Append(const wxString &item, const wxBitmap &bitmap, void *clientData, int item_style = 0);
-    int Append(const wxString &item, const wxBitmap &bitmap, const wxString &group, void *clientData = nullptr, int item_style = 0);
+    int  Append(const QString &item, const QPixmap &bitmap = {}, int item_style = 0);
+    int  Append(const QString &item, const QPixmap &bitmap, void *clientData, int item_style = 0);
+    int  Append(const QString &item, const QPixmap &bitmap,
+                const QString &group, void *clientData = nullptr, int item_style = 0);
 
-    int SetItems(const std::vector<DropDown::Item>& the_items);
+    int  SetItems(const std::vector<DropDown::Item> &the_items);
 
-    void set_replace_text(wxString text, wxString image_name);
-    unsigned int GetCount() const override;
+    void set_replace_text(const QString &text, const QString &image_name);
+    unsigned int GetCount() const;
 
-    int  GetSelection() const override;
+    int     GetSelection() const;
+    void    SetSelection(int n);
+    void    SelectAndNotify(int n);
 
-    void SetSelection(int n) override;
+    void    Rescale() override;
 
-    void SelectAndNotify(int n);
+    QString GetValue() const;
+    void    SetValue(const QString &value);
 
-    virtual void Rescale() override;
+    void    SetLabel(const QString &label) override;
+    QString GetLabel() const;
 
-    wxString GetValue() const;
-    void     SetValue(const wxString &value);
+    int     GetFlag(unsigned int n) const;
+    void    SetFlag(unsigned int n, int value);
 
-    void SetLabel(const wxString &label) override;
-    wxString GetLabel() const override;
+    void    SetTextLabel(const QString &label);
+    QString GetTextLabel() const;
 
-    int GetFlag(unsigned int n);
-    void SetFlag(unsigned int n, int value);
+    QString GetString(unsigned int n) const;
+    void    SetString(unsigned int n, const QString &value);
 
-    void SetTextLabel(const wxString &label);
-    wxString GetTextLabel() const;
+    QString GetItemTooltip(unsigned int n) const;
+    void    SetItemTooltip(unsigned int n, const QString &value);
 
-    wxString GetString(unsigned int n) const override;
-    void     SetString(unsigned int n, wxString const &value) override;
+    QString GetItemAlias(unsigned int n) const;
+    void    SetItemAlias(unsigned int n, const QString &value);
 
-    wxString GetItemTooltip(unsigned int n) const;
-    void     SetItemTooltip(unsigned int n, wxString const &value);
+    QPixmap GetItemBitmap(unsigned int n) const;
+    void    SetItemBitmap(unsigned int n, const QPixmap &bitmap);
 
-    wxString GetItemAlias(unsigned int n) const;
-    void     SetItemAlias(unsigned int n, wxString const &value);
+    bool    is_drop_down() const { return drop_down; }
+    void    DeleteOneItem(unsigned int pos);
+    void    DoClear();
 
-    wxBitmap GetItemBitmap(unsigned int n);
-    void     SetItemBitmap(unsigned int n, wxBitmap const &bitmap);
-    bool     is_drop_down(){return drop_down;}
-    void     DeleteOneItem(unsigned int pos) { DoDeleteOneItem(pos); }
+signals:
+    void selectionChanged(int index);
+
 protected:
-    virtual int  DoInsertItems(const wxArrayStringsAdapter &items,
-                               unsigned int                 pos,
-                               void **                      clientData,
-                               wxClientDataType             type) override;
-    virtual void DoClear() override;
-
-    void DoDeleteOneItem(unsigned int pos) override;
-
-    void *DoGetItemClientData(unsigned int n) const override;
-    void  DoSetItemClientData(unsigned int n, void *data) override;
-
-    void OnEdit() override;
-
-    void sendComboBoxEvent();
-
-#ifdef __WIN32__
-    WXLRESULT MSWWindowProc(WXUINT nMsg, WXWPARAM wParam, WXLPARAM lParam) override;
-#endif
+    void mousePressEvent(QMouseEvent *event) override;
+    void wheelEvent(QWheelEvent *event) override;
+    void keyPressEvent(QKeyEvent *event) override;
 
 private:
-
-    // some useful events
-    void mouseDown(wxMouseEvent &event);
-    void mouseWheelMoved(wxMouseEvent &event);
-    void keyDown(wxKeyEvent &event);
-    void onMove(wxMoveEvent &event);
-
-    DECLARE_EVENT_TABLE()
+    void sendComboBoxEvent();
+    void onDropDismissed();
+    void onDropSelectionChanged(int idx);
 };
 
 #endif // !slic3r_GUI_ComboBox_hpp_

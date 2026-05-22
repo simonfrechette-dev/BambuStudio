@@ -3,23 +3,20 @@
 #include "slic3r/GUI/GUI_Utils.hpp"
 
 #include <string>
-#include <wx/string.h>
-
-class wxWebView;
 
 namespace Slic3r { namespace GUI {
 
 class UxProgramTermsDialog : public DPIDialog
 {
 public:
-    explicit UxProgramTermsDialog(wxWindow* parent);
+    explicit UxProgramTermsDialog(QWidget* parent = nullptr);
 
 private:
-    wxWebView* m_webview{nullptr};
+    void*       m_webview{nullptr}; // stub
     std::string m_host_url;
 
 protected:
-    void on_dpi_changed(const wxRect& suggested_rect) override;
+    void on_dpi_changed(const QRect& suggested_rect) override;
 };
 
 }} // namespace Slic3r::GUI

@@ -14,24 +14,24 @@ class PlateMoveDialog : public DPIDialog
 {
 public:
     enum ButtonStyle { ONLY_CONFIRM = 0, CONFIRM_AND_CANCEL = 1, MAX_STYLE_NUM = 2 };
-    PlateMoveDialog(wxWindow *      parent,
-                        wxWindowID      id    = wxID_ANY,
-                        const wxString &title = wxEmptyString,
-                        const wxPoint & pos   = wxDefaultPosition,
-                        const wxSize &  size  = wxDefaultSize,
-                        long            style = wxCLOSE_BOX | wxCAPTION);
+    PlateMoveDialog(QWidget *      parent,
+                        int      id    = -1,
+                        const QString &title = QString(),
+                        const QPoint & pos   = QPoint(),
+                        const QSize &  size  = QSize(),
+                        long            style = 0 | 0);
 
     ~PlateMoveDialog();
-    void on_dpi_changed(const wxRect &suggested_rect) override;
+    void on_dpi_changed(const QRect &suggested_rect) override;
     int  get_swap_index() { return m_specify_plate_idx; }
 
 private:
     void init_bitmaps();
     void update_swipe_button_state();
-    void on_previous_plate(wxCommandEvent &event);
-    void on_next_plate(wxCommandEvent &event);
-    void on_frontmost_plate(wxCommandEvent &event);
-    void on_backmost_plate(wxCommandEvent &event);
+    void on_previous_plate(QEvent &event);
+    void on_next_plate(QEvent &event);
+    void on_frontmost_plate(QEvent &event);
+    void on_backmost_plate(QEvent &event);
     void update_plate_combox();
     void update_ok_button_enable();
 
@@ -39,7 +39,7 @@ private:
     Button *   m_button_ok{nullptr};
     Button *   m_button_cancel{nullptr};
 
-    wxArrayString m_plate_number_choices_str;
+    QStringList m_plate_number_choices_str;
     std::vector<int> m_plate_choices;
     int              m_specify_plate_idx{0};
     ComboBox *      m_combobox_plate{nullptr};

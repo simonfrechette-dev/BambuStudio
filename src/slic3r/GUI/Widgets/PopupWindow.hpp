@@ -1,37 +1,32 @@
 #ifndef slic3r_GUI_PopupWindow_hpp_
 #define slic3r_GUI_PopupWindow_hpp_
 
-#include <wx/popupwin.h>
-#include <wx/event.h>
+#include <QFrame>
 
-class PopupWindow : public wxPopupTransientWindow
+/**
+ * Lightweight popup window — shown as a frameless window/tool-window.
+ * Equivalent of QWidget: auto-dismisses when parent loses
+ * focus, user clicks outside, or the top-level window is minimised/hidden.
+ */
+class PopupWindow : public QFrame
 {
+    Q_OBJECT
 public:
-    PopupWindow() {}
+    PopupWindow() : QFrame(nullptr) { init(); }
+    explicit PopupWindow(QWidget *parent, Qt::WindowFlags flags = Qt::Popup)
+        : QFrame(parent, flags) { init(); }
 
-    ~PopupWindow();
+    // Show anchored below `anchor` (bottom-left of anchor by default).
+    virtual void Popup(QWidget *anchor = nullptr);
+    // Hide the popup.
+    virtual void Dismiss();
 
-    PopupWindow(wxWindow *parent, int style = wxBORDER_NONE) { Create(parent, style); }
+protected:
+    bool event(QEvent *e) override;
+    void focusOutEvent(QFocusEvent *e) override;
 
-    bool Create(wxWindow *parent, int flags = wxBORDER_NONE);
-#ifdef __WXMSW__
-    void BindUnfocusEvent();
-#endif
 private:
-#ifdef __WXOSX__
-    void OnMouseEvent2(wxMouseEvent &evt);
-    wxEvtHandler * hovered { this };
-#endif
-
-#ifdef __WXGTK__
-    void topWindowActivate(wxActivateEvent &event);
-#endif
-
-#ifdef __WXMSW__
-    void topWindowActivate(wxActivateEvent &event);
-    void topWindowIconize(wxIconizeEvent &event);
-    void topWindowShow(wxShowEvent &event);
-#endif
+    void init();
 };
 
 #endif // !slic3r_GUI_PopupWindow_hpp_

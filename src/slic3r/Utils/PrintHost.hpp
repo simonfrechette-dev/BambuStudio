@@ -7,12 +7,11 @@
 #include <functional>
 #include <boost/filesystem/path.hpp>
 
-#include <wx/string.h>
+#include <QString>
+#include <QStringList>
 
 #include <libslic3r/enum_bitmask.hpp>
 #include "Http.hpp"
-
-class wxArrayString;
 
 namespace Slic3r {
 
@@ -42,13 +41,13 @@ public:
     virtual ~PrintHost();
 
     typedef Http::ProgressFn ProgressFn;
-    typedef std::function<void(wxString /* error */)> ErrorFn;
+    typedef std::function<void(QString /* error */)> ErrorFn;
 
     virtual const char* get_name() const = 0;
 
-    virtual bool test(wxString &curl_msg) const = 0;
-    virtual wxString get_test_ok_msg () const = 0;
-    virtual wxString get_test_failed_msg (wxString &msg) const = 0;
+    virtual bool test(QString &curl_msg) const = 0;
+    virtual QString get_test_ok_msg () const = 0;
+    virtual QString get_test_failed_msg (QString &msg) const = 0;
     virtual bool upload(PrintHostUpload upload_data, ProgressFn prorgess_fn, ErrorFn error_fn) const = 0;
     virtual bool has_auto_discovery() const = 0;
     virtual bool can_test() const = 0;
@@ -59,13 +58,13 @@ public:
 
     // Support for Repetier server multiple groups & printers. Not supported by other print hosts.
     // Returns false if not supported. May throw HostNetworkError.
-    virtual bool get_groups(wxArrayString & /* groups */) const { return false; }
-    virtual bool get_printers(wxArrayString & /* printers */) const { return false; }
+    virtual bool get_groups(QStringList & /* groups */) const { return false; }
+    virtual bool get_printers(QStringList & /* printers */) const { return false; }
 
     static PrintHost* get_print_host(DynamicPrintConfig *config);
 
 protected:
-    virtual wxString format_error(const std::string &body, const std::string &error, unsigned status) const;
+    virtual QString format_error(const std::string &body, const std::string &error, unsigned status) const;
 };
 
 

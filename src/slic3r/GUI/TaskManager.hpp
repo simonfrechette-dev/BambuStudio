@@ -179,7 +179,6 @@ private:
 };
 
 
-wxDECLARE_EVENT(EVT_MULTI_SEND_LIMIT, wxCommandEvent);
 } // namespace Slic3r
 
 #endif

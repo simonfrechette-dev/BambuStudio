@@ -7,12 +7,12 @@
 #include <thread>
 #include <memory>
 
-#include <wx/colour.h>
-#include <wx/font.h>
+#include <QColor>
+#include <QFont>
 
 #include "RenderEnums.hpp"
 
-class wxImage;
+class QImage;
 
 namespace Slic3r {
 namespace GUI {
@@ -135,9 +135,9 @@ namespace GUI {
         int m_original_width;
         int m_original_height;
 
-        bool generate_texture_from_text(const std::string& text_str, wxFont& font, int& ww, int& hh, int &hl, wxColor background = *wxBLACK, wxColor foreground = *wxWHITE);
-        bool generate_from_text(const std::string& text_str, wxFont& font, wxColor background = *wxBLACK, wxColor foreground = *wxWHITE);
-        bool generate_from_text_string(const std::string& text_str, wxFont& font, wxColor background = *wxBLACK, wxColor foreground = *wxWHITE);
+        bool generate_texture_from_text(const std::string& text_str, QFont& font, int& ww, int& hh, int &hl, QColor background = Qt::black, QColor foreground = Qt::white);
+        bool generate_from_text(const std::string& text_str, QFont& font, QColor background = Qt::black, QColor foreground = Qt::white);
+        bool generate_from_text_string(const std::string& text_str, QFont& font, QColor background = Qt::black, QColor foreground = Qt::white);
 
         unsigned int get_id() const { return m_id; }
         int get_original_width() const { return m_original_width; }

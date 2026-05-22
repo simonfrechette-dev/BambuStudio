@@ -6,12 +6,12 @@
 #include <string>
 #include <functional>
 #include <imgui/imgui.h>
-#include <wx/font.h>
+#include <QFont>
 #include <GL/glew.h>
 #include <libslic3r/BoundingBox.hpp>
+#include <libslic3r/EmbossShape.hpp>
 #include <libslic3r/Emboss.hpp>
 #include <libslic3r/TextConfiguration.hpp>
-#include <libslic3r/EmbossShape.hpp>
 #include <libslic3r/AppConfig.hpp>
 
 namespace Slic3r::GUI::Emboss {
@@ -99,8 +99,8 @@ public:
     // load font style not stored in list
     struct Style;
     bool load_style(const Style &style);
-    // fastering load font on index by wxFont, ignore type and descriptor
-    bool load_style(const Style &style, const wxFont &font);
+    // fastering load font on index by QFont, ignore type and descriptor
+    bool load_style(const Style &style, const QFont &font);
 
     // clear actual selected glyphs cache
     void clear_glyphs_cache();
@@ -118,10 +118,10 @@ public:
     const ImFontAtlas &get_atlas() const     { return m_style_cache.atlas; }
     const FontProp    &get_font_prop() const { return get_style().prop; }
           FontProp    &get_font_prop()       { return get_style().prop; }
-    const wxFont &get_wx_font()        const { return m_style_cache.wx_font; }
-    const wxFont &get_stored_wx_font() const { return m_style_cache.stored_wx_font; }
+    const QFont &get_wx_font()        const { return m_style_cache.wx_font; }
+    const QFont &get_stored_wx_font() const { return m_style_cache.stored_wx_font; }
     Slic3r::Emboss::FontFileWithCache &get_font_file_with_cache()   { return m_style_cache.font_file; }
-    Slic3r::Emboss::FontFileWithCache get_font_file(wxString name);
+    Slic3r::Emboss::FontFileWithCache get_font_file(QString name);
     bool has_collections() const { return m_style_cache.font_file.font_file != nullptr &&
                                           m_style_cache.font_file.font_file->infos.size() > 1; }
 
@@ -141,7 +141,7 @@ public:
     /// </summary>
     /// <param name="wx_font">new wx font</param>
     /// <returns>True on success set otherwise FALSE</returns>
-    bool set_wx_font(const wxFont &wx_font);
+    bool set_wx_font(const QFont &wx_font);
 
     /// <summary>
     /// Faster way of set wx_font when font file is known(do not load font file twice)
@@ -150,7 +150,7 @@ public:
     /// <param name="wx_font">Must be source of font file</param>
     /// <param name="font_file">font file created by WxFontUtils::create_font_file(wx_font)</param>
     /// <returns>True on success otherwise false</returns>
-    bool set_wx_font(const wxFont &wx_font, std::unique_ptr<Slic3r::Emboss::FontFile> font_file);
+    bool set_wx_font(const QFont &wx_font, std::unique_ptr<Slic3r::Emboss::FontFile> font_file);
 
     // Getter on acitve font pointer for imgui
     // Initialize imgui font(generate texture) when doesn't exist yet.
@@ -256,7 +256,7 @@ private:
         ImFontAtlas atlas = {};
 
         // wx widget font
-        wxFont wx_font = {};
+        QFont wx_font = {};
 
         // cache for view font name with maximal width in imgui
         std::string truncated_name;
@@ -265,7 +265,7 @@ private:
         Style style = {};
 
         // cache for stored wx font to not create every frame
-        wxFont stored_wx_font = {};
+        QFont stored_wx_font = {};
 
         // index into m_styles
         size_t style_index = std::numeric_limits<size_t>::max();

@@ -11,8 +11,6 @@
 
 namespace Slic3r { namespace GUI {
 
-wxDECLARE_EVENT(EVT_SET_BED_TYPE_CONFIRM, wxCommandEvent);
-wxDECLARE_EVENT(EVT_NEED_RESORT_LAYERS, wxCommandEvent);
 
 struct LayerSeqInfo {
     int begin_layer_number;
@@ -32,7 +30,7 @@ public:
         Custom,
         End
     };
-    LayerNumberTextInput(wxWindow* parent, int layer_number, wxSize size, Type type, ValueType value_type = ValueType::Custom);
+    LayerNumberTextInput(QWidget* parent, int layer_number, QSize size, Type type, ValueType value_type = ValueType::Custom);
     void link(LayerNumberTextInput* layer_input) { 
         if (m_another_layer_input) return; 
         m_another_layer_input = layer_input; 
@@ -53,9 +51,9 @@ private:
     ValueType m_value_type;
 };
 
-class OtherLayersSeqPanel : public wxPanel {
+class OtherLayersSeqPanel : public QWidget {
 public:
-    OtherLayersSeqPanel(wxWindow* parent);
+    OtherLayersSeqPanel(QWidget* parent);
 
     void sync_layers_print_seq(int selection, const std::vector<LayerSeqInfo>& seq);
 
@@ -74,8 +72,8 @@ private:
     ScalableBitmap  m_bmp_delete;
     ScalableBitmap  m_bmp_add;
     ComboBox* m_other_layer_print_seq_choice{ nullptr };
-    wxPanel* m_layer_input_panel{ nullptr };
-    std::vector<wxBoxSizer*> m_layer_input_sizer_list;
+    QWidget* m_layer_input_panel{ nullptr };
+    std::vector<QBoxLayout*> m_layer_input_sizer_list;
     std::vector<LayerNumberTextInput*> m_begin_layer_input_list;
     std::vector<LayerNumberTextInput*> m_end_layer_input_list;
     std::vector<DragCanvas*> m_drag_canvas_list;
@@ -91,12 +89,12 @@ public:
         MAX_STYLE_NUM = 2
     };
     PlateSettingsDialog(
-        wxWindow* parent,
-        const wxString& title = wxEmptyString,
+        QWidget* parent,
+        const QString& title = QString(),
         bool only_layer_seq = false,
-        const wxPoint& pos = wxDefaultPosition,
-        const wxSize& size = wxDefaultSize,
-        long            style = wxCLOSE_BOX | wxCAPTION
+        const QPoint& pos = QPoint(),
+        const QSize& size = QSize(),
+        long            style = 0 | 0
     );
 
     ~PlateSettingsDialog();
@@ -105,9 +103,9 @@ public:
     void sync_first_layer_print_seq(int selection, const std::vector<int>& seq = std::vector<int>());
     void sync_other_layers_print_seq(int selection, const std::vector<LayerPrintSequence>& seq);
     void sync_spiral_mode(bool spiral_mode, bool as_global);
-    wxString to_bed_type_name(BedType bed_type);
-    wxString to_print_sequence_name(PrintSequence print_seq);
-    void on_dpi_changed(const wxRect& suggested_rect) override;
+    QString to_bed_type_name(BedType bed_type);
+    QString to_print_sequence_name(PrintSequence print_seq);
+    void on_dpi_changed(const QRect& suggested_rect) override;
 
     int get_print_seq_choice() {
         int choice = 0;
@@ -175,18 +173,18 @@ class PlateNameEditDialog : public DPIDialog
 {
 public:
     enum ButtonStyle { ONLY_CONFIRM = 0, CONFIRM_AND_CANCEL = 1, MAX_STYLE_NUM = 2 };
-    PlateNameEditDialog(wxWindow *      parent,
-                        wxWindowID      id    = wxID_ANY,
-                        const wxString &title = wxEmptyString,
-                        const wxPoint & pos   = wxDefaultPosition,
-                        const wxSize &  size  = wxDefaultSize,
-                        long            style = wxCLOSE_BOX | wxCAPTION);
+    PlateNameEditDialog(QWidget *      parent,
+                        int      id    = -1,
+                        const QString &title = QString(),
+                        const QPoint & pos   = QPoint(),
+                        const QSize &  size  = QSize(),
+                        long            style = 0 | 0);
 
     ~PlateNameEditDialog();
-    void     on_dpi_changed(const wxRect &suggested_rect) override;
+    void     on_dpi_changed(const QRect &suggested_rect) override;
 
-    wxString get_plate_name() const;
-    void     set_plate_name(const wxString &name);
+    QString get_plate_name() const;
+    void     set_plate_name(const QString &name);
 
 protected:
     Button *   m_button_ok;

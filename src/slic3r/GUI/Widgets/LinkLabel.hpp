@@ -1,29 +1,34 @@
 #ifndef slic3r_GUI_LinkLabel_hpp_
 #define slic3r_GUI_LinkLabel_hpp_
 
-#include <wx/panel.h>
-
 #include "Label.hpp"
+#include <QWidget>
+#include <QString>
 
-wxDECLARE_EVENT(EVT_LINK_LABEL_LEFT_DOWN, wxCommandEvent);
-
-class LinkLabel : public wxWindow
+class LinkLabel : public QWidget
 {
-private:
-    wxString m_url;
-    Label *  m_txt{nullptr};
-    wxPanel* m_underline{nullptr};
-
+    Q_OBJECT
 public:
-    LinkLabel(wxWindow *parent, wxString const &text, std::string url, long style = 0, wxSize size = wxDefaultSize);
-    ~LinkLabel() {};
+    LinkLabel(QWidget *parent, const QString &text,
+              const std::string &url, long style = 0,
+              const QSize &size = {});
 
-    void link(wxMouseEvent &evt);
-    Label *getLabel(){return m_txt;};
-    void setLinkUrl(wxString url);
-    void setLabel(wxString label);
-    bool SeLinkLabelFColour(const wxColour &colour);
-    bool SeLinkLabelBColour(const wxColour &colour);
+    void setLinkUrl(const QString &url);
+    void setLabel(const QString &label);
+    bool setLinkLabelFColour(const QColor &colour);
+    bool setLinkLabelBColour(const QColor &colour);
+
+    Label *getLabel() { return m_txt; }
+
+signals:
+    void linkClicked(const QString &url);
+
+protected:
+    void mousePressEvent(QMouseEvent *event) override;
+
+private:
+    QString m_url;
+    Label  *m_txt{nullptr};
 };
 
 #endif // !slic3r_GUI_LinkLabel_hpp_

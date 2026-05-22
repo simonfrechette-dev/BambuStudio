@@ -4,8 +4,8 @@
 #define BAMBU_DYNAMIC
 #include "BambuTunnel.h"
 
-#include <wx/bitmap.h>
-#include <wx/event.h>
+#include <QPixmap>
+#include <QObject>
 
 #include <boost/thread.hpp>
 #include <boost/enable_shared_from_this.hpp>
@@ -16,19 +16,24 @@ using nlohmann::json;
 #include <functional>
 #include <deque>
 
-wxDECLARE_EVENT(EVT_STATUS_CHANGED, wxCommandEvent);
-wxDECLARE_EVENT(EVT_MODE_CHANGED, wxCommandEvent);
-wxDECLARE_EVENT(EVT_FILE_CHANGED, wxCommandEvent);
-wxDECLARE_EVENT(EVT_SELECT_CHANGED, wxCommandEvent);
-wxDECLARE_EVENT(EVT_THUMBNAIL, wxCommandEvent);
-wxDECLARE_EVENT(EVT_DOWNLOAD, wxCommandEvent);
-wxDECLARE_EVENT(EVT_RAMDOWNLOAD, wxCommandEvent);
-wxDECLARE_EVENT(EVT_MEDIA_ABILITY_CHANGED, wxCommandEvent);
-wxDECLARE_EVENT(EVT_UPLOADING, wxCommandEvent);
-wxDECLARE_EVENT(EVT_UPLOAD_CHANGED, wxCommandEvent);
+// Qt signals replace wxDECLARE_EVENT — see PrinterFileSystem Q_SIGNALS section
+// EVT_STATUS_CHANGED, EVT_MODE_CHANGED, EVT_FILE_CHANGED, EVT_SELECT_CHANGED
+// EVT_THUMBNAIL, EVT_DOWNLOAD, EVT_RAMDOWNLOAD, EVT_MEDIA_ABILITY_CHANGED
+// EVT_UPLOADING, EVT_UPLOAD_CHANGED
+static constexpr int EVT_STATUS_CHANGED        = 1;
+static constexpr int EVT_MODE_CHANGED          = 2;
+static constexpr int EVT_FILE_CHANGED          = 3;
+static constexpr int EVT_SELECT_CHANGED        = 4;
+static constexpr int EVT_THUMBNAIL             = 5;
+static constexpr int EVT_DOWNLOAD              = 6;
+static constexpr int EVT_RAMDOWNLOAD           = 7;
+static constexpr int EVT_MEDIA_ABILITY_CHANGED = 8;
+static constexpr int EVT_UPLOADING             = 9;
+static constexpr int EVT_UPLOAD_CHANGED        = 10;
 
-class PrinterFileSystem : public wxEvtHandler, public boost::enable_shared_from_this<PrinterFileSystem>, BambuLib
+class PrinterFileSystem : public QObject, public boost::enable_shared_from_this<PrinterFileSystem>, BambuLib
 {
+    Q_OBJECT
     static const int CTRL_TYPE     = 0x3001;
 
     enum {
@@ -130,8 +135,8 @@ public:
 
     struct Progress
     {
-        wxInt64 size  = 0;
-        wxInt64 total = 0;
+        qint64 size  = 0;
+        qint64 total = 0;
         int     progress = 0;
     };
 
@@ -145,7 +150,7 @@ public:
         time_t time = 0;
         boost::uint64_t size = 0;
         int         flags = 0;
-        wxBitmap    thumbnail;
+        QPixmap     thumbnail;
         std::shared_ptr<Download> download;
         std::string local_path;
         std::map<std::string, std::string> metadata;
@@ -278,7 +283,7 @@ private:
 
     std::pair<FileList &, size_t> FindFile(std::pair<FileType, std::string> type, size_t index, std::string const &name, bool by_path);
 
-    void SendChangedEvent(wxEventType type, size_t index = (size_t)-1, std::string const &str = {}, long extra = 0);
+    void SendChangedEvent(int type, size_t index = (size_t)-1, std::string const &str = {}, long extra = 0);
 
     static void DumpLog(void* context, int level, tchar const *msg);
 
@@ -406,6 +411,18 @@ private:
 
     MediaAbilityList m_media_ability_list;
     std::map<boost::uint32_t, callback_t3>  m_produce_message_cb_map;
+
+Q_SIGNALS:
+    void statusChanged(size_t index, const std::string &str, long extra);
+    void modeChanged(size_t index, const std::string &str, long extra);
+    void fileChanged(size_t index, const std::string &str, long extra);
+    void selectChanged(size_t index, const std::string &str, long extra);
+    void thumbnailReady(size_t index, const std::string &str, long extra);
+    void downloadChanged(size_t index, const std::string &str, long extra);
+    void ramDownloadChanged(size_t index, const std::string &str, long extra);
+    void mediaAbilityChanged(size_t index, const std::string &str, long extra);
+    void uploading(size_t index, const std::string &str, long extra);
+    void uploadChanged(size_t index, const std::string &str, long extra);
 };
 
 #endif // !slic3r_GUI_PrinterFileSystem_h_

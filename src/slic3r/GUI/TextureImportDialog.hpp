@@ -1,21 +1,17 @@
 #pragma once
+#include <QWidget>
+#include <QOpenGLWidget>
+#include <QSurfaceFormat>
+#include <QOpenGLContext>
+#include <QString>
 
 #include "GUI_Utils.hpp"
 #include "Widgets/ProgressDialog.hpp"
 #include "libslic3r/TexturePainting.hpp"
 
-#include <wx/sizer.h>
-#include <wx/stattext.h>
 #include "Widgets/PopupWindow.hpp"
-#include <wx/panel.h>
-#include <wx/scrolwin.h>
-#include <wx/textctrl.h>
 #include "Widgets/SpinInput.hpp"
-#include <wx/checkbox.h>
-#include <wx/button.h>
 #include "Widgets/Button.hpp"
-#include <wx/glcanvas.h>
-#include <wx/event.h>
 
 #include <array>
 #include <atomic>
@@ -31,9 +27,6 @@ class GreenSlider;
 
 namespace Slic3r { namespace GUI {
 
-wxDECLARE_EVENT(EVT_TEXTURE_COMPUTE_DONE, wxCommandEvent);
-wxDECLARE_EVENT(EVT_TEXTURE_COMPUTE_PROGRESS, wxCommandEvent);
-wxDECLARE_EVENT(EVT_TEXTURE_COMPUTE_ERROR, wxCommandEvent);
 
 enum class TextureImportState {
     Idle,
@@ -47,19 +40,19 @@ struct FilamentMappingRow {
     std::array<std::size_t, 3> source_color  = {0, 0, 0};
     std::string                source_hex;
     int                        target_filament_idx = 0;
-    wxPanel*                   source_panel  = nullptr;
-    wxPanel*                   target_panel  = nullptr;
+    QWidget*                   source_panel  = nullptr;
+    QWidget*                   target_panel  = nullptr;
 };
 
 class FilamentSelectPopup;
-// Lightweight 3D preview panel using wxGLCanvas.
+// Lightweight 3D preview panel using QOpenGLWidget.
 // Renders: original textured, multi-color, or filament-mapped.
-class TexturePreviewCanvas : public wxGLCanvas
+class TexturePreviewCanvas : public QOpenGLWidget
 {
 public:
     enum class RenderMode { Original, MultiColor, FilamentMap };
 
-    TexturePreviewCanvas(wxWindow* parent, const wxGLAttributes& attrs);
+    TexturePreviewCanvas(QWidget* parent, const QSurfaceFormat& attrs);
     ~TexturePreviewCanvas();
 
     void set_mesh_data(
@@ -90,23 +83,23 @@ public:
     void reset_view();
 
 private:
-    void on_paint(wxPaintEvent& evt);
-    void on_size(wxSizeEvent& evt);
-    void on_mouse(wxMouseEvent& evt);
+    void on_paint(QPaintEvent& evt);
+    void on_size(QResizeEvent& evt);
+    void on_mouse(QMouseEvent& evt);
     void ensure_gl_ready();
     void render();
     void render_mesh();
     void render_textured_original();
-    void render_reset_overlay(const wxSize& logical_size, const wxSize& viewport_size);
+    void render_reset_overlay(const QSize& logical_size, const QSize& viewport_size);
     void upload_reset_icon_textures();
     unsigned int upload_reset_icon_texture(const std::string& icon_name);
-    wxRect reset_overlay_rect() const;
-    bool handle_reset_overlay_mouse(wxMouseEvent& evt);
+    QRect reset_overlay_rect() const;
+    bool handle_reset_overlay_mouse(QMouseEvent& evt);
     void upload_textures();
     void compute_smooth_normals();
     void update_bounding_box();
 
-    wxGLContext*  m_context        = nullptr;
+    QOpenGLContext*  m_context        = nullptr;
     bool          m_gl_initialized = false;
     RenderMode    m_mode           = RenderMode::Original;
 
@@ -115,7 +108,7 @@ private:
     float   m_rot_y    = 30.0f;
     float   m_pan_x    = 0.0f;
     float   m_pan_y    = 0.0f;
-    wxPoint m_last_mouse_pos;
+    QPoint m_last_mouse_pos;
     enum class DragMode { None, Rotate, Pan };
     DragMode m_drag_mode = DragMode::None;
 
@@ -161,7 +154,7 @@ private:
 class TextureImportDialog : public DPIDialog
 {
 public:
-    TextureImportDialog(wxWindow*                        parent,
+    TextureImportDialog(QWidget*                        parent,
                         const Slic3r::TexturedMesh&      textured_mesh,
                         const std::vector<std::string>&  filament_color_strs,
                         const std::vector<std::string>&  filament_names,
@@ -169,8 +162,8 @@ public:
                         std::function<bool(int)>         initial_progress_callback = {});
     ~TextureImportDialog();
 
-    int ShowModal() override;
-    void on_dpi_changed(const wxRect& suggested_rect) override;
+    int exec() override;
+    void on_dpi_changed(const QRect& suggested_rect) override;
 
     Slic3r::PaintedMesh               get_painted_mesh() const;
     std::vector<Slic3r::FilamentMatch> get_matches() const;
@@ -184,19 +177,19 @@ public:
 
 private:
     void build_ui();
-    void build_preview_panel(wxWindow* parent, wxSizer* sizer);
-    void build_params_panel(wxWindow* parent, wxSizer* sizer);
-    void build_mapping_panel(wxWindow* parent, wxSizer* sizer);
-    void build_bottom_buttons(wxSizer* sizer);
+    void build_preview_panel(QWidget* parent, QLayout* sizer);
+    void build_params_panel(QWidget* parent, QLayout* sizer);
+    void build_mapping_panel(QWidget* parent, QLayout* sizer);
+    void build_bottom_buttons(QLayout* sizer);
 
     void set_state(TextureImportState new_state);
     void update_ui_for_state();
 
     void start_computation(bool auto_color = false, bool initial = false);
     void cancel_computation();
-    void on_computation_complete(wxCommandEvent& evt);
-    void on_computation_progress(wxCommandEvent& evt);
-    void on_computation_error(wxCommandEvent& evt);
+    void on_computation_complete(QEvent& evt);
+    void on_computation_progress(QEvent& evt);
+    void on_computation_error(QEvent& evt);
 
     void rebuild_mapping_rows();
     void do_auto_match();
@@ -204,7 +197,7 @@ private:
     void update_filament_color_map();
     void show_filament_popup(size_t row_index);
     void dismiss_filament_popup();
-    void dismiss_filament_popup_on_wheel(wxMouseEvent& evt);
+    void dismiss_filament_popup_on_wheel(QMouseEvent& evt);
     int  add_virtual_filament(const std::array<float, 4>& rgba, const std::string& hex,
                               const std::string& preset_name = std::string());
     size_t max_filament_count() const;
@@ -212,24 +205,24 @@ private:
     void show_filament_limit_warning_once();
     int  find_closest_filament_index(const std::array<std::size_t, 3>& color) const;
 
-    void on_color_preset_clicked(wxCommandEvent& evt);
-    void on_color_slider_changed(wxCommandEvent& evt);
-    void on_color_spin_changed(wxCommandEvent& evt);
-    void on_color_spin_text_changed(wxCommandEvent& evt);
-    void on_smooth_slider_changed(wxCommandEvent& evt);
-    void on_smooth_spin_changed(wxCommandEvent& evt);
-    void on_smooth_spin_text_changed(wxCommandEvent& evt);
-    void on_apply_clicked(wxCommandEvent& evt);
-    void on_auto_merge_toggled(wxCommandEvent& evt);
-    void on_view_button_clicked(wxCommandEvent& evt);
+    void on_color_preset_clicked(QEvent& evt);
+    void on_color_slider_changed(QEvent& evt);
+    void on_color_spin_changed(QEvent& evt);
+    void on_color_spin_text_changed(QEvent& evt);
+    void on_smooth_slider_changed(QEvent& evt);
+    void on_smooth_spin_changed(QEvent& evt);
+    void on_smooth_spin_text_changed(QEvent& evt);
+    void on_apply_clicked(QEvent& evt);
+    void on_auto_merge_toggled(QEvent& evt);
+    void on_view_button_clicked(QEvent& evt);
     void highlight_view_button(int view_index);
-    void on_skip_clicked(wxCommandEvent& evt);
-    void on_ok_clicked(wxCommandEvent& evt);
+    void on_skip_clicked(QEvent& evt);
+    void on_ok_clicked(QEvent& evt);
 
     void set_color_count_value(int value, bool update_spin);
     void set_smooth_value(int value, bool update_spin);
     void preview_spin_text_value(SpinInput* spin, GreenSlider* slider, int& param,
-                                 int min_value, int max_value, const wxString& text,
+                                 int min_value, int max_value, const QString& text,
                                  std::function<void()> on_value_changed = {});
     void update_color_count_preset_buttons();
 
@@ -275,16 +268,16 @@ private:
     SpinInput*   m_smooth_spin    = nullptr;
     Button*      m_btn_apply      = nullptr;
 
-    wxCheckBox*           m_auto_merge_cb = nullptr;
-    wxScrolledWindow*     m_mapping_scroll = nullptr;
-    wxBoxSizer*           m_mapping_sizer  = nullptr;
+    QCheckBox*           m_auto_merge_cb = nullptr;
+    QScrollArea*     m_mapping_scroll = nullptr;
+    QBoxLayout*           m_mapping_sizer  = nullptr;
     std::vector<FilamentMappingRow> m_mapping_rows;
     FilamentSelectPopup*  m_filament_popup = nullptr;
     int                   m_filament_popup_row = -1;
     int                   m_skip_next_filament_popup_row = -1;
 
     TexturePreviewCanvas* m_preview_canvas      = nullptr;
-    wxPanel*              m_tab_panel           = nullptr;
+    QWidget*              m_tab_panel           = nullptr;
     Button*               m_btn_view_original   = nullptr;
     Button*               m_btn_view_multicolor = nullptr;
     Button*               m_btn_view_filament   = nullptr;
@@ -299,19 +292,18 @@ private:
 
     int   m_applied_color_count = -1;
     int   m_applied_smooth      = -1;
-    wxStaticText* m_hint_label  = nullptr;
+    QLabel* m_hint_label  = nullptr;
 
-    static const int ID_COLOR_4     = wxID_HIGHEST + 200;
-    static const int ID_COLOR_8     = wxID_HIGHEST + 201;
-    static const int ID_COLOR_16    = wxID_HIGHEST + 202;
-    static const int ID_COLOR_AUTO  = wxID_HIGHEST + 203;
-    static const int ID_BTN_APPLY   = wxID_HIGHEST + 204;
-    static const int ID_BTN_SKIP    = wxID_HIGHEST + 205;
-    static const int ID_VIEW_ORIGINAL   = wxID_HIGHEST + 206;
-    static const int ID_VIEW_MULTICOLOR = wxID_HIGHEST + 207;
-    static const int ID_VIEW_FILAMENT   = wxID_HIGHEST + 208;
+    static const int ID_COLOR_4     = 50000 + 200;
+    static const int ID_COLOR_8     = 50000 + 201;
+    static const int ID_COLOR_16    = 50000 + 202;
+    static const int ID_COLOR_AUTO  = 50000 + 203;
+    static const int ID_BTN_APPLY   = 50000 + 204;
+    static const int ID_BTN_SKIP    = 50000 + 205;
+    static const int ID_VIEW_ORIGINAL   = 50000 + 206;
+    static const int ID_VIEW_MULTICOLOR = 50000 + 207;
+    static const int ID_VIEW_FILAMENT   = 50000 + 208;
 
-    wxDECLARE_EVENT_TABLE();
-};
+    };
 
 }} // namespace Slic3r::GUI

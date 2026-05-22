@@ -3,7 +3,7 @@
 #include <memory>
 #include <vector>
 #include <assert.h>
-#include <wx/font.h>
+#include <QFont>
 
 namespace Slic3r {
 
@@ -49,7 +49,7 @@ struct FontFile
 
 bool can_generate_text_shape(const std::string &font_name);
 
-bool can_load(const wxFont &font);
+bool can_load(const QFont &font);
 
 } // namespace Slic3r
 

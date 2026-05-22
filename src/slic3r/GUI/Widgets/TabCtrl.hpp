@@ -2,86 +2,66 @@
 #define slic3r_GUI_TabCtrl_hpp_
 
 #include "Button.hpp"
+#include "StateColor.hpp"
 
-wxDECLARE_EVENT( wxEVT_TAB_SEL_CHANGING, wxCommandEvent );
-wxDECLARE_EVENT( wxEVT_TAB_SEL_CHANGED, wxCommandEvent );
+#include <QHBoxLayout>
+#include <QFont>
+#include <vector>
 
 class TabCtrl : public StaticBox
 {
-    std::vector<Button*> btns;
-    wxImageList* images = nullptr;
-    wxBoxSizer * sizer = nullptr;
+    Q_OBJECT
 
-    int sel = -1;
-    wxFont bold;
-
-public:
-    TabCtrl(wxWindow *      parent,
-             wxWindowID      id,
-             const wxPoint & pos       = wxDefaultPosition,
-             const wxSize &  size      = wxDefaultSize,
-             long            style     = 0);
-
-    ~TabCtrl();
+    std::vector<Button *> btns;
+    std::vector<void *>   item_data;
+    QHBoxLayout          *sizer = nullptr;
+    int                   sel   = -1;
+    QFont                 bold_font;
 
 public:
-    virtual bool SetFont(wxFont const & font) override;
+    explicit TabCtrl(QWidget *parent,
+                     const QPoint &pos  = {},
+                     const QSize  &size = {});
+    ~TabCtrl() override;
 
-public:
-    int AppendItem(const wxString &item, int image = -1, int selImage = -1, void *clientData = nullptr);
+    bool setFont(const QFont &font);
 
-    bool DeleteItem(int item);
-
-    void DeleteAllItems();
-
+    int          AppendItem(const QString &item, int image = -1, int selImage = -1, void *clientData = nullptr);
+    bool         DeleteItem(int item);
+    void         DeleteAllItems();
     unsigned int GetCount() const;
+    int          GetSelection() const { return sel; }
+    void         SelectItem(int item);
+    void         Unselect();
+    void         Rescale();
 
-    int  GetSelection() const;
-
-    void SelectItem(int item);
-
-    void Unselect();
-
-    virtual void Rescale();
-
-    wxString GetItemText(unsigned int item) const;
-    void     SetItemText(unsigned int item, wxString const &value);
-
+    QString  GetItemText(unsigned int item) const;
+    void     SetItemText(unsigned int item, const QString &value);
     bool     GetItemBold(unsigned int item) const;
     void     SetItemBold(unsigned int item, bool bold);
-
-    void*    GetItemData(unsigned int item) const;
+    void    *GetItemData(unsigned int item) const;
     void     SetItemData(unsigned int item, void *clientData);
+    void     AssignImageList(void * /*unused*/) {}
+    void     SetItemPaddingSize(unsigned int item, const QSize &size);
+    void     SetItemTextColour(unsigned int item, const StateColor &col);
 
-    void AssignImageList(wxImageList *imageList);
+    // Fakes for API compatibility
+    int  GetFirstVisibleItem() const;
+    int  GetNextVisible(int item) const;
+    bool IsVisible(unsigned int item) const { return true; }
 
-    void SetItemPaddingSize(unsigned int item, const wxSize &size);
+signals:
+    void selChanging(int newSel);
+    void selChanged(int newSel);
 
-    void SetItemTextColour(unsigned int item, const StateColor &col);
-
-    /* fakes */
-    int GetFirstVisibleItem() const;
-    int GetNextVisible(int item) const;
-    bool IsVisible(unsigned int item) const;
+protected:
+    void doRender(QPainter &painter) override;
+    void keyPressEvent(QKeyEvent *event) override;
+    void resizeEvent(QResizeEvent *event) override;
 
 private:
-    virtual void DoSetSize(int x, int y, int width, int height, int sizeFlags = wxSIZE_AUTO);
-
-#ifdef __WIN32__
-    WXLRESULT MSWWindowProc(WXUINT nMsg, WXWPARAM wParam, WXLPARAM lParam) override;
-#endif
-
     void relayout();
-
-    void buttonClicked(wxCommandEvent & event);
-    void keyDown(wxKeyEvent &event);
-
-    void doRender(wxDC & dc) override;
-
-    // some useful events
-    bool sendTabCtrlEvent(bool changing = false);
-
-    DECLARE_EVENT_TABLE()
+    void buttonClicked();
 };
 
 #endif // !slic3r_GUI_TabCtrl_hpp_

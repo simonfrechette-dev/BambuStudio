@@ -6,13 +6,14 @@
 //**********************************************************/
 
 #pragma once
+#include <QWidget>
+#include <QString>
 #include "slic3r/GUI/DeviceCore/DevNozzleRack.h"
 
 #include "slic3r/GUI/GUI_Utils.hpp"
 #include "slic3r/GUI/Widgets/StaticBox.hpp"
 #include "slic3r/GUI/Widgets/AnimaController.hpp"
 
-#include <wx/panel.h>
 #include <memory>
 
 // Previous definitions
@@ -36,27 +37,27 @@ namespace Slic3r::GUI
 class wgtDeviceNozzleRackUpgradeDlg : public DPIDialog
 {
 public:
-    wgtDeviceNozzleRackUpgradeDlg(wxWindow* parent, const std::shared_ptr<DevNozzleRack> rack);
+    wgtDeviceNozzleRackUpgradeDlg(QWidget* parent, const std::shared_ptr<DevNozzleRack> rack);
 
 public:
     void UpdateRackInfo(const std::shared_ptr<DevNozzleRack> rack);;
 
 public:
-    void on_dpi_changed(const wxRect& suggested_rect) override;
+    void on_dpi_changed(const QRect& suggested_rect) override;
 
 private:
     wgtDeviceNozzleRackUprade* m_rack_upgrade_panel;
 };
 
 
-class wgtDeviceNozzleRackUprade : public wxPanel
+class wgtDeviceNozzleRackUprade : public QWidget
 {
 public:
-    wgtDeviceNozzleRackUprade(wxWindow* parent,
-        wxWindowID id = wxID_ANY,
-        const wxPoint& pos = wxDefaultPosition,
-        const wxSize& size = wxDefaultSize,
-        long style = wxTAB_TRAVERSAL);
+    wgtDeviceNozzleRackUprade(QWidget* parent,
+        int id = -1,
+        const QPoint& pos = QPoint(),
+        const QSize& size = QSize(),
+        long style = 0);
     ~wgtDeviceNozzleRackUprade() = default;
 
 public:
@@ -66,7 +67,7 @@ public:
 private:
     void CreateGui();
 
-    void OnBtnReadAll(wxCommandEvent& e);
+    void OnBtnReadAll(QEvent& e);
 
 private:
     std::weak_ptr<DevNozzleRack> m_nozzle_rack;
@@ -80,11 +81,11 @@ private:
 class wgtDeviceNozzleRackHotendUpdate : public StaticBox
 {
 public:
-    wgtDeviceNozzleRackHotendUpdate(wxWindow* parent, const wxString& idx_text);
+    wgtDeviceNozzleRackHotendUpdate(QWidget* parent, const QString& idx_text);
 
 public:
     // Color
-    void UpdateColourStyle(const wxColour& clr);
+    void UpdateColourStyle(const QColor& clr);
 
     // extruder nozzle
     int GetExtruderNozzleId() const { return m_ext_nozzle_id; }
@@ -104,9 +105,9 @@ private:
 
     void UpdateInfo(const DevNozzle& nozzle);
 
-    void OnBitmapHoverEnter(wxMouseEvent& event);
-    void OnBitmapHoverLeave(wxMouseEvent& event);
-    void OnStatusIconClick(wxMouseEvent& event);
+    void OnBitmapHoverEnter(QMouseEvent& event);
+    void OnBitmapHoverLeave(QMouseEvent& event);
+    void OnStatusIconClick(QMouseEvent& event);
     void updateNozzleImage(const DevNozzle& nozzle);
 
 private:
@@ -141,12 +142,12 @@ private:
     ScalableBitmap* m_error_icon = nullptr;
 
     Label* m_idx_label;
-    wxStaticBitmap* m_icon_bitmap{ nullptr };
-    wxStaticBitmap* m_status_bitmap{ nullptr };
+    QLabel* m_icon_bitmap{ nullptr };
+    QLabel* m_status_bitmap{ nullptr };
 
     Label* m_material_label{ nullptr };
     StaticBox* m_colour_box{ nullptr };
-    wxFrame* m_hoverFrame{ nullptr };
+    QMainWindow* m_hoverFrame{ nullptr };
 
     Label* m_status_label{ nullptr };
     Label* m_used_time{ nullptr };
@@ -161,6 +162,5 @@ private:
     Label* m_version_new_label;
 };
 
-wxDECLARE_EVENT(wxEVT_NOZZLE_JUMP_UPGRADE, wxCommandEvent);
 
 };// end of namespace Slic3r::GUI

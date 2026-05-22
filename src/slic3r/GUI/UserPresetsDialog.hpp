@@ -22,22 +22,22 @@ namespace GUI {
 class UserPresetsDialog : public DPIDialog
 {
 public:
-    UserPresetsDialog(wxWindow * parent);
+    UserPresetsDialog(QWidget * parent);
 
 private:
     void init_preset_list();
 
-    void create_preset_list(wxWindow *parent);
+    void create_preset_list(QWidget *parent);
 
-    wxSizer *create_preset_line(wxWindow *parent, std::string const & preset);
+    QLayout *create_preset_line(QWidget *parent, std::string const & preset);
 
-    wxSizer *create_filament_group(wxWindow *parent, std::pair<std::string const, std::vector<std::string>> const &filament);
+    QLayout *create_filament_group(QWidget *parent, std::pair<std::string const, std::vector<std::string>> const &filament);
 
     void layout_preset_list(bool delete_old = false);
 
     void on_collection_changed(int collection);
 
-    void on_search(wxString const & keyword);
+    void on_search(QString const & keyword);
 
     void on_preset_checked(std::string const &preset, bool checked, bool from_user);
 
@@ -57,7 +57,7 @@ private:
     
     bool delete_confirm(int collection, int filament_preset_num, int print_preset_num);
 
-    void on_dpi_changed(const wxRect &suggested_rect) override;
+    void on_dpi_changed(const QRect &suggested_rect) override;
 
     bool is_filament_list() const;
 
@@ -65,11 +65,11 @@ private:
     TabCtrl * m_tab_ctrl;
     SwitchButton * m_switch_button;
     TextInput * m_search;
-    wxPanel * m_empty_panel;
-    wxScrolledWindow * m_scrolled;
-    std::map<std::string, wxSizer *> m_preset_sizers;
-    std::map<std::string, wxSizer *> m_filament_sizers;
-    std::unordered_set<wxSizer*> m_hiden_sizers;
+    QWidget * m_empty_panel;
+    QScrollArea * m_scrolled;
+    std::map<std::string, QLayout *> m_preset_sizers;
+    std::map<std::string, QLayout *> m_filament_sizers;
+    std::unordered_set<QLayout*> m_hiden_sizers;
     CheckBox * m_check_all;
     Label * m_label_check_count;
     Button * m_button_delete;

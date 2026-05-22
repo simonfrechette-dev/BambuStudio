@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.5...3.31)
 project(HintsToPot)
 
 add_executable(hintsToPot

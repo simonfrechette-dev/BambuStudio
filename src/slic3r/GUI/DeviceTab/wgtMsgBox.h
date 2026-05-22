@@ -1,10 +1,8 @@
 #ifndef WGTMSGBOX_H
 #define WGTMSGBOX_H
+#include <QWidget>
+#include <QString>
 
-#include <wx/wx.h>
-#include <wx/panel.h>
-#include <wx/stattext.h>
-#include <wx/button.h>
 
 #include "slic3r/GUI/Widgets/StaticBox.hpp"
 
@@ -14,7 +12,7 @@ namespace Slic3r::GUI
 class wgtMsgBox : public StaticBox
 {
 public:
-    wgtMsgBox(wxWindow* parent);
+    wgtMsgBox(QWidget* parent);
 
 public:
     Label* GetTextLabel() const { return m_txt_label; }
@@ -24,7 +22,7 @@ private:
 
 private:
     void CreateGUI();
-    void OnCloseClicked(wxCommandEvent& evt);
+    void OnCloseClicked(QEvent& evt);
 };
 }
 

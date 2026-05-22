@@ -8,19 +8,16 @@
 
 #include <map>
 
-// wx
-#include <wx/string.h>
-#include <wx/event.h>
-
-wxDECLARE_EVENT(DEV_RACK_EVENT_READING_FINISHED, wxCommandEvent);
+#include <QObject>
 
 namespace Slic3r
 {
     // Previous definitions
 class DevNozzleSystem;
 
-class DevNozzleRack: public wxEvtHandler
+class DevNozzleRack : public QObject
 {
+    Q_OBJECT
 public:
     enum RackStatus : int
     {

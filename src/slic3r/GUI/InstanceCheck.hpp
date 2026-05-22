@@ -43,10 +43,11 @@ class MainFrame;
 #endif // __linux__
 
 using LoadFromOtherInstanceEvent = Event<std::vector<boost::filesystem::path>>;
-wxDECLARE_EVENT(EVT_LOAD_MODEL_OTHER_INSTANCE, LoadFromOtherInstanceEvent);
+// Qt port: event type IDs registered at runtime
+QEvent::Type getLoadModelOtherInstanceEventType();
+QEvent::Type getInstanceGoToFrontEventType();
 
-using InstanceGoToFrontEvent = SimpleEvent;
-wxDECLARE_EVENT(EVT_INSTANCE_GO_TO_FRONT, InstanceGoToFrontEvent);
+using InstanceGoToFrontEvent = QEvent;
 
 class OtherInstanceMessageHandler
 {
@@ -57,7 +58,7 @@ public:
 	~OtherInstanceMessageHandler() { assert(!m_initialized); }
 
 	// inits listening, on each platform different. On linux starts background thread
-	void    init(wxEvtHandler* callback_evt_handler);
+	void    init(QObject* callback_evt_handler);
 	// stops listening, on linux stops the background thread
 	void    shutdown(MainFrame* main_frame);
 
@@ -77,7 +78,7 @@ public:
 #endif //WIN32
 private:
 	bool                    m_initialized { false };
-	wxEvtHandler*           m_callback_evt_handler { nullptr };
+	QObject*                m_callback_evt_handler { nullptr };
 
 #ifdef BACKGROUND_MESSAGE_LISTENER
 	//worker thread to listen incoming dbus communication

@@ -1,28 +1,8 @@
 #ifndef slic3r_GUI_SelectMachinePop_hpp_
 #define slic3r_GUI_SelectMachinePop_hpp_
+#include <QWidget>
+#include <QString>
 
-#include <wx/wx.h>
-#include <wx/intl.h>
-#include <wx/collpane.h>
-#include <wx/dataview.h>
-#include <wx/artprov.h>
-#include <wx/xrc/xmlres.h>
-#include <wx/dataview.h>
-#include <wx/gdicmn.h>
-#include <wx/font.h>
-#include <wx/colour.h>
-#include <wx/settings.h>
-#include <wx/string.h>
-#include <wx/sizer.h>
-#include <wx/stattext.h>
-#include <wx/hyperlink.h>
-#include <wx/button.h>
-#include <wx/dialog.h>
-#include <wx/popupwin.h>
-#include <wx/spinctrl.h>
-#include <wx/artprov.h>
-#include <wx/wrapsizer.h>
-#include <wx/srchctrl.h>
 
 #include "ReleaseNote.hpp"
 #include "GUI_Utils.hpp"
@@ -37,8 +17,6 @@
 #include "Widgets/ComboBox.hpp"
 #include "Widgets/ScrolledWindow.hpp"
 #include "Widgets/PopupWindow.hpp"
-#include <wx/simplebook.h>
-#include <wx/hashmap.h>
 
 namespace Slic3r { namespace GUI {
 
@@ -56,26 +34,18 @@ enum PrinterBindState {
     ALLOW_UNBIND
 };
 
-wxDECLARE_EVENT(EVT_FINISHED_UPDATE_MACHINE_LIST, wxCommandEvent);
-wxDECLARE_EVENT(EVT_WILL_DISMISS_MACHINE_LIST, wxCommandEvent);
-wxDECLARE_EVENT(EVT_UPDATE_WINDOWS_POSITION, wxCommandEvent);
-wxDECLARE_EVENT(EVT_DISSMISS_MACHINE_LIST, wxCommandEvent);
-wxDECLARE_EVENT(EVT_CONNECT_LAN_PRINT, wxCommandEvent);
-wxDECLARE_EVENT(EVT_EDIT_PRINT_NAME, wxCommandEvent);
-wxDECLARE_EVENT(EVT_UNBIND_MACHINE, wxCommandEvent);
-wxDECLARE_EVENT(EVT_BIND_MACHINE, wxCommandEvent);
 
-#define SELECT_MACHINE_POPUP_SIZE wxSize(FromDIP(216), FromDIP(364))
-#define SELECT_MACHINE_LIST_SIZE wxSize(FromDIP(212), FromDIP(360))
-#define SELECT_MACHINE_ITEM_SIZE wxSize(FromDIP(190), FromDIP(35))
-#define SELECT_MACHINE_GREY900 wxColour(38, 46, 48)
-#define SELECT_MACHINE_GREY600 wxColour(144, 144, 144)
-#define SELECT_MACHINE_GREY400 wxColour(206, 206, 206)
-#define SELECT_MACHINE_BRAND wxColour(0, 174, 66)
-#define SELECT_MACHINE_REMIND wxColour(255, 111, 0)
-#define SELECT_MACHINE_LIGHT_GREEN wxColour(219, 253, 231)
+#define SELECT_MACHINE_POPUP_SIZE QSize(FromDIP(216), FromDIP(364))
+#define SELECT_MACHINE_LIST_SIZE QSize(FromDIP(212), FromDIP(360))
+#define SELECT_MACHINE_ITEM_SIZE QSize(FromDIP(190), FromDIP(35))
+#define SELECT_MACHINE_GREY900 QColor(38, 46, 48)
+#define SELECT_MACHINE_GREY600 QColor(144, 144, 144)
+#define SELECT_MACHINE_GREY400 QColor(206, 206, 206)
+#define SELECT_MACHINE_BRAND QColor(0, 174, 66)
+#define SELECT_MACHINE_REMIND QColor(255, 111, 0)
+#define SELECT_MACHINE_LIGHT_GREEN QColor(219, 253, 231)
 
-class MachineObjectPanel : public wxPanel
+class MachineObjectPanel : public QWidget
 {
 private:
     bool        m_is_my_devices {false};
@@ -101,16 +71,16 @@ private:
     MachineObject *m_info;
 
 protected:
-    wxStaticBitmap *m_bitmap_info;
-    wxStaticBitmap *m_bitmap_bind;
+    QLabel *m_bitmap_info;
+    QLabel *m_bitmap_bind;
 
 public:
-    MachineObjectPanel(wxWindow *      parent,
-                       wxWindowID      id    = wxID_ANY,
-                       const wxPoint & pos   = wxDefaultPosition,
-                       const wxSize &  size  = wxDefaultSize,
-                       long            style = wxTAB_TRAVERSAL,
-                       const wxString &name  = wxEmptyString);
+    MachineObjectPanel(QWidget *      parent,
+                       int      id    = -1,
+                       const QPoint & pos   = QPoint(),
+                       const QSize &  size  = QSize(),
+                       long            style = 0,
+                       const QString &name  = QString());
 
     ~MachineObjectPanel();
 
@@ -120,57 +90,57 @@ public:
     void show_edit_printer_name(bool show);
     void update_machine_info(MachineObject *info, bool is_my_devices = false);
 protected:
-    void OnPaint(wxPaintEvent &event);
-    void render(wxDC &dc);
-    void doRender(wxDC &dc);
-    void on_mouse_enter(wxMouseEvent &evt);
-    void on_mouse_leave(wxMouseEvent &evt);
-    void on_mouse_left_up(wxMouseEvent &evt);
+    void OnPaint(QPaintEvent &event);
+    void render(QPainter &dc);
+    void doRender(QPainter &dc);
+    void on_mouse_enter(QMouseEvent &evt);
+    void on_mouse_leave(QMouseEvent &evt);
+    void on_mouse_left_up(QMouseEvent &evt);
 };
 
 class MachinePanel
 {
 public:
-    wxString mIndex;
+    QString mIndex;
     MachineObjectPanel *mPanel;
 };
 
-class PinCodePanel : public wxPanel
+class PinCodePanel : public QWidget
 {
 public:
-    PinCodePanel(wxWindow* parent,
+    PinCodePanel(QWidget* parent,
         int type,
-        wxWindowID      winid = wxID_ANY,
-        const wxPoint& pos = wxDefaultPosition,
-        const wxSize& size = wxDefaultSize);
+        int      winid = -1,
+        const QPoint& pos = QPoint(),
+        const QSize& size = QSize());
     ~PinCodePanel() {};
 
     ScalableBitmap       m_bitmap;
     bool           m_hover{false};
     int            m_type{0};
 
-    void OnPaint(wxPaintEvent& event);
-    void render(wxDC& dc);
-    void doRender(wxDC& dc);
+    void OnPaint(QPaintEvent& event);
+    void render(QPainter& dc);
+    void doRender(QPainter& dc);
 
-    void on_mouse_enter(wxMouseEvent& evt);
-    void on_mouse_leave(wxMouseEvent& evt);
-    void on_mouse_left_up(wxMouseEvent& evt);
+    void on_mouse_enter(QMouseEvent& evt);
+    void on_mouse_leave(QMouseEvent& evt);
+    void on_mouse_left_up(QMouseEvent& evt);
 };
 
 class SelectMachinePopup : public PopupWindow
 {
 public:
-    SelectMachinePopup(wxWindow *parent);
+    SelectMachinePopup(QWidget *parent);
     ~SelectMachinePopup();
 
     // PopupWindow virtual methods are all overridden to log them
-    virtual void Popup(wxWindow *focus = NULL) wxOVERRIDE;
-    virtual void OnDismiss() wxOVERRIDE;
-    virtual bool ProcessLeftDown(wxMouseEvent &event) wxOVERRIDE;
-    virtual bool Show(bool show = true) wxOVERRIDE;
+    virtual void Popup(QWidget *focus = NULL) override;
+    virtual void OnDismiss();
+    virtual bool ProcessLeftDown(QMouseEvent&);
+    virtual void setVisible(bool show) override;
 
-    void update_machine_list(wxCommandEvent &event);
+    void update_machine_list(QEvent &event);
     void start_ssdp(bool on_off);
     bool was_dismiss() { return m_dismiss; }
 
@@ -179,18 +149,18 @@ private:
     int                               m_other_devices_count{0};
     PinCodePanel*                     m_panel_ping_code{nullptr};
     PinCodePanel*                     m_panel_direct_connection{nullptr};
-    wxWindow*                         m_placeholder_panel{nullptr};
-    wxHyperlinkCtrl*                  m_hyperlink{nullptr};
+    QWidget*                         m_placeholder_panel{nullptr};
+    QLabel*                  m_hyperlink{nullptr};
     Label*                            m_ping_code_text{nullptr};
-    wxStaticBitmap*                   m_img_ping_code{nullptr};
-    wxBoxSizer *                      m_sizer_body{nullptr};
-    wxBoxSizer *                      m_sizer_my_devices{nullptr};
-    wxBoxSizer *                      m_sizer_other_devices{nullptr};
-    wxBoxSizer *                      m_sizer_search_bar{nullptr};
-    wxSearchCtrl*                     m_search_bar{nullptr};
-    wxScrolledWindow *                m_scrolledWindow{nullptr};
-    wxWindow *                        m_panel_body{nullptr};
-    wxTimer *                         m_refresh_timer{nullptr};
+    QLabel*                   m_img_ping_code{nullptr};
+    QBoxLayout *                      m_sizer_body{nullptr};
+    QBoxLayout *                      m_sizer_my_devices{nullptr};
+    QBoxLayout *                      m_sizer_other_devices{nullptr};
+    QBoxLayout *                      m_sizer_search_bar{nullptr};
+    QLineEdit*                     m_search_bar{nullptr};
+    QScrollArea *                m_scrolledWindow{nullptr};
+    QWidget *                        m_panel_body{nullptr};
+    QTimer *                         m_refresh_timer{nullptr};
     std::vector<MachinePanel*>        m_user_list_machine_panel;
     std::vector<MachinePanel*>        m_other_list_machine_panel;
     boost::thread*                    get_print_info_thread{ nullptr };
@@ -202,14 +172,14 @@ private:
     std::map<std::string, MachineObject*> m_free_machine_list;
 
 private:
-    void OnLeftUp(wxMouseEvent &event);
-    void on_timer(wxTimerEvent &event);
+    void OnLeftUp(QMouseEvent &event);
+    void on_timer(QTimerEvent &event);
 
 	void      update_other_devices();
     void      update_user_devices();
     bool      search_for_printer(MachineObject* obj);
-    void      on_dissmiss_win(wxCommandEvent &event);
-    wxWindow *create_title_panel(wxString text);
+    void      on_dissmiss_win(QEvent &event);
+    QWidget *create_title_panel(QString text);
 };
 
 class EditDevNameDialog : public DPIDialog
@@ -219,12 +189,12 @@ public:
     ~EditDevNameDialog();
 
     void set_machine_obj(MachineObject *obj);
-    void on_dpi_changed(const wxRect &suggested_rect) override;
-    void on_edit_name(wxCommandEvent &e);
+    void on_dpi_changed(const QRect &suggested_rect) override;
+    void on_edit_name(QEvent &e);
 
     Button*             m_button_confirm{nullptr};
     TextInput*          m_textCtr{nullptr};
-    wxStaticText*       m_static_valid{nullptr};
+    QLabel*       m_static_valid{nullptr};
     MachineObject*      m_info{nullptr};
 };
 

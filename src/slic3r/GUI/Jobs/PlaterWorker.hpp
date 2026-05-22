@@ -15,11 +15,11 @@ namespace Slic3r { namespace GUI {
 template<class WorkerSubclass>
 class PlaterWorker: public Worker {
     WorkerSubclass m_w;
-    wxWindow *m_plater;
+    QWidget *m_plater;
 
     class PlaterJob : public JobNew {
         std::unique_ptr<JobNew> m_job;
-        wxWindow *m_plater;
+        QWidget *m_plater;
         long long m_process_duration; // [ms]
 
     public:
@@ -95,7 +95,7 @@ class PlaterWorker: public Worker {
             }
         }
 
-        PlaterJob(wxWindow *p, std::unique_ptr<JobNew> j)
+        PlaterJob(QWidget *p, std::unique_ptr<JobNew> j)
             : m_job{std::move(j)}, m_plater{p}
         {
             // TODO: decide if disabling slice button during UI job is what we
@@ -122,13 +122,13 @@ class PlaterWorker: public Worker {
 public:
 
     template<class... WorkerArgs>
-    PlaterWorker(wxWindow *plater, WorkerArgs &&...args)
+    PlaterWorker(QWidget *plater, WorkerArgs &&...args)
         : m_w{std::forward<WorkerArgs>(args)...}
         , m_plater{plater}
         // Ensure that messages from the worker thread to the UI thread are
         // processed continuously.
         , on_idle_evt(plater, wxEVT_IDLE, [this](wxIdleEvent&) { process_events(); })
-        , on_paint_evt(plater, wxEVT_PAINT, [this](wxPaintEvent&) { process_events(); })
+        , on_paint_evt(plater, wxEVT_PAINT, [this](QPaintEvent&) { process_events(); })
     {
     }
 

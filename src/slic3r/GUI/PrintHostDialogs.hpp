@@ -2,22 +2,22 @@
 #define slic3r_PrintHostSendDialog_hpp_
 
 #include <set>
+#include <QDialog>
+#include <QString>
+#include <QStringList>
 #include <string>
 #include <boost/filesystem/path.hpp>
 
-#include <wx/string.h>
-#include <wx/event.h>
-#include <wx/dialog.h>
 
 #include "GUI_Utils.hpp"
 #include "MsgDialog.hpp"
 #include "../Utils/PrintHost.hpp"
 
-class wxButton;
-class wxTextCtrl;
-class wxChoice;
-class wxComboBox;
-class wxDataViewListCtrl;
+class QPushButton;
+class QLineEdit;
+class QComboBox;
+class QComboBox;
+class QListView;
 
 namespace Slic3r {
 
@@ -26,51 +26,46 @@ namespace GUI {
 class PrintHostSendDialog : public GUI::MsgDialog
 {
 public:
-    PrintHostSendDialog(const boost::filesystem::path &path, PrintHostPostUploadActions post_actions, const wxArrayString& groups);
+    PrintHostSendDialog(const boost::filesystem::path &path, PrintHostPostUploadActions post_actions, const QStringList& groups);
     boost::filesystem::path filename() const;
     PrintHostPostUploadAction post_action() const;
     std::string group() const;
 
-    virtual void EndModal(int ret) override;
+    void accept() override;
+    void reject() override;
 private:
-    wxTextCtrl *txt_filename;
-    wxComboBox *combo_groups;
+    QLineEdit *txt_filename;
+    QComboBox *combo_groups;
     PrintHostPostUploadAction post_upload_action;
-    wxString    m_valid_suffix;
+    QString    m_valid_suffix;
 };
 
 
 class PrintHostQueueDialog : public DPIDialog
 {
 public:
-    class Event : public wxEvent
-    {
+    class Event : public QEvent {
     public:
-        size_t job_id;
-        int progress = 0;    // in percent
-        wxString error;
-
-        Event(wxEventType eventType, int winid, size_t job_id);
-        Event(wxEventType eventType, int winid, size_t job_id, int progress);
-        Event(wxEventType eventType, int winid, size_t job_id, wxString error);
-
-        virtual wxEvent *Clone() const;
+        size_t job_id{0};
+        int progress{0};
+        QString error;
+        Event(QEvent::Type t, size_t jid) : QEvent(t), job_id(jid) {}
+        Event(QEvent::Type t, size_t jid, int p) : QEvent(t), job_id(jid), progress(p) {}
+        Event(QEvent::Type t, size_t jid, QString e) : QEvent(t), job_id(jid), error(std::move(e)) {}
     };
 
-
-    PrintHostQueueDialog(wxWindow *parent);
+    PrintHostQueueDialog(QWidget *parent);
 
     void append_job(const PrintHostJob &job);
     void get_active_jobs(std::vector<std::pair<std::string, std::string>>& ret);
 
-    virtual bool Show(bool show = true) override
-    {
+    void setVisible(bool show) override {
         if(!show)
             save_user_data(UDT_SIZE | UDT_POSITION | UDT_COLS);
-        return DPIDialog::Show(show);
+        DPIDialog::setVisible(show);
     }
 protected:
-    void on_dpi_changed(const wxRect &suggested_rect) override;
+    void on_dpi_changed(const QRect &suggested_rect) override;
     void on_sys_color_changed() override;
 
 private:
@@ -101,9 +96,9 @@ private:
         UDT_COLS = 4
     };
 
-    wxButton *btn_cancel;
-    wxButton *btn_error;
-    wxDataViewListCtrl *job_list;
+    QPushButton *btn_cancel;
+    QPushButton *btn_error;
+    QListView *job_list;
     // Note: EventGuard prevents delivery of progress evts to a freed PrintHostQueueDialog
     EventGuard on_progress_evt;
     EventGuard on_error_evt;
@@ -121,9 +116,6 @@ private:
     bool load_user_data(int, std::vector<int>&);
 };
 
-wxDECLARE_EVENT(EVT_PRINTHOST_PROGRESS, PrintHostQueueDialog::Event);
-wxDECLARE_EVENT(EVT_PRINTHOST_ERROR, PrintHostQueueDialog::Event);
-wxDECLARE_EVENT(EVT_PRINTHOST_CANCEL, PrintHostQueueDialog::Event);
 
 }}
 

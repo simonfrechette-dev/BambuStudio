@@ -73,8 +73,6 @@ using namespace nlohmann;
 #include "libslic3r/FilamentMixer.hpp"
 
 #include "BambuStudio.hpp"
-//BBS: add exception handler for win32
-#include <wx/stdpaths.h>
 #ifdef WIN32
 //#include "BaseException.h"
 #endif
@@ -87,9 +85,6 @@ using namespace nlohmann;
 #include "slic3r/GUI/GuiColor.hpp"
 #include <GLFW/glfw3.h>
 
-#ifdef __WXGTK__
-#include <X11/Xlib.h>
-#endif
 
 #ifdef SLIC3R_GUI
     #include "slic3r/GUI/GUI_Init.hpp"
@@ -1526,7 +1521,7 @@ int CLI::run(int argc, char **argv)
         return CLI_INVALID_PARAMS;
     }
     BOOST_LOG_TRIVIAL(info) << "finished setup params, argc="<< argc << std::endl;
-    std::string temp_path = wxFileName::GetTempDir().utf8_str().data();
+    std::string temp_path = boost::filesystem::temp_directory_path().string();
     set_temporary_dir(temp_path);
 
     m_extra_config.apply(m_config, true);
@@ -1575,7 +1570,7 @@ int CLI::run(int argc, char **argv)
     bool start_gui = m_actions.empty() && !downward_check;
     if (start_gui) {
         BOOST_LOG_TRIVIAL(info) << "no action, start gui directly" << std::endl;
-        ::Label::initSysFont();
+        // Label::initSysFont() moved into GUI_App::OnInit() — must run after QApplication is constructed
 #ifdef SLIC3R_GUI
     /*#if !defined(_WIN32) && !defined(__APPLE__)
         // likely some linux / unix system

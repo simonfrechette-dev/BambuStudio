@@ -1,67 +1,85 @@
 #ifndef slic3r_GUI_Label_hpp_
 #define slic3r_GUI_Label_hpp_
 
-#include <wx/stattext.h>
+#include <QLabel>
+#include <QFont>
+#include <QColor>
+#include <QString>
+#include <QSize>
+#include <string>
 
-#define LB_HYPERLINK 0x0020
-#define LB_PROPAGATE_MOUSE_EVENT 0x0040
-#define LB_AUTO_WRAP 0x0080
+class QPainter;
+class QFontMetrics;
 
-
-class Label : public wxStaticText
+class Label : public QLabel
 {
+    Q_OBJECT
 public:
-    Label(wxWindow *parent, wxString const &text = {}, long style = 0, wxSize size = wxDefaultSize);
+    static constexpr long LB_HYPERLINK             = 0x0020;
+    static constexpr long LB_PROPAGATE_MOUSE_EVENT = 0x0040;
+    static constexpr long LB_AUTO_WRAP             = 0x0080;
+public:
+    explicit Label(QWidget *parent, const QString &text = {}, long style = 0,
+                   const QSize &size = QSize());
+    Label(QWidget *parent, const QFont &font, const QString &text = {},
+          long style = 0, const QSize &size = QSize());
 
-	Label(wxWindow *parent, wxFont const &font, wxString const &text = {}, long style = 0, wxSize size = wxDefaultSize);
+    void setText(const QString &label);
 
-    void SetLabel(const wxString& label) override;
+    void setStyleFlags(long style);
 
-    void SetWindowStyleFlag(long style) override;
+    void Wrap(int width);
 
-	void Wrap(int width);
+    QSize sizeHint() const override;
 
 protected:
-	wxSize DoGetBestClientSize() const override;
+    void resizeEvent(QResizeEvent *event) override;
+    void mousePressEvent(QMouseEvent *event) override;
+    void mouseReleaseEvent(QMouseEvent *event) override;
 
 private:
-	void OnSize(wxSizeEvent & evt);
+    void applyStyle();
+    void rewrap();
 
-private:
-    wxFont m_font;
-    wxColour m_color;
-	wxString m_text;
-	bool m_skip_size_evt = false;
+    QFont  m_font;
+    QColor m_color;
+    QString m_rawText;    // unwrapped source text
+    long   m_style       = 0;
+    bool   m_inRewrap    = false;
 
 public:
-    static wxFont Head_48;
-    static wxFont Head_32;
-	static wxFont Head_24;
-	static wxFont Head_20;
-	static wxFont Head_18;
-	static wxFont Head_16;
-	static wxFont Head_15;
-	static wxFont Head_14;
-	static wxFont Head_13;
-	static wxFont Head_12;
-	static wxFont Head_11;
-    static wxFont Head_10;
+    // ---- Static font catalogue (same names as wxWidgets version) ----
+    static QFont Head_48;
+    static QFont Head_32;
+    static QFont Head_24;
+    static QFont Head_20;
+    static QFont Head_18;
+    static QFont Head_16;
+    static QFont Head_15;
+    static QFont Head_14;
+    static QFont Head_13;
+    static QFont Head_12;
+    static QFont Head_11;
+    static QFont Head_10;
 
-	static wxFont Body_16;
-	static wxFont Body_15;
-	static wxFont Body_14;
-    static wxFont Body_13;
-	static wxFont Body_12;
-	static wxFont Body_10;
-	static wxFont Body_11;
-	static wxFont Body_9;
-	static wxFont Body_8;
+    static QFont Body_16;
+    static QFont Body_15;
+    static QFont Body_14;
+    static QFont Body_13;
+    static QFont Body_12;
+    static QFont Body_11;
+    static QFont Body_10;
+    static QFont Body_9;
+    static QFont Body_8;
 
-	static void initSysFont(std::string lang_code = "", bool load_font_resource = true);
+    static void  initSysFont(std::string lang_code = "", bool load_font_resource = true);
+    static QFont sysFont(int size, bool bold = false, std::string lang_code = "");
 
-    static wxFont sysFont(int size, bool bold = false, std::string lang_code = "");
-
-    static wxSize split_lines(wxDC &dc, int width, const wxString &text, wxString &multiline_text, int max_count = 0);
+    /// Word-wrap \p text to \p width pixels using \p fm, at most \p maxCount
+    /// lines.  Returns wrapped string and bounding size.
+    static QSize split_lines(const QFontMetrics &fm, int width,
+                             const QString &text, QString &out,
+                             int maxCount = 0);
 };
 
 #endif // !slic3r_GUI_Label_hpp_

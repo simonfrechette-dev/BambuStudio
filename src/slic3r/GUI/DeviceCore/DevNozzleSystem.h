@@ -6,7 +6,7 @@
 #include "libslic3r/MultiNozzleUtils.hpp"
 #include "slic3r/Utils/json_diff.hpp"
 
-#include <wx/string.h>
+#include <QString>
 #include <map>
 
 namespace Slic3r
@@ -27,17 +27,17 @@ namespace Slic3r
        float           m_diameter = 0.4f;// 0.2mm  0.4mm  0.6mm 0.8mm
 
     public:
-        static wxString             GetNozzleFlowTypeStr(NozzleFlowType type);
+        static QString              GetNozzleFlowTypeStr(NozzleFlowType type);
         static std::string          GetNozzleFlowTypeString(NozzleFlowType type);// no translation
         static NozzleFlowType       ToNozzleFlowType(const std::string& type);
         static NozzleFlowType       VariantToNozzleFlowType(const std::string& variant);
         static std::string          ToNozzleFlowString(const NozzleFlowType& type);
 
-        static wxString             GetNozzleTypeStr(NozzleType type);
+        static QString              GetNozzleTypeStr(NozzleType type);
         static std::string          GetNozzleTypeString(NozzleType type);
 
         static NozzleFlowType       ToNozzleFlowType(const NozzleVolumeType& type);
-        static wxString             GetNozzleVolumeTypeStr(const NozzleVolumeType& type);
+        static QString              GetNozzleVolumeTypeStr(const NozzleVolumeType& type);
         static NozzleVolumeType     ToNozzleVolumeType(const NozzleFlowType& type);
         static std::string          ToNozzleVolumeString(const NozzleVolumeType& type);
         static std::string          ToNozzleVolumeShortString(const NozzleVolumeType& type);
@@ -45,7 +45,7 @@ namespace Slic3r
         static float                ToNozzleDiameterFloat(const NozzleDiameterType& type);
         static NozzleDiameterType   ToNozzleDiameterType(float diameter);
         static NozzleDiameterType   ToNozzleDiameterType(const std::string& diameter);
-        static wxString             ToNozzleDiameterStr(const NozzleDiameterType& type);
+        static QString              ToNozzleDiameterStr(const NozzleDiameterType& type);
 
    public:
        bool     IsEmpty() const { return m_nozzle_id < 0; }
@@ -64,13 +64,13 @@ namespace Slic3r
 
        int            GetNozzlePrintTime() const { return m_nozzle_print_time; }
        // display
-       wxString GetDisplayId() const;
-       wxString GetNozzleDiameterStr() const {  return wxString::Format("%.1f mm", m_diameter);}
-       wxString GetNozzleFlowTypeStr() const;
-       wxString GetNozzleTypeStr() const;
+       QString GetDisplayId() const;
+       QString GetNozzleDiameterStr() const { return QString::asprintf("%.1f mm", m_diameter); }
+       QString GetNozzleFlowTypeStr() const;
+       QString GetNozzleTypeStr() const;
 
        // serial number
-       wxString GetSerialNumber() const { return GetFirmwareInfo().sn; }
+       QString GetSerialNumber() const { return QString::fromStdString(GetFirmwareInfo().sn); }
        DevFirmwareVersionInfo GetFirmwareInfo() const;
 
        // location

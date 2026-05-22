@@ -3,7 +3,6 @@
 
 #include "JobNew.hpp"
 
-#include <wx/utils.h>
 #include <boost/log/trivial.hpp>
 
 namespace Slic3r { namespace GUI {

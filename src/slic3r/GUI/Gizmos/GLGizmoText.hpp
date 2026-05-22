@@ -1,3 +1,5 @@
+#include <QMouseEvent>
+#include <QString>
 #ifndef slic3r_GLGizmoText_hpp_
 #define slic3r_GLGizmoText_hpp_
 
@@ -38,7 +40,7 @@ private:
     std::vector<std::string> m_avail_font_names;
     std::string   m_text{""};
     std::string   m_font_name;
-    wxString      m_cur_font_name;
+    QString      m_cur_font_name;
     std::string m_font_version = CUR_FONT_VERSION;
     std::string m_style_name;
     float m_font_size = 10.f;
@@ -144,7 +146,7 @@ private:
     std::vector<Vec3d> m_cut_points_in_world;
     // This map holds all translated description texts, so they can be easily referenced during layout calculations
     // etc. When language changes, GUI is recreated and this class constructed again, so the change takes effect.
-    std::map<std::string, wxString> m_desc;
+    std::map<std::string, QString> m_desc;
     ModelVolume *                   m_last_text_mv{nullptr};
     // move gizmo
     Grabber m_move_grabber;
@@ -173,7 +175,7 @@ public:
     bool is_mesh_point_clipped(const Vec3d &point, const Transform3d &trafo) const;
     BoundingBoxf3 bounding_box() const;
     static EmbossStyles create_default_styles();
-    bool                select_facename(const wxString &facename,bool update_text );
+    bool                select_facename(const std::string &facename, bool update_text);
     bool                on_shortcut_key();
     bool                is_only_text_case() const;
     void                close();
@@ -202,8 +204,8 @@ protected:
     void     on_set_hover_id() override;
     void     on_enable_grabber(unsigned int id) override;
     void     on_disable_grabber(unsigned int id) override;
-    bool     on_mouse(const wxMouseEvent &mouse_event) override;
-    bool     on_mouse_for_rotation(const wxMouseEvent &mouse_event);
+    bool     on_mouse(const QMouseEvent &mouse_event) override;
+    bool     on_mouse_for_rotation(const QMouseEvent &mouse_event);
     virtual CommonGizmosDataID on_get_requirements() const override;
     virtual void on_render_input_window(float x, float y, float bottom_limit);
 

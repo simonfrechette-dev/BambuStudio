@@ -1,5 +1,7 @@
 #ifndef slic3r_calib_dlg_hpp_
 #define slic3r_calib_dlg_hpp_
+#include <QWidget>
+#include <QString>
 
 #include "wxExtensions.hpp"
 #include "GUI_Utils.hpp"
@@ -11,8 +13,6 @@
 #include "Widgets/ComboBox.hpp"
 #include "Widgets/TextInput.hpp"
 #include "GUI_App.hpp"
-#include "wx/hyperlink.h"
-#include <wx/radiobox.h>
 #include "libslic3r/Calib.hpp"
 
 namespace Slic3r { namespace GUI {
@@ -20,23 +20,23 @@ namespace Slic3r { namespace GUI {
 class PA_Calibration_Dlg : public DPIDialog
 {
 public:
-    PA_Calibration_Dlg(wxWindow* parent, wxWindowID id, Plater* plater);
+    PA_Calibration_Dlg(QWidget* parent, int id, Plater* plater);
     ~PA_Calibration_Dlg();
-    void on_dpi_changed(const wxRect& suggested_rect) override;
-	void on_show(wxShowEvent& event);
+    void on_dpi_changed(const QRect& suggested_rect) override;
+	void on_show(QShowEvent& event);
 protected:
     void reset_params();
-	virtual void on_start(wxCommandEvent& event);
-	virtual void on_extruder_type_changed(wxCommandEvent& event);
-	virtual void on_method_changed(wxCommandEvent& event);
+	virtual void on_start(QEvent& event);
+	virtual void on_extruder_type_changed(QEvent& event);
+	virtual void on_method_changed(QEvent& event);
 
 protected:
 	bool m_hasBowdenExtruder{false};
 	int  m_bowdenExtruderId{-1};
 	Calib_Params m_params;
 
-	wxRadioBox* m_rbExtruderType{nullptr};
-	wxRadioBox* m_rbMethod;
+	QGroupBox* m_rbExtruderType{nullptr};
+	QGroupBox* m_rbMethod;
 	TextInput* m_tiStartPA;
 	TextInput* m_tiEndPA;
 	TextInput* m_tiPAStep;
@@ -49,17 +49,17 @@ protected:
 class Temp_Calibration_Dlg : public DPIDialog
 {
 public:
-    Temp_Calibration_Dlg(wxWindow* parent, wxWindowID id, Plater* plater);
+    Temp_Calibration_Dlg(QWidget* parent, int id, Plater* plater);
     ~Temp_Calibration_Dlg();
-    void on_dpi_changed(const wxRect& suggested_rect) override;
+    void on_dpi_changed(const QRect& suggested_rect) override;
 
 protected:
     
-    virtual void on_start(wxCommandEvent& event);
-    virtual void on_filament_type_changed(wxCommandEvent& event);
+    virtual void on_start(QEvent& event);
+    virtual void on_filament_type_changed(QEvent& event);
     Calib_Params m_params;
 
-    wxRadioBox* m_rbFilamentType;
+    QGroupBox* m_rbFilamentType;
     TextInput* m_tiStart;
     TextInput* m_tiEnd;
     TextInput* m_tiStep;
@@ -70,13 +70,13 @@ protected:
 class MaxVolumetricSpeed_Test_Dlg : public DPIDialog
 {
 public:
-    MaxVolumetricSpeed_Test_Dlg(wxWindow* parent, wxWindowID id, Plater* plater);
+    MaxVolumetricSpeed_Test_Dlg(QWidget* parent, int id, Plater* plater);
     ~MaxVolumetricSpeed_Test_Dlg();
-    void on_dpi_changed(const wxRect& suggested_rect) override;
+    void on_dpi_changed(const QRect& suggested_rect) override;
 
 protected:
 
-    virtual void on_start(wxCommandEvent& event);
+    virtual void on_start(QEvent& event);
     Calib_Params m_params;
 
     TextInput* m_tiStart;
@@ -88,12 +88,12 @@ protected:
 
 class VFA_Test_Dlg : public DPIDialog {
 public:
-    VFA_Test_Dlg(wxWindow* parent, wxWindowID id, Plater* plater);
+    VFA_Test_Dlg(QWidget* parent, int id, Plater* plater);
     ~VFA_Test_Dlg();
-    void on_dpi_changed(const wxRect& suggested_rect) override;
+    void on_dpi_changed(const QRect& suggested_rect) override;
 
 protected:
-    virtual void on_start(wxCommandEvent& event);
+    virtual void on_start(QEvent& event);
     Calib_Params m_params;
 
     TextInput* m_tiStart;
@@ -107,13 +107,13 @@ protected:
 class Retraction_Test_Dlg : public DPIDialog
 {
 public:
-    Retraction_Test_Dlg (wxWindow* parent, wxWindowID id, Plater* plater);
+    Retraction_Test_Dlg (QWidget* parent, int id, Plater* plater);
     ~Retraction_Test_Dlg ();
-    void on_dpi_changed(const wxRect& suggested_rect) override;
+    void on_dpi_changed(const QRect& suggested_rect) override;
 
 protected:
 
-    virtual void on_start(wxCommandEvent& event);
+    virtual void on_start(QEvent& event);
     Calib_Params m_params;
 
     TextInput* m_tiStart;

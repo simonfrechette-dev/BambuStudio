@@ -54,7 +54,7 @@ void RaycastManager::actualize(const ModelObject &object, const ISkip *skip, Mes
     }
 
     // clean other transformation
-    ::erase(m_transformations, removed_transf);
+    erase(m_transformations, removed_transf);
 
     if (need_sort)
         std::sort(m_transformations.begin(), m_transformations.end(), ::is_lower);
@@ -93,7 +93,7 @@ void RaycastManager::actualize(const ModelInstance &instance, const ISkip *skip,
     }
 
     // clean other transformation
-    ::erase(m_transformations, removed_transf);
+    erase(m_transformations, removed_transf);
 
     if (need_sort)
         std::sort(m_transformations.begin(), m_transformations.end(), ::is_lower);

@@ -8,15 +8,15 @@
 
 #include "Jobs/ProgressIndicator.hpp"
 
-class wxTimer;
-class wxGauge;
-class wxButton;
-class wxTimerEvent;
-class wxStatusBar;
-class wxWindow;
-class wxFrame;
-class wxString;
-class wxFont;
+class QTimer;
+class QProgressBar;
+class QPushButton;
+class QTimerEvent;
+class QStatusBar;
+class QWidget;
+class QMainWindow;
+class QString;
+class QFont;
 
 namespace Slic3r {
 
@@ -28,14 +28,14 @@ namespace Slic3r {
  
 class ProgressStatusBar : public ProgressIndicator
 {
-    wxStatusBar *self;      // we cheat! It should be the base class but: perl!
-    wxGauge *m_prog;
-    wxButton *m_cancelbutton;
-    std::unique_ptr<wxTimer> m_timer;
+    QStatusBar *self;      // we cheat! It should be the base class but: perl!
+    QProgressBar *m_prog;
+    QPushButton *m_cancelbutton;
+    std::unique_ptr<QTimer> m_timer;
 public:
 
 
-    ProgressStatusBar(wxWindow *parent = nullptr, int id = -1);
+    ProgressStatusBar(QWidget *parent = nullptr, int id = -1);
     ~ProgressStatusBar() override;
 
     int         get_progress() const;
@@ -51,12 +51,12 @@ public:
     void        set_cancel_callback(CancelFn = CancelFn()) override;
     inline void reset_cancel_callback() { set_cancel_callback(); }
     void        run(int rate);
-    void        embed(wxFrame *frame = nullptr);
-    void        set_status_text(const wxString& txt);
+    void        embed(QMainWindow *frame = nullptr);
+    void        set_status_text(const QString& txt);
     void        set_status_text(const std::string& txt);
     void        set_status_text(const char *txt) override;
-    wxString    get_status_text() const;
-    void        set_font(const wxFont &font);
+    QString    get_status_text() const;
+    void        set_font(const QFont &font);
 
     // Temporary methods to satisfy Perl side
     void        show_cancel_button();

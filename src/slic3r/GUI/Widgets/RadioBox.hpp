@@ -1,40 +1,39 @@
 #ifndef slic3r_GUI_RADIOBOX_hpp_
 #define slic3r_GUI_RADIOBOX_hpp_
 
-#include "../wxExtensions.hpp"
-
-#include <wx/tglbtn.h>
+#include "../QtExtensions.hpp"
+#include <QAbstractButton>
 
 namespace Slic3r {
 namespace GUI {
 
-class RadioBox : public wxBitmapToggleButton
+class RadioBox : public QAbstractButton
 {
+    Q_OBJECT
 public:
-    RadioBox(wxWindow *parent);
+    explicit RadioBox(QWidget *parent = nullptr);
 
-public:
-    void SetValue(bool value) override;
-	bool GetValue();
+    void SetValue(bool value);
+    bool GetValue() const { return m_checked; }
     void Rescale();
-    bool Disable() {
-        return wxBitmapToggleButton::Disable();
-    }
-    bool Enable() {
-        return wxBitmapToggleButton::Enable();
-    }
+
+    QSize sizeHint() const override;
+
+protected:
+    void paintEvent(QPaintEvent *event) override;
+    void mousePressEvent(QMouseEvent *event) override;
+    void mouseReleaseEvent(QMouseEvent *event) override;
+    void changeEvent(QEvent *event) override;
 
 private:
-    void update();
+    const QPixmap &currentPixmap() const;
 
-private:
+    bool m_checked = false;
     ScalableBitmap m_on;
     ScalableBitmap m_off;
     ScalableBitmap m_ban;
 };
 
-}}
-
-
+}} // namespace Slic3r::GUI
 
 #endif // !slic3r_GUI_CheckBox_hpp_

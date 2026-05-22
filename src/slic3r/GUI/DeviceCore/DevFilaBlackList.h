@@ -1,7 +1,7 @@
 #pragma once
 
 #include <optional>
-#include <wx/string.h>
+#include <QString>
 #include "slic3r/Utils/json_diff.hpp"
 
 namespace Slic3r
@@ -37,8 +37,8 @@ public:
     struct CheckResultItem
     {
         std::string action;// warning/prohibition
-        wxString    info_msg;
-        wxString    wiki_url;
+        QString     info_msg;
+        QString     wiki_url;
     };
 
     struct CheckResult

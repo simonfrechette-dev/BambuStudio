@@ -6,7 +6,7 @@
 namespace Slic3r { 
 namespace GUI {
 
-class MultiSendMachineModel : public wxDataViewModel
+class MultiSendMachineModel : public QAbstractItemModel
 {
 public:
     MultiSendMachineModel();
@@ -14,7 +14,7 @@ public:
 
     void Init();
 
-    wxDataViewItem AddMachine(MachineObject* obj);
+    QModelIndex AddMachine(MachineObject* obj);
 
 private:
 };

@@ -1,17 +1,18 @@
 #ifndef SKIPPARTCANVAS_H
 #define SKIPPARTCANVAS_H
-#include <wx/wx.h>
-#include <wx/glcanvas.h>
+#include <QWidget>
+#include <QString>
+#include <QOpenGLWidget>
+#include <QOpenGLContext>
+#include <QSurfaceFormat>
+#include <GL/gl.h>
 #include <opencv2/opencv.hpp>
-#include <wx/textctrl.h>
 #include <vector>
 #include <expat.h>
 #include <libslic3r/Color.hpp>
 #include <boost/thread/mutex.hpp>
 #include "PartSkipCommon.hpp"
 
-wxDECLARE_EVENT(EVT_ZOOM_PERCENT, wxCommandEvent);
-wxDECLARE_EVENT(EVT_CANVAS_PART, wxCommandEvent);
 
 namespace Slic3r {
 namespace GUI {
@@ -27,7 +28,7 @@ struct ObjectInfo {
     PartState state{psUnCheck};
 };
 
-class SkipPartCanvas : public wxGLCanvas
+class SkipPartCanvas : public QOpenGLWidget
 {
     union SkipIdHelper
     {
@@ -56,7 +57,7 @@ class SkipPartCanvas : public wxGLCanvas
         }
     };
 public:
-    SkipPartCanvas(wxWindow *parent, const wxGLAttributes& dispAttrs);
+    SkipPartCanvas(QWidget *parent, const QSurfaceFormat& dispAttrs);
     ~SkipPartCanvas() = default;
 
     void SetParentBackground(const ColorRGB& color) {
@@ -70,29 +71,29 @@ public:
     void SwitchDrag(const bool drag_on);
     void UpdatePartsInfo(const PartsInfo& parts);
     void SetZoomPercent(const int value);
-    void SetOffset(const wxPoint &value);
+    void SetOffset(const QPoint &value);
 
-    wxTextCtrl* log_ctrl;
+    QLineEdit* log_ctrl;
 protected:
-    void OnPaint(wxPaintEvent& event);
-    void OnSize(wxSizeEvent& event);
-    void OnMouseLeftDown(wxMouseEvent& event);
-    void OnMouseLeftUp(wxMouseEvent& event);
-    void OnMouseRightDown(wxMouseEvent& event);
-    void OnMouseRightUp(wxMouseEvent& event);
-    void OnMouseMotion(wxMouseEvent& event);
-    void OnMouseWheel(wxMouseEvent& event);
+    void OnPaint(QPaintEvent& event);
+    void OnSize(QResizeEvent& event);
+    void OnMouseLeftDown(QMouseEvent& event);
+    void OnMouseLeftUp(QMouseEvent& event);
+    void OnMouseRightDown(QMouseEvent& event);
+    void OnMouseRightUp(QMouseEvent& event);
+    void OnMouseMotion(QMouseEvent& event);
+    void OnMouseWheel(QMouseEvent& event);
 private:
-    wxGLContext* context_;
+    QOpenGLContext* context_;
     cv::Mat pick_image_;
     std::unordered_map < uint32_t, std::vector<std::vector<FloatPoint>>> parts_triangles_;
     std::unordered_map < uint32_t, std::vector<std::vector<cv::Point>>> pick_parts_;
     std::unordered_map<uint32_t, PartState> parts_state_;
     bool gl_inited_{false};
     int zoom_percent_{100};
-    wxPoint offset_{0,0};
-    wxPoint drag_start_offset_{0,0};
-    wxPoint drag_start_pt_{0,0};
+    QPoint offset_{0,0};
+    QPoint drag_start_offset_{0,0};
+    QPoint drag_start_pt_{0,0};
     bool is_draging_{false};
     bool fixed_draging_{false};
     bool left_down_{false};
@@ -105,14 +106,14 @@ private:
     void SendZoomEvent(int zoom_percent);
 
     inline double Zoom() const;
-    inline wxPoint ViewPtToImagePt(const wxPoint& view_pt) const;
-    uint32_t GetIdAtImagePt(const wxPoint& image_pt) const;
-    inline uint32_t GetIdAtViewPt(const wxPoint& view_pt) const;
+    inline QPoint ViewPtToImagePt(const QPoint& view_pt) const;
+    uint32_t GetIdAtImagePt(const QPoint& image_pt) const;
+    inline uint32_t GetIdAtViewPt(const QPoint& view_pt) const;
 
-    void ProcessHover(const wxPoint& mouse_pt);
+    void ProcessHover(const QPoint& mouse_pt);
     void AutoSetCursor();
-    void StartDrag(const wxPoint& mouse_pt);
-    void ProcessDrag(const wxPoint& mouse_pt);
+    void StartDrag(const QPoint& mouse_pt);
+    void ProcessDrag(const QPoint& mouse_pt);
     void EndDrag();
 
     void Render();

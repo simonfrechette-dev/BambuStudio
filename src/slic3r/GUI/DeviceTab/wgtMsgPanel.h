@@ -1,8 +1,7 @@
 #pragma once
+#include <QWidget>
+#include <QString>
 
-#include <wx/panel.h>
-#include <wx/hyperlink.h>
-#include <wx/sizer.h>
 
 #include <string>
 
@@ -14,55 +13,55 @@ namespace GUI
 {
 
 // Single message item, including color, text and optional wiki link
-class wgtMsgPanelItem : public wxPanel
+class wgtMsgPanelItem : public QWidget
 {
 public:
-    wgtMsgPanelItem(wxWindow* parent,
-                    const wxColour& colour,
-                    const wxString& text,
+    wgtMsgPanelItem(QWidget* parent,
+                    const QColor& colour,
+                    const QString& text,
                     int max_width,
-                    const wxString& wiki_url = wxEmptyString);
+                    const QString& wiki_url = QString());
 
-    void SetColour(const wxColour& colour);
-    void SetText(const wxString& text);
-    void SetWiki(const wxString& wiki_url);
+    void SetColour(const QColor& colour);
+    void SetText(const QString& text);
+    void SetWiki(const QString& wiki_url);
 
 private:
     void CreateGui();
-    void OnClickWiki(wxHyperlinkEvent& evt);
+    void OnClickWiki(QEvent& evt);
 
 private:
     int m_max_width;
-    wxColour m_colour;
-    wxString m_text;
-    wxString m_wiki_url;
+    QColor m_colour;
+    QString m_text;
+    QString m_wiki_url;
 
     Label* m_text_label{ nullptr };
-    wxHyperlinkCtrl* m_wiki_link{ nullptr };
+    QLabel* m_wiki_link{ nullptr };
 };
 
 // Message panel based on wxWidget, shows wgtMsgPanelItem in a list
-class wgtMsgPanel : public wxPanel
+class wgtMsgPanel : public QWidget
 {
 public:
-    explicit wgtMsgPanel(wxWindow* parent);
+    explicit wgtMsgPanel(QWidget* parent);
     ~wgtMsgPanel() override = default;
 
     // Add a message (preferred API)
-    void AddMessage(const wxString& text,
-                    const wxColour& colour,
-                    const wxString& wiki_url = wxEmptyString);
+    void AddMessage(const QString& text,
+                    const QColor& colour,
+                    const QString& wiki_url = QString());
     void Clear();
 
     // Const API
-    int GetMessageCount() const { return m_list_sizer ? m_list_sizer->GetItemCount() : 0; }
+    int GetMessageCount() const { return m_list_sizer ? m_list_sizer->count() : 0; }
 
 private:
     void CreateGui();
 
 private:
     Label*            m_label_title{ nullptr };
-    wxBoxSizer*       m_list_sizer{ nullptr };
+    QBoxLayout*       m_list_sizer{ nullptr };
 };
 
 }

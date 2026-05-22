@@ -1,7 +1,9 @@
 #ifndef slic3r_UpgradePanel_hpp_
 #define slic3r_UpgradePanel_hpp_
 
-#include <wx/panel.h>
+#include <QWidget>
+#include <QLabel>
+#include <QString>
 #include <slic3r/GUI/Widgets/Button.hpp>
 #include "Widgets/ProgressBar.hpp"
 #include <slic3r/GUI/DeviceManager.hpp>
@@ -15,44 +17,44 @@ namespace GUI {
 // Previous definitions
 class uiDeviceUpdateVersion;
 
-class ExtensionPanel : public wxPanel
+class ExtensionPanel : public QWidget
 {
 public:
-    wxStaticText* m_staticText_ext;
-    wxStaticText* m_staticText_ext_val;
-    wxStaticText* m_staticText_ext_ver;
-    wxStaticText* m_staticText_ext_ver_val;
-    wxStaticText* m_staticText_ext_sn_val;
+    QLabel* m_staticText_ext;
+    QLabel* m_staticText_ext_val;
+    QLabel* m_staticText_ext_ver;
+    QLabel* m_staticText_ext_ver_val;
+    QLabel* m_staticText_ext_sn_val;
     ScalableBitmap upgrade_green_icon;
-    wxStaticBitmap* m_ext_new_version_img;
+    QLabel* m_ext_new_version_img;
 
-    ExtensionPanel(wxWindow* parent,
-        wxWindowID      id = wxID_ANY,
-        const wxPoint& pos = wxDefaultPosition,
-        const wxSize& size = wxDefaultSize,
-        long            style = wxTAB_TRAVERSAL,
-        const wxString& name = wxEmptyString);
+    ExtensionPanel(QWidget* parent,
+        int      id = -1,
+        const QPoint& pos = QPoint(),
+        const QSize& size = QSize(),
+        long            style = 0,
+        const QString& name = QString());
     ~ExtensionPanel();
     void msw_rescale();
 };
 
-class AmsPanel : public wxPanel
+class AmsPanel : public QWidget
 {
 public:
-    wxStaticText *m_staticText_ams_model_id;
-    wxStaticText *m_staticText_ams;
-    wxStaticText *m_staticText_ams_sn_val;
-    wxStaticText *m_staticText_ams_ver_val;
-    wxStaticText *m_staticText_beta_version;
-    wxStaticBitmap *m_ams_new_version_img;
+    QLabel *m_staticText_ams_model_id;
+    QLabel *m_staticText_ams;
+    QLabel *m_staticText_ams_sn_val;
+    QLabel *m_staticText_ams_ver_val;
+    QLabel *m_staticText_beta_version;
+    QLabel *m_ams_new_version_img;
     ScalableBitmap upgrade_green_icon;
 
-    AmsPanel(wxWindow *      parent,
-                     wxWindowID      id    = wxID_ANY,
-                     const wxPoint & pos   = wxDefaultPosition,
-                     const wxSize &  size  = wxDefaultSize,
-                     long            style = wxTAB_TRAVERSAL,
-                     const wxString &name  = wxEmptyString);
+    AmsPanel(QWidget *      parent,
+                     int      id    = -1,
+                     const QPoint & pos   = QPoint(),
+                     const QSize &  size  = QSize(),
+                     long            style = 0,
+                     const QString &name  = QString());
     ~AmsPanel();
 
     void msw_rescale();
@@ -61,120 +63,119 @@ public:
 class ExtraAmsPanel : public AmsPanel
 {
 public:
-    ExtraAmsPanel(wxWindow* parent,
-        wxWindowID      id = wxID_ANY,
-        const wxPoint& pos = wxDefaultPosition,
-        const wxSize& size = wxDefaultSize,
-        long            style = wxTAB_TRAVERSAL,
-        const wxString& name = wxEmptyString);
+    ExtraAmsPanel(QWidget* parent,
+        int      id = -1,
+        const QPoint& pos = QPoint(),
+        const QSize& size = QSize(),
+        long            style = 0,
+        const QString& name = QString());
 };
 
-WX_DEFINE_ARRAY(AmsPanel*, AmsPanelHash);
 
 
-class MachineInfoPanel : public wxPanel
+class MachineInfoPanel : public QWidget
 {
 protected:
-    wxPanel *       m_panel_caption;
-    wxStaticBitmap *m_upgrade_status_img;
-    wxStaticText *  m_caption_text;
-    wxStaticBitmap *m_printer_img;
-    wxStaticText *  m_staticText_model_id;
-    wxStaticText *  m_staticText_model_id_val;
-    wxStaticText *  m_staticText_sn;
-    wxStaticText *  m_staticText_sn_val;
-    wxStaticBitmap *m_ota_new_version_img;
-    wxStaticText *  m_staticText_ver;
-    wxStaticText *  m_staticText_ver_val;
-    wxStaticText *  m_staticText_beta_version;
-    wxStaticLine *  m_staticline;
-    wxStaticBitmap *m_ams_img;
-    wxStaticLine*   m_staticline2;
+    QWidget *       m_panel_caption;
+    QLabel *m_upgrade_status_img;
+    QLabel *  m_caption_text;
+    QLabel *m_printer_img;
+    QLabel *  m_staticText_model_id;
+    QLabel *  m_staticText_model_id_val;
+    QLabel *  m_staticText_sn;
+    QLabel *  m_staticText_sn_val;
+    QLabel *m_ota_new_version_img;
+    QLabel *  m_staticText_ver;
+    QLabel *  m_staticText_ver_val;
+    QLabel *  m_staticText_beta_version;
+    QFrame *  m_staticline;
+    QLabel *m_ams_img;
+    QFrame*   m_staticline2;
     ExtraAmsPanel*  m_extra_ams_panel;
-    wxStaticBitmap* m_extra_ams_img;
-    wxStaticBitmap* m_ext_img;
+    QLabel* m_extra_ams_img;
+    QLabel* m_ext_img;
     ExtensionPanel* m_ext_panel;
 
-    wxFlexGridSizer*   m_ams_info_sizer;
+    QGridLayout*   m_ams_info_sizer;
 
     /* ams info */
     bool           m_last_ams_show = true;
-    wxBoxSizer*    m_ams_sizer;
+    QBoxLayout*    m_ams_sizer;
 
     /* extension info */
     bool           m_last_ext_show = true;
-    wxBoxSizer*    m_ext_sizer;
+    QBoxLayout*    m_ext_sizer;
 
     /* extra_ams info */
     bool           m_last_extra_ams_show = true;
-    wxBoxSizer*    m_extra_ams_sizer;
+    QBoxLayout*    m_extra_ams_sizer;
 
     /* air_pump info*/
-    wxBoxSizer*            m_air_pump_sizer = nullptr;
-    wxStaticBitmap*        m_air_pump_img   = nullptr;
-    wxStaticLine*          m_air_pump_line_above = nullptr;
+    QBoxLayout*            m_air_pump_sizer = nullptr;
+    QLabel*        m_air_pump_img   = nullptr;
+    QFrame*          m_air_pump_line_above = nullptr;
     uiDeviceUpdateVersion* m_air_pump_version = nullptr;
 
     /* rotary attachment*/
-    wxBoxSizer            *m_rotary_sizer      = nullptr;
-    wxStaticBitmap        *m_rotary_img        = nullptr;
-    wxStaticLine          *m_rotary_line_above = nullptr;
+    QBoxLayout            *m_rotary_sizer      = nullptr;
+    QLabel        *m_rotary_img        = nullptr;
+    QFrame          *m_rotary_line_above = nullptr;
     uiDeviceUpdateVersion *m_rotary_version    = nullptr;
 
     /* cutting module info*/
-    wxBoxSizer*            m_cutting_sizer = nullptr;
-    wxStaticBitmap*        m_cutting_img = nullptr;
-    wxStaticLine*          m_cutting_line_above = nullptr;
+    QBoxLayout*            m_cutting_sizer = nullptr;
+    QLabel*        m_cutting_img = nullptr;
+    QFrame*          m_cutting_line_above = nullptr;
     uiDeviceUpdateVersion* m_cutting_version = nullptr;
 
     /* laser info*/
-    wxBoxSizer*            m_laser_sizer = nullptr;
-    wxStaticBitmap*        m_lazer_img = nullptr;
-    wxStaticLine*          m_laser_line_above = nullptr;
+    QBoxLayout*            m_laser_sizer = nullptr;
+    QLabel*        m_lazer_img = nullptr;
+    QFrame*          m_laser_line_above = nullptr;
     uiDeviceUpdateVersion* m_laser_version = nullptr;
 
     /* fire extinguish*/
-    wxBoxSizer* m_extinguish_sizer = nullptr;
-    wxStaticBitmap* m_extinguish_img = nullptr;
-    wxStaticLine* m_extinguish_line_above = nullptr;;
+    QBoxLayout* m_extinguish_sizer = nullptr;
+    QLabel* m_extinguish_img = nullptr;
+    QFrame* m_extinguish_line_above = nullptr;;
     uiDeviceUpdateVersion* m_extinguish_version = nullptr;
 
     /*amshub*/
-    wxBoxSizer*            m_amshub_sizer = nullptr;
-    wxStaticBitmap*        m_amshub_img = nullptr;
-    wxStaticLine*          m_amshub_line_above = nullptr;
+    QBoxLayout*            m_amshub_sizer = nullptr;
+    QLabel*        m_amshub_img = nullptr;
+    QFrame*          m_amshub_line_above = nullptr;
     uiDeviceUpdateVersion* m_amshub_version = nullptr;
 
     /* filament track switch */
-    wxBoxSizer*            m_filatrack_sizer = nullptr;
-    wxStaticBitmap*        m_filatrack_img = nullptr;
-    wxStaticLine*          m_filatrack_line_above = nullptr;
+    QBoxLayout*            m_filatrack_sizer = nullptr;
+    QLabel*        m_filatrack_img = nullptr;
+    QFrame*          m_filatrack_line_above = nullptr;
     uiDeviceUpdateVersion* m_filatrack_version = nullptr;
 
     /* nozzle_rack*/
-    wxStaticLine * m_nozzle_rack_line_above{nullptr};
-    wxStaticBitmap *m_nozzle_rack_img = nullptr;
-    wxBoxSizer   *m_nozzle_rack_sizer{nullptr};
-    wxStaticText *m_nozzle_rack_text{nullptr};
+    QFrame * m_nozzle_rack_line_above{nullptr};
+    QLabel *m_nozzle_rack_img = nullptr;
+    QBoxLayout   *m_nozzle_rack_sizer{nullptr};
+    QLabel *m_nozzle_rack_text{nullptr};
 
      /* exhaust fan */
-    wxBoxSizer            *m_exhaustfan_sizer   = nullptr;
-    wxStaticBitmap        *m_exhaustfan_img     = nullptr;
-    wxStaticLine          *m_exhaustfan_line_above = nullptr;
+    QBoxLayout            *m_exhaustfan_sizer   = nullptr;
+    QLabel        *m_exhaustfan_img     = nullptr;
+    QFrame          *m_exhaustfan_line_above = nullptr;
     uiDeviceUpdateVersion *m_exhaustfan_version    = nullptr;
 
     /* upgrade widgets */
-    wxBoxSizer*     m_upgrading_sizer;
-    wxStaticText *  m_staticText_upgrading_info;
+    QBoxLayout*     m_upgrading_sizer;
+    QLabel *  m_staticText_upgrading_info;
     ProgressBar *   m_upgrade_progress;
-    wxStaticText *  m_staticText_upgrading_percent;
-    wxStaticBitmap *m_upgrade_retry_img;
-    wxStaticText *  m_staticText_release_note;
+    QLabel *  m_staticText_upgrading_percent;
+    QLabel *m_upgrade_retry_img;
+    QLabel *  m_staticText_release_note;
     Button *        m_button_upgrade_firmware;
     Button *        m_nozzle_rack_update_btn;
 
-    wxPanel* create_caption_panel(wxWindow *parent);
-    AmsPanelHash             m_amspanel_list;
+    QWidget* create_caption_panel(QWidget *parent);
+    std::unordered_map<std::string, AmsPanel*>             m_amspanel_list;
     std::vector<ExtraAmsPanel*>    m_extra_ams_panel_list;
 
     ScalableBitmap m_img_ext;
@@ -202,11 +203,11 @@ protected:
     SecondaryCheckDialog* confirm_dlg = nullptr;
 
     void upgrade_firmware_internal();
-    void on_show_release_note(wxMouseEvent &event);
+    void on_show_release_note(QMouseEvent &event);
     void confirm_upgrade(MachineObject* obj = nullptr);
 
 public:
-    MachineInfoPanel(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString);
+    MachineInfoPanel(QWidget* parent, int id = -1, const QPoint& pos = QPoint(), const QSize& size = QSize(), long style = 0, const QString& name = QString());
     ~MachineInfoPanel();
 
     void on_sys_color_changed();
@@ -228,8 +229,8 @@ public:
     void show_ext(bool show = false, bool force_update = false);
     void show_extra_ams(bool show = false, bool force_update = false);
 
-    void on_upgrade_firmware(wxCommandEvent &event);
-    void on_consisitency_upgrade_firmware(wxCommandEvent &event);
+    void on_upgrade_firmware(QEvent &event);
+    void on_consisitency_upgrade_firmware(QEvent &event);
 
     MachineObject *m_obj{nullptr};
     FirmwareInfo  m_ota_info;
@@ -245,15 +246,15 @@ public:
     }panel_type;
 
 private:
-    void createAirPumpWidgets(wxBoxSizer* main_left_sizer);
-    void createCuttingWidgets(wxBoxSizer* main_left_sizer);
-    void createLaserWidgets(wxBoxSizer* main_left_sizer);
-    void createExtinguishWidgets(wxBoxSizer* main_left_sizer);
-    void createFilaTrackSwitchWidgets(wxBoxSizer* main_left_sizer);
-    void createNozzleRackWidgets(wxBoxSizer* main_left_sizer);
-    void createRotaryWidgets(wxBoxSizer *main_left_sizer);
-    void createExhaustFan(wxBoxSizer *main_left_sizer);
-    void createAmshubWidgets(wxBoxSizer *main_left_sizer);
+    void createAirPumpWidgets(QBoxLayout* main_left_sizer);
+    void createCuttingWidgets(QBoxLayout* main_left_sizer);
+    void createLaserWidgets(QBoxLayout* main_left_sizer);
+    void createExtinguishWidgets(QBoxLayout* main_left_sizer);
+    void createFilaTrackSwitchWidgets(QBoxLayout* main_left_sizer);
+    void createNozzleRackWidgets(QBoxLayout* main_left_sizer);
+    void createRotaryWidgets(QBoxLayout *main_left_sizer);
+    void createExhaustFan(QBoxLayout *main_left_sizer);
+    void createAmshubWidgets(QBoxLayout *main_left_sizer);
 
     void update_air_pump(MachineObject* obj);
     void update_cut(MachineObject* obj);
@@ -264,7 +265,7 @@ private:
     void update_amshub(MachineObject *obj);
     void update_nozzle_rack(MachineObject *obj);
     void update_exhaustfan(MachineObject *obj);
-    void on_nozzle_rack_update(wxCommandEvent &event);
+    void on_nozzle_rack_update(QEvent &event);
 
     void show_air_pump(bool show = true);
     void show_cut(bool show = true);
@@ -284,11 +285,11 @@ private:
 //};
 //static UpgradeMode upgrade_mode;
 
-class UpgradePanel : public wxPanel
+class UpgradePanel : public QWidget
 {
 protected:
-    wxScrolledWindow* m_scrolledWindow;
-    wxBoxSizer* m_machine_list_sizer;
+    QScrollArea* m_scrolledWindow;
+    QBoxLayout* m_machine_list_sizer;
     MachineInfoPanel *m_push_upgrade_panel{nullptr};
 
     //enable_select_firmware only in debug mode
@@ -304,11 +305,11 @@ protected:
     SecondaryCheckDialog* consistency_dlg{ nullptr };
 
 public:
-    UpgradePanel(wxWindow *parent, wxWindowID id = wxID_ANY, const wxPoint &pos = wxDefaultPosition, const wxSize &size = wxDefaultSize, long style = wxTAB_TRAVERSAL);
+    UpgradePanel(QWidget *parent, int id = -1, const QPoint &pos = QPoint(), const QSize &size = QSize(), long style = 0);
     ~UpgradePanel();
     void clean_push_upgrade_panel();
     void msw_rescale();
-    bool Show(bool show = true) override;
+    void setVisible(bool show) override;
 
     void refresh_version_and_firmware(MachineObject* obj);
     void update(MachineObject *obj);

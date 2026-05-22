@@ -1,13 +1,13 @@
 #ifndef slic3r_2DBed_hpp_
 #define slic3r_2DBed_hpp_
 
-#include <wx/wx.h>
+#include <QWidget>
 #include "libslic3r/Config.hpp"
 
 namespace Slic3r {
 namespace GUI {
 
-class Bed_2D : public wxPanel
+class Bed_2D : public QWidget
 {
     static const int Border = 10;
 
@@ -17,11 +17,11 @@ class Bed_2D : public wxPanel
 	Vec2d		m_shift = Vec2d::Zero();
 	Vec2d		m_pos = Vec2d::Zero();
 
-    Point		to_pixels(const Vec2d& point, int height);
+    QPoint		to_pixels(const Vec2d& point, int height);
     void		set_pos(const Vec2d& pos);
 
 public:
-    explicit Bed_2D(wxWindow* parent);
+    explicit Bed_2D(QWidget* parent = nullptr);
 
     void repaint(const std::vector<Vec2d>& shape);
 };

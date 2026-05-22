@@ -1,3 +1,6 @@
+#include <QKeyEvent>
+#include <QMouseEvent>
+#include <QString>
 #ifndef slic3r_GLGizmoAdvancedCut_hpp_
 #define slic3r_GLGizmoAdvancedCut_hpp_
 
@@ -129,9 +132,9 @@ private:
     std::vector<size_t> m_invalid_connectors_idxs;
     bool m_show_shortcuts{false};
 
-    std::vector<std::pair<wxString, wxString>> m_connector_shortcuts;
-    std::vector<std::pair<wxString, wxString>> m_cut_plane_shortcuts;
-    std::vector<std::pair<wxString, wxString>> m_cut_groove_shortcuts;
+    std::vector<std::pair<QString, QString>> m_connector_shortcuts;
+    std::vector<std::pair<QString, QString>> m_cut_plane_shortcuts;
+    std::vector<std::pair<QString, QString>> m_cut_groove_shortcuts;
     double m_label_width{150.0};
     double m_control_width{ 200.0 };
     double m_editing_window_width;
@@ -214,7 +217,7 @@ public:
     GLGizmoAdvancedCut(GLCanvas3D& parent, unsigned int sprite_id);
 
     bool gizmo_event(SLAGizmoEventType action, const Vec2d &mouse_position, bool shift_down, bool alt_down, bool control_down) override;
-    bool on_key(const wxKeyEvent &evt) override;
+    bool on_key(const QKeyEvent &evt) override;
 
     double get_movement() const { return m_movement; }
     void reset_rotation();
@@ -251,7 +254,7 @@ protected:
     virtual void update_plate_center(Axis axis_type, double projection, bool is_abs_move); // old name:dragging_grabber_move
     virtual void update_plate_normal_boundingbox_clipper(const Transform3d &rotation_tmp); // old name:dragging_grabber_rotation
     virtual void on_update(const UpdateData& data);
-    virtual bool on_mouse(const wxMouseEvent &mouse_event) override;
+    virtual bool on_mouse(const QMouseEvent &mouse_event) override;
     virtual void on_render();
     virtual void on_render_for_picking();
     virtual void on_render_input_window(float x, float y, float bottom_limit);

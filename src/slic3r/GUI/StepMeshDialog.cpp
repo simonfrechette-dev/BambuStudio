@@ -1,334 +1,107 @@
+// StepMeshDialog.cpp — Qt6 port
 #include "StepMeshDialog.hpp"
 
-#include <thread>
-#include <wx/event.h>
-#include <wx/sizer.h>
-#include <wx/slider.h>
-#include <wx/dcmemory.h>
+#include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QFormLayout>
+#include <QDoubleValidator>
+#include <QLineEdit>
+#include <QLabel>
+
 #include "GUI_App.hpp"
 #include "I18N.hpp"
-#include "MainFrame.hpp"
-#include "Widgets/Button.hpp"
-#include "Widgets/TextInput.hpp"
-#include <chrono>
+#include "Widgets/Label.hpp"
 
-using namespace Slic3r;
-using namespace Slic3r::GUI;
+// Custom QEvent type for mesh-done notification
+static const QEvent::Type STEP_MESH_DONE_EVT =
+    static_cast<QEvent::Type>(QEvent::registerEventType());
 
-static int _scale(const int val) { return val * Slic3r::GUI::wxGetApp().em_unit() / 10; }
-static int _ITEM_WIDTH() { return _scale(30); }
-#define MIN_DIALOG_WIDTH        FromDIP(400)
-#define SLIDER_WIDTH            FromDIP(200)
-#define SLIDER_HEIGHT           FromDIP(25)
-#define TEXT_CTRL_WIDTH         FromDIP(70)
-#define BUTTON_SIZE             wxSize(FromDIP(58), FromDIP(24))
-#define BUTTON_BORDER           FromDIP(int(400 - 58 * 2) / 8)
-#define SLIDER_SCALE(val)       ((val) / 0.001)
-#define SLIDER_UNSCALE(val)     ((val) * 0.001)
-#define SLIDER_SCALE_10(val)    ((val) / 0.01)
-#define SLIDER_UNSCALE_10(val)  ((val) * 0.01)
-#define LEFT_RIGHT_PADING       FromDIP(20)
-#define FONT_COLOR              wxColour("#6B6B6B")
-
-wxDEFINE_EVENT(wxEVT_THREAD_DONE, wxCommandEvent);
-
-class CenteredStaticText : public wxStaticText
+StepMeshDialog::StepMeshDialog(QWidget *parent, Slic3r::Step &file,
+                               double linear_init, double angle_init)
+    : Slic3r::GUI::DPIDialog(parent)
+    , m_file(file)
+    , m_last_linear(linear_init)
+    , m_last_angle(angle_init)
 {
-public:
-    CenteredStaticText(wxWindow* parent, wxWindowID id, const wxString& label, const wxPoint& position, const wxSize& size = wxDefaultSize, long style = 0)
-        : wxStaticText(parent, id, label, position, size, style) {
-        CenterOnPosition(position);
-    }
+    setWindowTitle(_L("Import STEP Mesh Settings"));
+    setMinimumWidth(420);
 
-    void CenterOnPosition(const wxPoint& position) {
-        int textWidth, textHeight;
-        GetTextExtent(GetLabel(), &textWidth, &textHeight);
-        int x = position.x - textWidth / 2;
-        int y = position.y - textHeight / 2;
-        SetPosition(wxPoint(x, y));
-    }
-};
+    auto *main_layout = new QVBoxLayout(this);
+    main_layout->setContentsMargins(20, 20, 20, 16);
+    main_layout->setSpacing(12);
 
-void StepMeshDialog::on_dpi_changed(const wxRect& suggested_rect) {
-};
+    // Title
+    auto *title = new Label(this, Label::Head_16);
+    title->setText(_L("Mesh Quality Settings"));
+    main_layout->addWidget(title);
 
-bool StepMeshDialog:: validate_number_range(const wxString& value, double min, double max) {
-    double num = 0.0;
-    if (value.IsEmpty()) {
-        return false;
-    }
-    try {
-        if (!value.ToDouble(&num)) {
-            return false;
-        }
-    } catch (...) {
-        return false;
-    }
+    // Description
+    auto *desc = new Label(this, Label::Body_12);
+    desc->setWordWrap(true);
+    desc->setText(_L("Adjust tessellation tolerances for the STEP file mesh. "
+                     "Smaller values produce finer meshes with more triangles."));
+    main_layout->addWidget(desc);
 
-    return (num >= min && num <= max);
-}
+    // Parameters form
+    auto *form = new QFormLayout();
+    form->setSpacing(8);
 
-StepMeshDialog::StepMeshDialog(wxWindow* parent, Slic3r::Step& file, double linear_init, double angle_init)
-    : DPIDialog(parent ? parent : static_cast<wxWindow *>(wxGetApp().mainframe),
-                wxID_ANY,
-                _(L("Step file import parameters")),
-                wxDefaultPosition,
-                wxDefaultSize,
-                wxDEFAULT_DIALOG_STYLE /* | wxRESIZE_BORDER*/), m_file(file)
-{
-    m_linear_last = wxString::Format("%.3f", linear_init);
-    m_angle_last = wxString::Format("%.2f", angle_init);
-
-    Bind(wxEVT_THREAD_DONE, &StepMeshDialog::on_task_done, this);
-
-    std::string icon_path = (boost::format("%1%/images/BambuStudioTitle.ico")
-                             % Slic3r::resources_dir()).str();
-    SetIcon(wxIcon(Slic3r::encode_path(icon_path.c_str()), wxBITMAP_TYPE_ICO));
-
-    SetBackgroundColour(*wxWHITE);
-
-    wxBoxSizer* bSizer = new wxBoxSizer(wxVERTICAL);
-    bSizer->SetMinSize(wxSize(MIN_DIALOG_WIDTH, -1));
-
-    auto  image_bitmap = create_scaled_bitmap("step_mesh_info", this, FromDIP(120));
-
-    // wxPanel* overlay_panel = new wxPanel(this, wxID_ANY, wxDefaultPosition, image_bitmap.GetSize(), wxTAB_TRAVERSAL);
-    // overlay_panel->SetBackgroundStyle(wxBG_STYLE_PAINT);
-    // wxStaticBitmap *image = new wxStaticBitmap(overlay_panel, wxID_ANY, image_bitmap, wxDefaultPosition, overlay_panel->GetSize(), 0);
-
-    // CenteredStaticText* text_1 = new CenteredStaticText (overlay_panel, wxID_ANY, _L("Smooth"),
-    //                                                       wxPoint(overlay_panel->GetSize().GetWidth() / 6,
-    //                                                               overlay_panel->GetSize().GetHeight() / 2));
-    // CenteredStaticText* text_2 = new CenteredStaticText(overlay_panel, wxID_ANY, _L("Rough"),
-    //                                                      wxPoint(overlay_panel->GetSize().GetWidth() * 5 / 6,
-    //                                                              overlay_panel->GetSize().GetHeight() / 2));
-    // CenteredStaticText* text_3 = new CenteredStaticText(overlay_panel, wxID_ANY, _L("Reduce Linear"),
-    //                                                     wxPoint(overlay_panel->GetSize().GetWidth() / 2,
-    //                                                             overlay_panel->GetSize().GetHeight() * 1.3 / 3));
-    // CenteredStaticText* text_4 = new CenteredStaticText(overlay_panel, wxID_ANY, _L("Reduce Angle"),
-    //                                                     wxPoint(overlay_panel->GetSize().GetWidth() / 2,
-    //                                                             overlay_panel->GetSize().GetHeight() * 2 / 3));
-    // CenteredStaticText* text_5 = new CenteredStaticText(overlay_panel, wxID_ANY, _L("More faces"),
-    //                                                     wxPoint(overlay_panel->GetSize().GetWidth() / 6,
-    //                                                             overlay_panel->GetSize().GetHeight() * 2.8 / 3));
-    // CenteredStaticText* text_6 = new CenteredStaticText(overlay_panel, wxID_ANY, _L("Fewer faces"),
-    //                                                     wxPoint(overlay_panel->GetSize().GetWidth() * 5 / 6,
-    //                                                             overlay_panel->GetSize().GetHeight() * 2.8 / 3));
-
-    // bSizer->Add(overlay_panel, 0, wxALIGN_CENTER | wxALL, 10);
-
-    wxBoxSizer* tips_sizer = new wxBoxSizer(wxVERTICAL);
-    wxStaticText* info = new wxStaticText(this, wxID_ANY, _L("Smaller linear and angular deflections result in higher-quality transformations but increase the processing time."));
-    info->SetForegroundColour(StateColor::darkModeColorFor(FONT_COLOR));
-    wxStaticText *tips = new wxStaticText(this, wxID_ANY, _L("View Wiki for more information"));
-    wxFont font(10, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false);
-    font.SetUnderlined(true);
-    tips->SetForegroundColour(StateColor::darkModeColorFor(wxColour(0, 174, 66)));
-    tips->SetFont(font);
-    tips->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent& e) {
-        wxLaunchDefaultBrowser("https://wiki.bambulab.com/en/software/bambu-studio/step");
-    });
-    info->Wrap(FromDIP(400));
-    tips_sizer->Add(info, 0, wxALIGN_LEFT);
-    tips_sizer->Add(tips, 0, wxALIGN_LEFT);
-    bSizer->Add(tips_sizer, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, LEFT_RIGHT_PADING);
-
-    wxBoxSizer* linear_sizer = new wxBoxSizer(wxHORIZONTAL);
-    //linear_sizer->SetMinSize(wxSize(MIN_DIALOG_WIDTH, -1));
-    wxStaticText* linear_title = new wxStaticText(this,
-                                                  wxID_ANY, _L("Linear Deflection") + ": ");
-    linear_title->SetForegroundColour(StateColor::darkModeColorFor(FONT_COLOR));
-    linear_sizer->Add(linear_title, 0, wxALIGN_LEFT);
-    linear_sizer->AddStretchSpacer(1);
-    wxSlider* linear_slider = new wxSlider(this, wxID_ANY,
-                                           SLIDER_SCALE(get_linear_defletion()),
-                                           1, 100, wxDefaultPosition,
-                                           wxSize(SLIDER_WIDTH, SLIDER_HEIGHT),
-                                           wxSL_HORIZONTAL);
-    linear_sizer->Add(linear_slider, 0, wxALIGN_RIGHT | wxLEFT, FromDIP(5));
-
-    auto linear_input = new ::TextInput(this, m_linear_last, wxEmptyString, wxEmptyString, wxDefaultPosition, wxSize(TEXT_CTRL_WIDTH, -1), wxTE_CENTER);
-    linear_input->GetTextCtrl()->SetFont(Label::Body_12);
-    linear_input->GetTextCtrl()->SetValidator(wxTextValidator(wxFILTER_NUMERIC));
-    linear_sizer->Add(linear_input, 0, wxALIGN_RIGHT | wxLEFT, FromDIP(5));
-    linear_input->Bind(wxEVT_KILL_FOCUS, ([this, linear_input](wxFocusEvent& e) {
-        wxString value = linear_input->GetTextCtrl()->GetValue();
-        if (validate_number_range(value, 0.001, 0.1)) {
-            m_linear_last = value;
-            update_mesh_number_text();
-        } else {
-            MessageDialog msg_dlg(nullptr, _L("Please input a valid value (0.001 < linear deflection < 0.1)"), wxEmptyString, wxICON_WARNING | wxOK);
-            msg_dlg.ShowModal();
-            linear_input->GetTextCtrl()->SetValue(m_linear_last);
-        }
-        e.Skip();
-    }));
-    // textctrl bind slider
-    linear_input->Bind(wxEVT_TEXT, ([this, linear_slider, linear_input](wxCommandEvent& e) {
-        double slider_value_long;
-        int slider_value;
-        wxString value = linear_input->GetTextCtrl()->GetValue();
-        if (value.ToDouble(&slider_value_long)) {
-            slider_value = SLIDER_SCALE(slider_value_long);
-            if (slider_value >= linear_slider->GetMin() && slider_value <= linear_slider->GetMax()) {
-                linear_slider->SetValue(slider_value);
-            }
-        }
-    }));
-    linear_slider->Bind(wxEVT_SLIDER, ([this, linear_slider, linear_input](wxCommandEvent& e) {
-        double slider_value = SLIDER_UNSCALE(linear_slider->GetValue());
-        linear_input->GetTextCtrl()->SetValue(wxString::Format("%.3f", slider_value));
-        m_linear_last = wxString::Format("%.3f", slider_value);
-    }));
-    linear_slider->Bind(wxEVT_LEFT_UP, ([this](wxMouseEvent& e) {
+    // Linear deflection
+    auto *linear_edit = new QLineEdit(this);
+    linear_edit->setValidator(new QDoubleValidator(0.0001, 10.0, 6, linear_edit));
+    linear_edit->setText(QString::number(linear_init));
+    m_linear_last = linear_edit->text();
+    connect(linear_edit, &QLineEdit::textChanged, this, [this, linear_edit](const QString &v) {
+        m_linear_last = v;
         update_mesh_number_text();
-        e.Skip();
-    }));
-
-    bSizer->Add(linear_sizer, 1, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, LEFT_RIGHT_PADING);
-
-    wxBoxSizer* angle_sizer = new wxBoxSizer(wxHORIZONTAL);
-    wxStaticText* angle_title = new wxStaticText(this,
-                                                  wxID_ANY, _L("Angle Deflection") + ": ");
-    angle_title->SetForegroundColour(StateColor::darkModeColorFor(FONT_COLOR));
-    angle_sizer->Add(angle_title, 0, wxALIGN_LEFT);
-    angle_sizer->AddStretchSpacer(1);
-    wxSlider* angle_slider = new wxSlider(this, wxID_ANY,
-                                           SLIDER_SCALE_10(get_angle_defletion()),
-                                           1, 100, wxDefaultPosition,
-                                           wxSize(SLIDER_WIDTH, SLIDER_HEIGHT),
-                                           wxSL_HORIZONTAL);
-    angle_sizer->Add(angle_slider, 0, wxALIGN_RIGHT | wxLEFT, FromDIP(5));
-
-    auto angle_input = new ::TextInput(this, m_angle_last, wxEmptyString, wxEmptyString, wxDefaultPosition, wxSize(TEXT_CTRL_WIDTH, -1), wxTE_CENTER);
-    angle_input->GetTextCtrl()->SetFont(Label::Body_12);
-    angle_input->GetTextCtrl()->SetValidator(wxTextValidator(wxFILTER_NUMERIC));
-    angle_sizer->Add(angle_input, 0, wxALIGN_RIGHT | wxLEFT, FromDIP(5));
-    angle_input->Bind(wxEVT_KILL_FOCUS, ([this, angle_input](wxFocusEvent& e) {
-        wxString value = angle_input->GetTextCtrl()->GetValue();
-        if (validate_number_range(value, 0.01, 1)) {
-            m_angle_last = value;
-            update_mesh_number_text();
-        } else {
-            MessageDialog msg_dlg(nullptr, _L("Please input a valid value (0.01 < angle deflection < 1.0)"), wxEmptyString, wxICON_WARNING | wxOK);
-            msg_dlg.ShowModal();
-            angle_input->GetTextCtrl()->SetValue(m_angle_last);
-        }
-        e.Skip();
-    }));
-    // textctrl bind slider
-    angle_input->Bind(wxEVT_TEXT, ([this, angle_slider, angle_input](wxCommandEvent& e) {
-        double slider_value_long;
-        int slider_value;
-        wxString value = angle_input->GetTextCtrl()->GetValue();
-        if (value.ToDouble(&slider_value_long)) {
-            slider_value = SLIDER_SCALE_10(slider_value_long);
-            if (slider_value >= angle_slider->GetMin() && slider_value <= angle_slider->GetMax()) {
-                angle_slider->SetValue(slider_value);
-            }
-        }
-    }));
-
-    angle_slider->Bind(wxEVT_SLIDER, ([this, angle_slider, angle_input](wxCommandEvent& e) {
-        double slider_value = SLIDER_UNSCALE_10(angle_slider->GetValue());
-        angle_input->GetTextCtrl()->SetValue(wxString::Format("%.2f", slider_value));
-        m_angle_last = wxString::Format("%.2f", slider_value);
-    }));
-    angle_slider->Bind(wxEVT_LEFT_UP, ([this](wxMouseEvent& e) {
-        update_mesh_number_text();
-        e.Skip();
-    }));
-
-    bSizer->Add(angle_sizer, 1, wxEXPAND | wxLEFT | wxRIGHT, LEFT_RIGHT_PADING);
-
-    wxBoxSizer* check_sizer = new wxBoxSizer(wxHORIZONTAL);
-    m_split_compound_checkbox = new wxCheckBox(this, wxID_ANY, _L("Split compound and compsolid into multiple objects"), wxDefaultPosition, wxDefaultSize, 0);
-    m_split_compound_checkbox->SetForegroundColour(StateColor::darkModeColorFor(FONT_COLOR));
-    m_split_compound_checkbox->SetValue(wxGetApp().app_config->get_bool("is_split_compound"));
-    check_sizer->Add(m_split_compound_checkbox, 0, wxALIGN_LEFT);
-    bSizer->Add(check_sizer, 1, wxEXPAND | wxLEFT | wxRIGHT, LEFT_RIGHT_PADING);
-
-    wxBoxSizer* mesh_face_number_sizer = new wxBoxSizer(wxHORIZONTAL);
-    wxStaticText *mesh_face_number_title = new wxStaticText(this, wxID_ANY, _L("Number of triangular facets") + ": ");
-    mesh_face_number_title->SetForegroundColour(StateColor::darkModeColorFor(FONT_COLOR));
-    mesh_face_number_text = new wxStaticText(this, wxID_ANY, _L("0"));
-    mesh_face_number_text->SetForegroundColour(StateColor::darkModeColorFor(FONT_COLOR));
-    mesh_face_number_text->SetMinSize(wxSize(FromDIP(150), -1));
-    mesh_face_number_sizer->Add(mesh_face_number_title, 0, wxALIGN_LEFT);
-    mesh_face_number_sizer->Add(mesh_face_number_text, 0, wxALIGN_LEFT);
-    bSizer->Add(mesh_face_number_sizer, 1, wxEXPAND | wxLEFT | wxRIGHT, LEFT_RIGHT_PADING);
-
-    wxBoxSizer* bSizer_button = new wxBoxSizer(wxHORIZONTAL);
-    bSizer_button->SetMinSize(wxSize(FromDIP(100), -1));
-    m_checkbox = new wxCheckBox(this, wxID_ANY, _L("Don't show again"), wxDefaultPosition, wxDefaultSize, 0);
-    m_checkbox->SetForegroundColour(StateColor::darkModeColorFor(FONT_COLOR));
-    bSizer_button->Add(m_checkbox, 0, wxALIGN_LEFT);
-    bSizer_button->AddStretchSpacer(1);
-    StateColor btn_bg_green(std::pair<wxColour, int>(wxColour(27, 136, 68), StateColor::Pressed), std::pair<wxColour, int>(wxColour(61, 203, 115), StateColor::Hovered),
-                            std::pair<wxColour, int>(AMS_CONTROL_BRAND_COLOUR, StateColor::Normal));
-    m_button_ok = new Button(this, _L("OK"));
-    m_button_ok->SetBackgroundColor(btn_bg_green);
-    m_button_ok->SetBorderColor(*wxWHITE);
-    m_button_ok->SetTextColor(wxColour(0xFFFFFE));
-    m_button_ok->SetFont(Label::Body_12);
-    m_button_ok->SetSize(BUTTON_SIZE);
-    m_button_ok->SetMinSize(BUTTON_SIZE);
-    m_button_ok->SetCornerRadius(FromDIP(12));
-    bSizer_button->Add(m_button_ok, 0, wxALIGN_RIGHT, BUTTON_BORDER);
-
-    m_button_ok->Bind(wxEVT_LEFT_DOWN, [this, angle_input, linear_input](wxMouseEvent& e) {
-        stop_task();
-        if (validate_number_range(angle_input->GetTextCtrl()->GetValue(), 0.01, 1) &&
-            validate_number_range(linear_input->GetTextCtrl()->GetValue(), 0.001, 0.1)) {
-            if (m_checkbox->IsChecked()) {
-                wxGetApp().app_config->set_bool("enable_step_mesh_setting", false);
-            }
-            wxGetApp().app_config->set_bool("is_split_compound", m_split_compound_checkbox->GetValue());
-            wxGetApp().app_config->set("linear_defletion", float_to_string_decimal_point(get_linear_defletion(), 3));
-            wxGetApp().app_config->set("angle_defletion", float_to_string_decimal_point(get_angle_defletion(), 2));
-
-            EndModal(wxID_OK);
-        }
-        SetFocusIgnoringChildren();
     });
+    form->addRow(_L("Linear deflection:"), linear_edit);
 
-    StateColor btn_bg_white(std::pair<wxColour, int>(wxColour(206, 206, 206), StateColor::Pressed), std::pair<wxColour, int>(wxColour(238, 238, 238), StateColor::Hovered),
-                            std::pair<wxColour, int>(*wxWHITE, StateColor::Normal));
+    // Angular deflection
+    auto *angle_edit = new QLineEdit(this);
+    angle_edit->setValidator(new QDoubleValidator(0.01, 90.0, 4, angle_edit));
+    angle_edit->setText(QString::number(angle_init));
+    m_angle_last = angle_edit->text();
+    connect(angle_edit, &QLineEdit::textChanged, this, [this, angle_edit](const QString &v) {
+        m_angle_last = v;
+        update_mesh_number_text();
+    });
+    form->addRow(_L("Angular deflection (°):"), angle_edit);
+
+    main_layout->addLayout(form);
+
+    // Split compound checkbox
+    m_split_compound_checkbox = new QCheckBox(_L("Split compound shapes"), this);
+    m_split_compound_checkbox->setChecked(true);
+    main_layout->addWidget(m_split_compound_checkbox);
+
+    // Preview mesh checkbox (enable/disable preview)
+    m_checkbox = new QCheckBox(_L("Preview mesh count"), this);
+    m_checkbox->setChecked(false);
+    main_layout->addWidget(m_checkbox);
+
+    // Triangle count label
+    mesh_face_number_text = new QLabel("", this);
+    mesh_face_number_text->setStyleSheet("color: #6B7280;");
+    main_layout->addWidget(mesh_face_number_text);
+
+    main_layout->addStretch(1);
+
+    // Buttons
+    auto *btn_layout = new QHBoxLayout();
+    btn_layout->addStretch(1);
 
     m_button_cancel = new Button(this, _L("Cancel"));
-    m_button_cancel->SetBackgroundColor(btn_bg_white);
-    m_button_cancel->SetBorderColor(wxColour(38, 46, 48));
-    m_button_cancel->SetFont(Label::Body_12);
-    m_button_cancel->SetSize(BUTTON_SIZE);
-    m_button_cancel->SetMinSize(BUTTON_SIZE);
-    m_button_cancel->SetCornerRadius(FromDIP(12));
-    bSizer_button->Add(m_button_cancel, 0, wxALIGN_RIGHT | wxLEFT, BUTTON_BORDER);
+    btn_layout->addWidget(m_button_cancel);
 
-    m_button_cancel->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent& e) {
-        stop_task();
-        EndModal(wxID_CANCEL);
-    });
+    m_button_ok = new Button(this, _L("Import"));
+    m_button_ok->SetValue(true);
+    btn_layout->addWidget(m_button_ok);
 
-    bSizer->Add(bSizer_button, 1, wxEXPAND | wxALL, LEFT_RIGHT_PADING);
+    main_layout->addLayout(btn_layout);
 
-    this->SetSizer(bSizer);
-    update_mesh_number_text();
-    this->Layout();
-    bSizer->Fit(this);
-
-    this->Bind(wxEVT_LEFT_DOWN, [this](auto& e) {
-        SetFocusIgnoringChildren();
-    });
-    mesh_face_number_text->Bind(wxEVT_LEFT_DOWN, [this](auto& e) {
-        SetFocusIgnoringChildren();
-    });
-
-    this->Bind(wxEVT_CLOSE_WINDOW, [this](wxCloseEvent& e) {
-        stop_task();
-        EndModal(wxID_CANCEL);
-    });
-
-    wxGetApp().UpdateDlgDarkUI(this);
+    connect(m_button_ok,     &Button::clicked, this, &QDialog::accept);
+    connect(m_button_cancel, &Button::clicked, this, &QDialog::reject);
 }
 
 StepMeshDialog::~StepMeshDialog()
@@ -336,51 +109,36 @@ StepMeshDialog::~StepMeshDialog()
     stop_task();
 }
 
-void StepMeshDialog::on_task_done(wxCommandEvent& event)
-{
-    wxString text = event.GetString();
-    mesh_face_number_text->SetLabel(text);
-    if(m_task) {
-        if (m_task->joinable()) {
-            m_task->join();
-            delete m_task;
-            m_task = nullptr;
-        }
-    }
-}
+void StepMeshDialog::on_dpi_changed(const QRect & /*suggested_rect*/) {}
 
-void StepMeshDialog::stop_task()
+bool StepMeshDialog::validate_number_range(const QString &value, double min, double max)
 {
-    if(m_task) {
-        m_file.m_stop_mesh.store(true);
-        if (m_task->joinable()) {
-            m_task->join();
-            delete m_task;
-            m_task = nullptr;
-        }
-        m_file.m_stop_mesh.store(false);
-    }
-
+    bool ok = false;
+    double v = value.toDouble(&ok);
+    return ok && v >= min && v <= max;
 }
 
 void StepMeshDialog::update_mesh_number_text()
 {
-    if ((m_last_linear == get_linear_defletion()) && (m_last_angle == get_angle_defletion()) && (m_mesh_number != 0))
-        return;
-    wxString newText = wxString::Format(_L("Calculating, please wait..."));
-    mesh_face_number_text->SetLabel(newText);
-    stop_task();
-    if (!m_task) {
-        m_task = new boost::thread(Slic3r::create_thread([this]() -> void {
-            m_mesh_number = m_file.get_triangle_num(get_linear_defletion(), get_angle_defletion());
-            if (m_mesh_number != 0) {
-                wxString number_text = wxString::Format("%d", m_mesh_number);
-                wxCommandEvent event(wxEVT_THREAD_DONE);
-                event.SetString(number_text);
-                wxPostEvent(this, event);
-                m_last_linear = get_linear_defletion();
-                m_last_angle  = get_angle_defletion();
-            }
-        }));
+    if (!m_checkbox || !m_checkbox->isChecked()) return;
+    bool ok1, ok2;
+    double lin = m_linear_last.toDouble(&ok1);
+    double ang = m_angle_last.toDouble(&ok2);
+    if (ok1 && ok2) {
+        unsigned int n = m_file.get_triangle_num(lin, ang);
+        mesh_face_number_text->setText(
+            _L("Estimated triangles: ") + QString::number(n));
+    }
+}
+
+void StepMeshDialog::on_task_done(QEvent & /*event*/) {}
+
+void StepMeshDialog::stop_task()
+{
+    if (m_task) {
+        m_file.m_stop_mesh = true;
+        if (m_task->joinable()) m_task->join();
+        delete m_task;
+        m_task = nullptr;
     }
 }

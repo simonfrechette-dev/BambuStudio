@@ -1,19 +1,14 @@
 #ifndef slic3r_GUI_ParamsDialog_hpp_
 #define slic3r_GUI_ParamsDialog_hpp_
 
-#include <wx/wx.h>
-#include <wx/intl.h>
-#include <wx/collpane.h>
-
 #include "GUI_Utils.hpp"
-#include "wxExtensions.hpp"
 
-namespace Slic3r { 
+namespace Slic3r {
 namespace GUI {
 
-wxDECLARE_EVENT(EVT_MODIFY_FILAMENT, SimpleEvent);
+QEvent::Type getEVT_MODIFY_FILAMENTEventType();
 
-class FilamentInfomation : public wxObject
+class FilamentInfomation
 {
 public:
     std::string filament_id;
@@ -25,7 +20,7 @@ class ParamsPanel;
 class ParamsDialog : public DPIDialog
 {
 public:
-    ParamsDialog(wxWindow * parent);
+    ParamsDialog(QWidget *parent = nullptr);
 
     ParamsPanel * panel() { return m_panel; }
 
@@ -34,12 +29,11 @@ public:
     void set_editing_filament_id(std::string id) { m_editing_filament_id = id; }
 
 protected:
-    void on_dpi_changed(const wxRect& suggested_rect) override;
+    void on_dpi_changed(const QRect& suggested_rect) override;
 
 private:
-    std::string       m_editing_filament_id;
-    ParamsPanel * m_panel;
-    wxWindowDisabler *m_winDisabler = nullptr;
+    std::string   m_editing_filament_id;
+    ParamsPanel * m_panel{nullptr};
 };
 
 } // namespace GUI

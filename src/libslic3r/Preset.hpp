@@ -79,6 +79,8 @@
 
 //BBL: json path
 
+// Forward declaration for Qt6 port friend access
+namespace Slic3r { namespace GUI { class TabPrintModel; } }
 
 namespace Slic3r {
 
@@ -729,6 +731,7 @@ public:
     size_t num_default_presets() { return m_num_default_presets; }
 
 protected:
+    friend class Slic3r::GUI::TabPrintModel; // Qt6 port: TabPrintModel holds a PresetCollection member
     PresetCollection() = default;
     // Copy constructor and copy operators are not to be used from outside PresetBundle,
     // as the Profile::vendor points to an instance of VendorProfile stored at parent PresetBundle!

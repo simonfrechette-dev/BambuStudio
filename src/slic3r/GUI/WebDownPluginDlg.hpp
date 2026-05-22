@@ -1,36 +1,20 @@
 #ifndef slic3r_WebDialytipDialog_hpp_
 #define slic3r_WebDialytipDialog_hpp_
+#include <QWidget>
+#include <QString>
 
-#include "wx/artprov.h"
-#include "wx/cmdline.h"
-#include "wx/notifmsg.h"
-#include "wx/settings.h"
-#include "wx/webview.h"
 
 #if wxUSE_WEBVIEW_IE
-#include "wx/msw/webview_ie.h"
 #endif
 #if wxUSE_WEBVIEW_EDGE
-#include "wx/msw/webview_edge.h"
 #endif
 
-#include "wx/webviewarchivehandler.h"
-#include "wx/webviewfshandler.h"
-#include "wx/numdlg.h"
-#include "wx/infobar.h"
-#include "wx/filesys.h"
-#include "wx/fs_arc.h"
-#include "wx/fs_mem.h"
-#include "wx/stdpaths.h"
-#include <wx/frame.h>
-#include <wx/tbarbase.h>
-#include "wx/textctrl.h"
 
 #include "GUI_App.hpp"
 
 namespace Slic3r { namespace GUI {
 
-class DownPluginFrame : public wxDialog
+class DownPluginFrame : public QDialog
 {
 public:
     DownPluginFrame(GUI_App *pGUI);
@@ -38,23 +22,23 @@ public:
 
 
     // Web Function
-    void     load_url(wxString &url);
+    void     load_url(QString &url);
 
     void UpdateState();
-    void OnIdle(wxIdleEvent &evt);
-    // void OnClose(wxCloseEvent &evt);
+    void OnIdle(QEvent &evt);
+    // void OnClose(QCloseEvent &evt);
 
-    void OnNavigationRequest(wxWebViewEvent &evt);
-    void OnNavigationComplete(wxWebViewEvent &evt);
-    void OnDocumentLoaded(wxWebViewEvent &evt);
-    void OnNewWindow(wxWebViewEvent &evt);
-    void OnError(wxWebViewEvent &evt);
-    void OnTitleChanged(wxWebViewEvent &evt);
-    void OnFullScreenChanged(wxWebViewEvent &evt);
-    void OnScriptMessage(wxWebViewEvent &evt);
+    void OnNavigationRequest(QEvent &evt);
+    void OnNavigationComplete(QEvent &evt);
+    void OnDocumentLoaded(QEvent &evt);
+    void OnNewWindow(QEvent &evt);
+    void OnError(QEvent &evt);
+    void OnTitleChanged(QEvent &evt);
+    void OnFullScreenChanged(QEvent &evt);
+    void OnScriptMessage(QEvent &evt);
 
-    void OnScriptResponseMessage(wxCommandEvent &evt);
-    void RunScript(const wxString &javascript);
+    void OnScriptResponseMessage(QEvent &evt);
+    void RunScript(const QString &javascript);
 
     // install plugin
     int DownloadPlugin();
@@ -65,16 +49,16 @@ private:
     GUI_App * m_MainPtr;
     AppConfig m_appconfig_new;
 
-    wxWebView *m_browser;
+    QWidget *m_browser;
 
 #if wxUSE_WEBVIEW_IE
-    wxMenuItem *m_script_object_el;
-    wxMenuItem *m_script_date_el;
-    wxMenuItem *m_script_array_el;
+    QAction *m_script_object_el;
+    QAction *m_script_date_el;
+    QAction *m_script_array_el;
 #endif
     // Last executed JavaScript snippet, for convenience.
-    wxString m_javascript;
-    wxString m_response_js;
+    QString m_javascript;
+    QString m_response_js;
 
     // DECLARE_EVENT_TABLE()
 };

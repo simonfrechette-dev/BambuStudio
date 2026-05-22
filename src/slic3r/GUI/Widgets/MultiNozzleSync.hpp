@@ -1,14 +1,29 @@
 #ifndef MULTI_NOZZLE_SYNC_HPP
 #define MULTI_NOZZLE_SYNC_HPP
 
-#include "../wxExtensions.hpp"
-#include "../MsgDialog.hpp"
-#include "libslic3r/PrintConfig.hpp"
-#include "libslic3r/MultiNozzleUtils.hpp"
-#include "slic3r/GUI/DeviceCore/DevNozzleRack.h"
-#include "slic3r/GUI/DeviceTab/wgtDeviceNozzleRack.h"
-#include "slic3r/GUI/Widgets/RadioBox.hpp"
-#include <wx/webview.h>
+#include "../QtExtensions.hpp"
+#include "RadioBox.hpp"
+#include "Button.hpp"
+#include "Label.hpp"
+#include "libslic3r/MultiNozzleUtils.hpp"   // NozzleVolumeType, MultiNozzleUtils::NozzleGroupInfo
+
+// Forward-declare DevNozzleRack in its correct namespace
+namespace Slic3r { class DevNozzleRack; }
+
+#include <QWidget>
+#include <QDialog>
+#include <QComboBox>
+#include <QTimer>
+#include <optional>
+#include <memory>
+#include <vector>
+#include <string>
+#include <unordered_map>
+
+// NozzleListTable uses QWebEngineView (Phase 4), forward-declare here
+QT_BEGIN_NAMESPACE
+class QWebEngineView;
+QT_END_NAMESPACE
 
 #define ENABLE_MIX_FLOW_PRINT 1
 
@@ -18,178 +33,179 @@ namespace Slic3r {
 
 namespace Slic3r::GUI {
 
+class MachineObject;
+
+// wgtDeviceNozzleRackNozzleItem is a DeviceTab widget — forward-declare
+class wgtDeviceNozzleRackNozzleItem;
+
 #if ENABLE_MIX_FLOW_PRINT
-    struct NozzleOption
-    {
-        std::string diameter;
-        std::unordered_map<int, std::unordered_map<NozzleVolumeType, int>> extruder_nozzle_stats;
-    };
+struct NozzleOption {
+    std::string diameter;
+    std::unordered_map<int, std::unordered_map<NozzleVolumeType, int>> extruder_nozzle_stats;
+};
 #else
-    struct NozzleOption
-    {
-        std::string diameter;
-        std::unordered_map<int, std::pair<NozzleVolumeType, int>> extruder_nozzle_stats;
-    };
+struct NozzleOption {
+    std::string diameter;
+    std::unordered_map<int, std::pair<NozzleVolumeType, int>> extruder_nozzle_stats;
+};
 #endif
 
-class ManualNozzleCountDialog : public DPIDialog
+// ---- ManualNozzleCountDialog ----
+class ManualNozzleCountDialog : public QDialog
 {
+    Q_OBJECT
 public:
-    ManualNozzleCountDialog(wxWindow *parent, NozzleVolumeType volume_type, int standard_count, int highflow_count,int max_nozzle_count, bool force_no_zero);
-    ~ManualNozzleCountDialog() {};
-    virtual void on_dpi_changed(const wxRect& suggested_rect) {};
+    ManualNozzleCountDialog(QWidget *parent, NozzleVolumeType volume_type,
+                            int standard_count, int highflow_count,
+                            int max_nozzle_count, bool force_no_zero);
     int GetNozzleCount(NozzleVolumeType volume_type) const;
 private:
-    wxChoice* m_standard_choice { nullptr };
-    wxChoice* m_highflow_choice { nullptr };
-    Button* m_confirm_btn{ nullptr };
-    Label* m_error_label{ nullptr };
+    QComboBox *m_standard_choice = nullptr;
+    QComboBox *m_highflow_choice = nullptr;
+    Button    *m_confirm_btn     = nullptr;
+    Label     *m_error_label     = nullptr;
     NozzleVolumeType m_volume_type;
 };
 
-
-class ExtruderBadge :public wxPanel
+// ---- ExtruderBadge ----
+class ExtruderBadge : public QWidget
 {
+    Q_OBJECT
 public:
-    ExtruderBadge(wxWindow* parent);
-    void SetExtruderInfo(int extruder_id, const string& label, const NozzleVolumeType& flow);
-    void UnMarkRelatedItems(const NozzleOption& option);
-    void MarkRelatedItems(const NozzleOption& option);
+    explicit ExtruderBadge(QWidget *parent = nullptr);
+    void SetExtruderInfo(int extruder_id, const std::string &label, const NozzleVolumeType &flow);
+    void UnMarkRelatedItems(const NozzleOption &option);
+    void MarkRelatedItems(const NozzleOption &option);
     void SetExtruderValid(bool right_on);
 private:
     void SetExtruderStatus(bool left_selected, bool right_selected);
-
-    bool m_right_on{ true };
-    wxStaticBitmap* badget;
-    Label* left;
-    Label* right;
-    Label* left_diameter_desp;
-    Label* right_diameter_desp;
-    Label* left_flow_desp;
-    Label* right_flow_desp;
-
-    std::vector<std::string> m_diameter_list;
+    bool   m_right_on = true;
+    Label *m_left = nullptr, *m_right = nullptr;
+    Label *m_left_diameter_desp = nullptr, *m_right_diameter_desp = nullptr;
+    Label *m_left_flow_desp = nullptr, *m_right_flow_desp = nullptr;
+    std::vector<std::string>     m_diameter_list;
     std::vector<NozzleVolumeType> m_volume_type_list;
 };
 
-class HotEndTable :public wxPanel
+// ---- HotEndTable ----
+class HotEndTable : public QWidget
 {
+    Q_OBJECT
 public:
-    HotEndTable(wxWindow* parent);
+    explicit HotEndTable(QWidget *parent = nullptr);
     void UpdateRackInfo(std::weak_ptr<DevNozzleRack> rack);
-    void MarkRelatedItems(const NozzleOption& option);
-    void UnMarkRelatedItems(const NozzleOption& option);
+    void MarkRelatedItems(const NozzleOption &option);
+    void UnMarkRelatedItems(const NozzleOption &option);
 private:
-    StaticBox* CreateNozzleBox(const std::vector<int>& nozzle_indices);
-    void UpdateNozzleItems(const std::unordered_map<int, wgtDeviceNozzleRackNozzleItem*>& nozzle_items,
-        std::shared_ptr<DevNozzleRack> nozzle_rack);
+    StaticBox *CreateNozzleBox(const std::vector<int> &nozzle_indices);
+    void UpdateNozzleItems(const std::unordered_map<int, wgtDeviceNozzleRackNozzleItem *> &items,
+                           std::shared_ptr<DevNozzleRack> rack);
 
-private:
     struct HotEndAttr {
-        std::string diameter;
-        int extruder_id;
-        NozzleVolumeType volume_type;
+        std::string     diameter;
+        int             extruder_id = 0;
+        NozzleVolumeType volume_type{};
     };
+    std::vector<int> FilterHotEnds(const NozzleOption &option);
 
-    std::vector<int> FilterHotEnds(const NozzleOption& option);
-
-private:
-    StaticBox* m_arow_nozzle_box{ nullptr };
-    StaticBox* m_brow_nozzle_box{ nullptr };
-    std::unordered_map<int, wgtDeviceNozzleRackNozzleItem*> m_nozzle_items;
+    StaticBox *m_arow_nozzle_box = nullptr;
+    StaticBox *m_brow_nozzle_box = nullptr;
+    std::unordered_map<int, wgtDeviceNozzleRackNozzleItem *> m_nozzle_items;
     std::weak_ptr<DevNozzleRack> m_nozzle_rack;
-    void OnPaint(wxPaintEvent& event);
 };
 
-
-wxDECLARE_EVENT(EVT_NOZZLE_SELECTED, wxCommandEvent);
-
-class NozzleListTable : public wxPanel
+// ---- NozzleListTable (uses QWebEngineView — Phase 4) ----
+class NozzleListTable : public QWidget
 {
+    Q_OBJECT
 public:
-    NozzleListTable(wxWindow* parent);
-    int GetSelectIdx();
-    void SetOptions(const std::vector<NozzleOption>& options,int default_select);
+    explicit NozzleListTable(QWidget *parent = nullptr);
+    int  GetSelectIdx();
+    void SetOptions(const std::vector<NozzleOption> &options, int default_select);
+signals:
+    void selectionChanged(int idx);
 private:
-    wxString BuildTableObjStr();
-    wxString BuildTextObjStr();
+    QString BuildTableObjStr();
+    QString BuildTextObjStr();
+    void    SendSelectionChangedEvent();
+
     std::vector<NozzleOption> m_nozzle_options;
-
-    void SendSelectionChangedEvent();
-
-    wxWebView* m_web_view;
-
-    int m_selected_idx;
+    QWebEngineView *m_web_view = nullptr;
+    int             m_selected_idx = -1;
 };
 
-class MultiNozzleStatusTable : public wxPanel
+// ---- MultiNozzleStatusTable ----
+class MultiNozzleStatusTable : public QWidget
 {
+    Q_OBJECT
 public:
-    MultiNozzleStatusTable(wxWindow* parent);
+    explicit MultiNozzleStatusTable(QWidget *parent = nullptr);
     void UpdateRackInfo(std::weak_ptr<DevNozzleRack> rack);
-    void MarkRelatedItems(const NozzleOption& option);
-    void UnMarkRelatedItems(const NozzleOption& option);
+    void MarkRelatedItems(const NozzleOption &option);
+    void UnMarkRelatedItems(const NozzleOption &option);
 private:
-    ExtruderBadge* m_badge;
-    HotEndTable* m_table;
+    ExtruderBadge *m_badge = nullptr;
+    HotEndTable   *m_table = nullptr;
 };
 
-
-class MultiNozzleSyncDialog : public DPIDialog
+// ---- MultiNozzleSyncDialog ----
+class MultiNozzleSyncDialog : public QDialog
 {
+    Q_OBJECT
 public:
-    MultiNozzleSyncDialog(wxWindow* parent, std::weak_ptr<DevNozzleRack> rack);
-    virtual void on_dpi_changed(const wxRect& suggested_rect) {};
-    std::vector<NozzleOption> GetNozzleOptions(const std::vector<MultiNozzleUtils::NozzleGroupInfo>& group_infos);
+    MultiNozzleSyncDialog(QWidget *parent, std::weak_ptr<DevNozzleRack> rack);
+    ~MultiNozzleSyncDialog() override;
 
-    std::optional<NozzleOption> GetSelectedOption() {
-        if (m_nozzle_option_idx < 0 || m_nozzle_option_idx >= m_nozzle_option_values.size())
+    std::vector<NozzleOption> GetNozzleOptions(
+        const std::vector<MultiNozzleUtils::NozzleGroupInfo> &group_infos);
+
+    std::optional<NozzleOption> GetSelectedOption() const {
+        if (m_nozzle_option_idx < 0 || m_nozzle_option_idx >= (int)m_nozzle_option_values.size())
             return std::nullopt;
         return m_nozzle_option_values[m_nozzle_option_idx];
     }
 
-    int ShowModal() override;
-    ~MultiNozzleSyncDialog() override;
+    int exec() override; // ShowModal → exec()
+
 private:
     void UpdateRackInfo(std::weak_ptr<DevNozzleRack> rack);
-
-    bool hasMultiDiameters(const std::vector<MultiNozzleUtils::NozzleGroupInfo>& group_infos);
+    bool hasMultiDiameters(const std::vector<MultiNozzleUtils::NozzleGroupInfo> &group_infos);
     void OnSelectRadio(int select_idx);
+    bool UpdateUi(std::weak_ptr<DevNozzleRack> rack,
+                  bool ignore_unknown = false, bool ignore_unreliable = false);
+    bool UpdateOptionList(std::weak_ptr<DevNozzleRack> rack,
+                          bool ignore_unknown, bool ignore_unreliable);
+    void UpdateTip(std::weak_ptr<DevNozzleRack> rack,
+                   bool ignore_unknown, bool ignore_unreliable);
+    void UpdateButton(std::weak_ptr<DevNozzleRack> rack,
+                      bool ignore_unknown, bool ignore_unreliable);
 
-    bool UpdateUi(std::weak_ptr<DevNozzleRack> rack, bool ignore_unknown=false, bool ignore_unreliable=false);
-
-    bool UpdateOptionList(std::weak_ptr<DevNozzleRack> rack, bool ignore_unknown, bool ignore_unreliable);
-    void UpdateTip(std::weak_ptr<DevNozzleRack> rack, bool ignore_unknown, bool ignore_unreliable);
-    void UpdateButton(std::weak_ptr<DevNozzleRack> rack, bool ignore_unknown, bool ignore_unreliable);
-    void OnRackStatusReadingFinished(wxEvent& evt);
-    void OnRefreshTimer(wxTimerEvent& event);
+private slots:
+    void onRefreshTimer();
 
 private:
-    MultiNozzleStatusTable* m_nozzle_table;
-    NozzleListTable* m_list_table;
+    MultiNozzleStatusTable  *m_nozzle_table       = nullptr;
+    NozzleListTable         *m_list_table          = nullptr;
     std::vector<NozzleOption> m_nozzle_option_values;
-    int m_nozzle_option_idx{ -1 };
-    bool m_refreshing{ false };
-
+    int                      m_nozzle_option_idx  = -1;
+    bool                     m_refreshing         = false;
     std::weak_ptr<DevNozzleRack> m_nozzle_rack;
-    Label* m_tips;
-    Label* m_caution;
-
-    wxTimer* m_refresh_timer {nullptr};
-    size_t m_rack_event_token;
-    Button* m_cancel_btn;
-    Button* m_confirm_btn;
+    Label  *m_tips       = nullptr;
+    Label  *m_caution    = nullptr;
+    QTimer *m_refresh_timer = nullptr;
+    size_t  m_rack_event_token = 0;
+    Button *m_cancel_btn = nullptr;
+    Button *m_confirm_btn = nullptr;
 };
 
-
-std::optional<NozzleOption> tryPopUpMultiNozzleDialog(MachineObject* obj);
-
-void setExtruderNozzleCount(PresetBundle* preset_bundle, int extruder_id, NozzleVolumeType type, int nozzle_count, bool clear_before_set);
-
-void updateNozzleCountDisplay(PresetBundle* preset_bundle, int extruder_id, NozzleVolumeType volume_type);
-
+// ---- Free functions ----
+std::optional<NozzleOption> tryPopUpMultiNozzleDialog(MachineObject *obj);
+void setExtruderNozzleCount(PresetBundle *preset_bundle, int extruder_id,
+                            NozzleVolumeType type, int nozzle_count, bool clear_before_set);
+void updateNozzleCountDisplay(PresetBundle *preset_bundle, int extruder_id,
+                              NozzleVolumeType volume_type);
 void manuallySetNozzleCount(int extruder_id);
 
-} // namespace Slic3r
+} // namespace Slic3r::GUI
 
-#endif
+#endif // MULTI_NOZZLE_SYNC_HPP

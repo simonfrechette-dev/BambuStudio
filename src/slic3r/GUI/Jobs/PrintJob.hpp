@@ -3,6 +3,7 @@
 
 #include <boost/filesystem/path.hpp>
 #include <boost/filesystem/operations.hpp>
+#include <QString>
 #include "libslic3r/PrintConfig.hpp"
 #include "PlaterJob.hpp"
 
@@ -42,7 +43,7 @@ class PrintJob : public PlaterJob
     bool                m_job_finished{ false };
     int                 m_print_job_completed_id = 0;
     int                 m_print_stage = 0;
-    wxString            m_completed_evt_data;
+    QString             m_completed_evt_data;
     std::function<void()> m_enter_ip_address_fun_fail{ nullptr };
     std::function<void()> m_enter_ip_address_fun_success{ nullptr };
 
@@ -123,7 +124,7 @@ public:
     int  get_print_stage() const { return m_print_stage;}
     void reset_print_stage() { m_print_stage = 0; }
 
-    void set_print_job_finished_event(int event_id, wxString evt_data = wxEmptyString) {
+    void set_print_job_finished_event(int event_id, QString evt_data = {}) {
         m_print_job_completed_id = event_id;
         m_completed_evt_data = evt_data;
     }
@@ -135,7 +136,7 @@ public:
     void on_check_ip_address_fail(std::function<void()> func);
     void on_check_ip_address_success(std::function<void()> func);
     void connect_to_local_mqtt();
-    wxString get_http_error_msg(unsigned int status, std::string body);
+    QString get_http_error_msg(unsigned int status, std::string body);
     std::string truncate_string(const std::string& str, size_t maxLength);
     void set_calibration_task(bool is_calibration);
 

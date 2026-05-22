@@ -30,9 +30,9 @@ else()
 endif()
 
 option(SLIC3R_STATIC 			"Compile BambuStudio with static libraries (Boost, TBB, glew)" ${SLIC3R_STATIC_INITIAL})
-option(SLIC3R_GUI    			"Compile BambuStudio with GUI components (OpenGL, wxWidgets)" 1)
+option(SLIC3R_GUI    			"Compile BambuStudio with GUI components (OpenGL, Qt6)" 1)
 option(SLIC3R_FHS               "Assume BambuStudio is to be installed in a FHS directory structure" 0)
-option(SLIC3R_WX_STABLE         "Build against wxWidgets stable (3.0) as oppsed to dev (3.1) on Linux" 0)
+# SLIC3R_WX_STABLE removed: wxWidgets replaced by Qt6
 option(SLIC3R_PROFILE 			"Compile BambuStudio with an invasive Shiny profiler" 0)
 option(SLIC3R_PCH               "Use precompiled headers" 1)
 option(SLIC3R_MSVC_COMPILE_PARALLEL "Compile on Visual Studio in parallel" 1)
@@ -44,7 +44,7 @@ CMAKE_DEPENDENT_OPTION(SLIC3R_DESKTOP_INTEGRATION "Allow performing desktop inte
 
 set(OPENVDB_FIND_MODULE_PATH "" CACHE PATH "Path to OpenVDB installation's find modules.")
 
-set(SLIC3R_GTK "2" CACHE STRING "GTK version to use with wxWidgets on Linux")
+# SLIC3R_GTK removed: wxWidgets GTK toolkit selection no longer needed with Qt6
 
 set(IS_CROSS_COMPILE FALSE)
 
@@ -268,6 +268,7 @@ if (NOT MSVC AND ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_CXX_COMP
     add_compile_options(-Werror=return-type)
 
     add_compile_options(-Wno-unused-function -Wno-unused-variable -Wno-unused-but-set-variable -Wno-unused-label -Wno-unused-local-typedefs)
+    add_compile_options(-Wno-pessimizing-move -Wno-sign-compare -Wno-dangling-pointer)
 
     # removes LOTS of extraneous Eigen warnings (GCC only supports it since 6.1)
     # https://eigen.tuxfamily.org/bz/show_bug.cgi?id=1221
@@ -383,7 +384,8 @@ endif()
 # boost::process was introduced first in version 1.64.0,
 # boost::beast::detail::base64 was introduced first in version 1.66.0
 set(MINIMUM_BOOST_VERSION "1.83.0")
-set(_boost_components "system;filesystem;thread;log;locale;regex;chrono;atomic;date_time;iostreams")
+set(_boost_components "filesystem;thread;log;locale;regex;chrono;atomic;date_time;iostreams")
+# boost::system is header-only since Boost 1.69 — no compiled component needed
 find_package(Boost ${MINIMUM_BOOST_VERSION} REQUIRED COMPONENTS ${_boost_components})
 
 add_library(boost_libs INTERFACE)
@@ -593,6 +595,14 @@ if(SLIC3R_STATIC)
     set(USE_BLOSC TRUE)
 endif ()
 
+# Boost::system is header-only since Boost 1.69; create a stub INTERFACE target
+# so that packages like OpenVDB that still declare it as a link dep don't fail.
+if(NOT TARGET Boost::system)
+    add_library(Boost::system INTERFACE IMPORTED GLOBAL)
+    set_target_properties(Boost::system PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "${Boost_INCLUDE_DIRS}")
+endif()
+
 find_package(OpenVDB 5.0 COMPONENTS openvdb)
 if(OpenVDB_FOUND)
     slic3r_remap_configs(IlmBase::Half RelWithDebInfo Release)
@@ -725,47 +735,39 @@ function(bambustudio_copy_sos target config postfix output_sos)
     set(_out_dir "${CMAKE_CURRENT_BINARY_DIR}")
     message ("set out_dir to CMAKE_CURRENT_BINARY_DIR: ${_out_dir}")
 
-    if (EXISTS "/usr/lib/aarch64-linux-gnu/libavcodec.so")
-        file(COPY /usr/lib/aarch64-linux-gnu/libavcodec.so
-                  /usr/lib/aarch64-linux-gnu/libavcodec.so.61
-                  /usr/lib/aarch64-linux-gnu/libavutil.so
-                  /usr/lib/aarch64-linux-gnu/libavutil.so.59
-                  /usr/lib/aarch64-linux-gnu/libswscale.so
-                  /usr/lib/aarch64-linux-gnu/libswscale.so.8
-                  /usr/lib/aarch64-linux-gnu/libswresample.so
-                  /usr/lib/aarch64-linux-gnu/libswresample.so.5
-             DESTINATION ${_out_dir})
-    else()
-        file(COPY ${CMAKE_PREFIX_PATH}/lib/libavcodec.so
-                  ${CMAKE_PREFIX_PATH}/lib/libavcodec.so.61
-                  ${CMAKE_PREFIX_PATH}/lib/libavcodec.so.61.3.100
-                  ${CMAKE_PREFIX_PATH}/lib/libavutil.so
-                  ${CMAKE_PREFIX_PATH}/lib/libavutil.so.59
-                  ${CMAKE_PREFIX_PATH}/lib/libavutil.so.59.8.100
-                  ${CMAKE_PREFIX_PATH}/lib/libswscale.so
-                  ${CMAKE_PREFIX_PATH}/lib/libswscale.so.8
-                  ${CMAKE_PREFIX_PATH}/lib/libswscale.so.8.1.100
-                  ${CMAKE_PREFIX_PATH}/lib/libswresample.so
-                  ${CMAKE_PREFIX_PATH}/lib/libswresample.so.5
-                  ${CMAKE_PREFIX_PATH}/lib/libswresample.so.5.1.100
-             DESTINATION ${_out_dir})
-    endif()
+    # Locate ffmpeg libs: prefer system paths over dep prefix
+    find_library(_avcodec_lib    NAMES avcodec    PATHS /usr/lib64 /usr/lib ${CMAKE_PREFIX_PATH}/lib NO_CACHE)
+    find_library(_avutil_lib     NAMES avutil     PATHS /usr/lib64 /usr/lib ${CMAKE_PREFIX_PATH}/lib NO_CACHE)
+    find_library(_swscale_lib    NAMES swscale    PATHS /usr/lib64 /usr/lib ${CMAKE_PREFIX_PATH}/lib NO_CACHE)
+    find_library(_swresample_lib NAMES swresample PATHS /usr/lib64 /usr/lib ${CMAKE_PREFIX_PATH}/lib NO_CACHE)
+    foreach(_fflib _avcodec_lib _avutil_lib _swscale_lib _swresample_lib)
+        if (${_fflib})
+            get_filename_component(_ffdir "${${_fflib}}" DIRECTORY)
+            file(GLOB _fflib_files "${_ffdir}/lib${${_fflib}_NAME}*.so*")
+            # fallback: just copy the .so symlink
+            if (EXISTS "${${_fflib}}")
+                file(COPY "${${_fflib}}" DESTINATION ${_out_dir})
+            endif()
+        endif()
+    endforeach()
+    # Best-effort glob copy of all versioned .so files
+    foreach(_libname avcodec avutil swscale swresample)
+        foreach(_searchdir /usr/lib64 /usr/lib ${CMAKE_PREFIX_PATH}/lib)
+            file(GLOB _glob_sos "${_searchdir}/lib${_libname}.so*")
+            if (_glob_sos)
+                file(COPY ${_glob_sos} DESTINATION ${_out_dir})
+                break()
+            endif()
+        endforeach()
+    endforeach()
 
-    set(${output_dlls}
-        ${_out_dir}/libavcodec.so
-        ${_out_dir}/libavcodec.so.61
-        ${_out_dir}/libavcodec.so.61.3.100
-        ${_out_dir}/libavutil.so
-        ${_out_dir}/libavutil.so.59
-        ${_out_dir}/libavutil.so.59.8.100
-        ${_out_dir}/libswscale.so
-        ${_out_dir}/libswscale.so.8
-        ${_out_dir}/libswscale.so.8.1.100
-        ${_out_dir}/libswresample.so
-        ${_out_dir}/libswresample.so.5
-        ${_out_dir}/libswresample.so.5.1.100
-        PARENT_SCOPE
+    file(GLOB _copied_sos
+        "${_out_dir}/libavcodec.so*"
+        "${_out_dir}/libavutil.so*"
+        "${_out_dir}/libswscale.so*"
+        "${_out_dir}/libswresample.so*"
     )
+    set(${output_sos} ${_copied_sos} PARENT_SCOPE)
 endfunction()
 
 # libslic3r, BambuStudio GUI and the BambuStudio executable.

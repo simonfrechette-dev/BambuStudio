@@ -1,112 +1,84 @@
 #include "ComboBox.hpp"
 #include "Label.hpp"
+#include "../QtExtensions.hpp"
 
-#include <wx/dcgraph.h>
+#include <QMouseEvent>
+#include <QKeyEvent>
+#include <QWheelEvent>
+#include <algorithm>
 
-BEGIN_EVENT_TABLE(ComboBox, TextInput)
-
-EVT_LEFT_DOWN(ComboBox::mouseDown)
-EVT_LEFT_DCLICK(ComboBox::mouseDown)
-//EVT_MOUSEWHEEL(ComboBox::mouseWheelMoved)
-EVT_KEY_DOWN(ComboBox::keyDown)
-
-// catch paint events
-END_EVENT_TABLE()
-
-/*
- * Called by the system of by wxWidgets when the panel needs
- * to be redrawn. You can also trigger this call by
- * calling Refresh()/Update().
- */
-
-static wxWindow *GetScrollParent(wxWindow *pWindow)
+ComboBox::ComboBox(QWidget *parent, const QString &value,
+                   int n, const QString choices[], long style)
+    : TextInput(parent)
+    , drop(this, items, style)
 {
-    wxWindow *pWin = pWindow;
-    while (pWin->GetParent()) {
-        auto pWin2 = pWin->GetParent();
-        if (auto top = dynamic_cast<wxScrollHelper *>(pWin2))
-            return dynamic_cast<wxWindow *>(pWin);
-        pWin = pWin2;
+    if (n > 0 && choices) {
+        for (int i = 0; i < n; ++i)
+            Append(choices[i]);
     }
-    return nullptr;
+    if (!value.isEmpty()) SetValue(value);
+
+    connect(&drop, &DropDown::dismissed,          this, &ComboBox::onDropDismissed);
+    connect(&drop, &DropDown::selectionChanged,   this, &ComboBox::onDropSelectionChanged);
+
+    // Arrow button setup — reuse the icon slot in TextInput
+    SetIcon("drop_down");
+    GetTextCtrl()->setReadOnly(true);
+    GetTextCtrl()->setFocusPolicy(Qt::NoFocus);
 }
 
-ComboBox::ComboBox(wxWindow *parent,
-                   wxWindowID      id,
-                   const wxString &value,
-                   const wxPoint & pos,
-                   const wxSize &  size,
-                   int             n,
-                   const wxString  choices[],
-                   long            style)
-    : drop(items)
+bool ComboBox::setFont(const QFont &f)
 {
-    if ((style & wxALIGN_MASK) == 0 && (style & wxCB_READONLY))
-        style |= wxALIGN_RIGHT;
-    text_off = style & CB_NO_TEXT;
-    TextInput::Create(parent, "", value, (style & CB_NO_DROP_ICON) ? "" : "drop_down", pos, size,
-                      style | wxTE_PROCESS_ENTER);
-    drop.Create(this, style & DD_STYLE_MASK);
-
-    if (style & wxCB_READONLY) {
-        GetTextCtrl()->Hide();
-        TextInput::SetFont(Label::Body_14);
-        TextInput::SetBorderColor(StateColor(std::make_pair(0xDBDBDB, (int) StateColor::Disabled),
-            std::make_pair(0x00AE42, (int) StateColor::Hovered),
-            std::make_pair(0xDBDBDB, (int) StateColor::Normal)));
-        TextInput::SetBackgroundColor(StateColor(std::make_pair(0xF0F0F1, (int) StateColor::Disabled),
-            std::make_pair(0xEDFAF2, (int) StateColor::Focused),
-            std::make_pair(*wxWHITE, (int) StateColor::Normal)));
-        TextInput::SetLabelColor(StateColor(std::make_pair(0x909090, (int) StateColor::Disabled),
-            std::make_pair(0x262E30, (int) StateColor::Normal)));
-    }
-    if (auto scroll = GetScrollParent(this))
-        scroll->Bind(wxEVT_MOVE, &ComboBox::onMove, this);
-    drop.Bind(wxEVT_COMBOBOX, [this](wxCommandEvent &e) {
-        SetSelection(e.GetInt());
-        e.SetEventObject(this);
-        e.SetId(GetId());
-        GetEventHandler()->ProcessEvent(e);
-    });
-    drop.Bind(EVT_DISMISS, [this](auto &) {
-        drop_down = false;
-        wxCommandEvent e(wxEVT_COMBOBOX_CLOSEUP);
-        GetEventHandler()->ProcessEvent(e);
-    });
-    for (int i = 0; i < n; ++i) Append(choices[i]);
+    QWidget::setFont(f);
+    drop.setFont(f);
+    return true;
 }
 
-int ComboBox::GetSelection() const {
-    return drop.GetSelection();
+int ComboBox::Append(const QString &text, const QPixmap &bitmap, int item_style)
+{
+    items.push_back({text, {}, bitmap, {}, nullptr, {}, {}, {}, 0, item_style});
+    return (int)items.size() - 1;
 }
+
+int ComboBox::Append(const QString &text, const QPixmap &bitmap,
+                     void *clientData, int item_style)
+{
+    items.push_back({text, {}, bitmap, {}, clientData, {}, {}, {}, 0, item_style});
+    return (int)items.size() - 1;
+}
+
+int ComboBox::Append(const QString &text, const QPixmap &bitmap,
+                     const QString &group, void *clientData, int item_style)
+{
+    items.push_back({text, {}, bitmap, {}, clientData, group, {}, {}, 0, item_style});
+    return (int)items.size() - 1;
+}
+
+int ComboBox::SetItems(const std::vector<DropDown::Item> &the_items)
+{
+    items = the_items;
+    drop.Invalidate(true);
+    return (int)items.size();
+}
+
+void ComboBox::set_replace_text(const QString &text, const QString &img)
+{
+    replace_text = text; image_for_text = img;
+}
+
+unsigned int ComboBox::GetCount() const { return (unsigned)items.size(); }
+
+int ComboBox::GetSelection() const { return drop.GetSelection(); }
 
 void ComboBox::SetSelection(int n)
 {
-    if (n == drop.selection)
-        return;
     drop.SetSelection(n);
-    SetLabel(drop.GetValue());
-    if (drop.selection >= 0 && drop.iconSize.y > 0 && items[drop.selection].icon_textctrl.IsOk()) {
-        if (m_keep_drop_arrow) {
-            SetIcon("drop_down");
-            SetIcon_1(items[drop.selection].icon_textctrl);
-        } else {
-            SetIcon(items[drop.selection].icon_textctrl);
-        }
-    } else {
-        SetIcon("drop_down");
-        if (m_keep_drop_arrow)
-            SetIcon_1(wxNullBitmap);
-    }
-
-    if (drop.selection >= 0) {
-        SetStaticTips(items[drop.selection].text_static_tips, wxNullBitmap);
-    } else {
-        SetStaticTips(wxEmptyString, wxNullBitmap);
-    }
-
+    if (n >= 0 && n < (int)items.size())
+        GetTextCtrl()->setText(items[n].alias.isEmpty() ? items[n].text : items[n].alias);
 }
-void ComboBox::SelectAndNotify(int n) {
+
+void ComboBox::SelectAndNotify(int n)
+{
     SetSelection(n);
     sendComboBoxEvent();
 }
@@ -117,302 +89,88 @@ void ComboBox::Rescale()
     drop.Rescale();
 }
 
-wxString ComboBox::GetValue() const
-{
-    return drop.GetSelection() >= 0 ? drop.GetValue() : GetLabel();
-}
+QString ComboBox::GetValue() const { return GetTextCtrl() ? GetTextCtrl()->text() : QString{}; }
+void    ComboBox::SetValue(const QString &v) { drop.SetValue(v); if (GetTextCtrl()) GetTextCtrl()->setText(v); }
 
-void ComboBox::SetValue(const wxString &value)
+void    ComboBox::SetLabel(const QString &l) { TextInput::SetLabel(l); }
+QString ComboBox::GetLabel() const { return GetTextCtrl() ? GetTextCtrl()->text() : QString{}; }
+
+int  ComboBox::GetFlag(unsigned int n) const { return n < items.size() ? items[n].flag : 0; }
+void ComboBox::SetFlag(unsigned int n, int v) { if (n < items.size()) { items[n].flag = v; } }
+
+void    ComboBox::SetTextLabel(const QString &l) { if (GetTextCtrl()) GetTextCtrl()->setText(l); }
+QString ComboBox::GetTextLabel() const           { return GetTextCtrl() ? GetTextCtrl()->text() : QString{}; }
+
+QString ComboBox::GetString(unsigned int n) const
+{ return n < items.size() ? items[n].text : QString{}; }
+void ComboBox::SetString(unsigned int n, const QString &v)
+{ if (n < items.size()) { items[n].text = v; drop.Invalidate(); } }
+
+QString ComboBox::GetItemTooltip(unsigned int n) const { return n < items.size() ? items[n].tip : QString{}; }
+void    ComboBox::SetItemTooltip(unsigned int n, const QString &v) { if (n < items.size()) items[n].tip = v; }
+
+QString ComboBox::GetItemAlias(unsigned int n) const { return n < items.size() ? items[n].alias : QString{}; }
+void    ComboBox::SetItemAlias(unsigned int n, const QString &v) { if (n < items.size()) { items[n].alias = v; drop.Invalidate(); } }
+
+QPixmap ComboBox::GetItemBitmap(unsigned int n) const { return n < items.size() ? items[n].icon : QPixmap{}; }
+void    ComboBox::SetItemBitmap(unsigned int n, const QPixmap &bmp) { if (n < items.size()) { items[n].icon = bmp; drop.Invalidate(); } }
+
+void ComboBox::DeleteOneItem(unsigned int pos)
 {
-    drop.SetValue(value);
-    SetLabel(value);
-    if (drop.selection >= 0 && drop.iconSize.y > 0 && items[drop.selection].icon_textctrl.IsOk()) {
-        if (m_keep_drop_arrow) {
-            SetIcon("drop_down");
-            SetIcon_1(items[drop.selection].icon_textctrl);
-        } else {
-            SetIcon(items[drop.selection].icon_textctrl);
+    if (pos < items.size()) { items.erase(items.begin() + pos); drop.Invalidate(); }
+}
+void ComboBox::DoClear() { items.clear(); drop.Invalidate(true); }
+
+void ComboBox::mousePressEvent(QMouseEvent *event)
+{
+    if (event->button() == Qt::LeftButton) {
+        if (drop_down) {
+            drop.Dismiss();
+            drop_down = false;
+        } else if (drop.HasDismissLongTime()) {
+            drop.init(this, 0);
+            drop.Popup(this);
+            drop_down = true;
         }
+        event->accept();
     } else {
-        SetIcon("drop_down");
-        if (m_keep_drop_arrow)
-            SetIcon_1(wxNullBitmap);
-    }
-
-    if (drop.selection >= 0) {
-        SetStaticTips(items[drop.selection].text_static_tips, wxNullBitmap);
-    } else {
-        SetStaticTips(wxEmptyString, wxNullBitmap);
+        TextInput::mousePressEvent(event);
     }
 }
 
-void ComboBox::SetLabel(const wxString &value)
+void ComboBox::wheelEvent(QWheelEvent *event)
 {
-    if (GetTextCtrl()->IsShown() || text_off)
-        GetTextCtrl()->SetValue(value);
-    else {
-        if (is_replace_text_to_image) {
-            auto new_value = value;
-            if (new_value.starts_with(replace_text)) {
-                new_value.Replace(replace_text, "", false); // replace first text
-                TextInput::SetIcon_1(image_for_text);
-                TextInput::SetLabel(new_value);
-                return;
-            }
-        }
-        TextInput::SetIcon_1("");
-        TextInput::SetLabel(value);
+    const int cur = drop.GetSelection();
+    const int cnt = (int)items.size();
+    if (cnt == 0) return;
+    int next = cur + (event->angleDelta().y() > 0 ? -1 : 1);
+    next = std::clamp(next, 0, cnt - 1);
+    if (next != cur) SelectAndNotify(next);
+    event->accept();
+}
+
+void ComboBox::keyPressEvent(QKeyEvent *event)
+{
+    const int cur = drop.GetSelection();
+    const int cnt = (int)items.size();
+    if (event->key() == Qt::Key_Up && cur > 0)          { SelectAndNotify(cur - 1); event->accept(); return; }
+    if (event->key() == Qt::Key_Down && cur < cnt - 1)  { SelectAndNotify(cur + 1); event->accept(); return; }
+    if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Space) {
+        if (drop_down) { drop.Dismiss(); drop_down = false; }
+        else { drop.Popup(this); drop_down = true; }
+        event->accept(); return;
     }
+    TextInput::keyPressEvent(event);
 }
 
-wxString ComboBox::GetLabel() const
+void ComboBox::sendComboBoxEvent() { emit selectionChanged(drop.GetSelection()); }
+
+void ComboBox::onDropDismissed()  { drop_down = false; }
+
+void ComboBox::onDropSelectionChanged(int idx)
 {
-    if (GetTextCtrl()->IsShown() || text_off)
-        return GetTextCtrl()->GetValue();
-    else
-        return TextInput::GetLabel();
-}
-
-int ComboBox::GetFlag(unsigned int n)
-{
-    if (n >= items.size())
-        return -1;
-    return items[n].flag;
-}
-
-void ComboBox::SetFlag(unsigned int n, int value) {
-    if (n >= items.size()) return;
-    items[n].flag = value;
-    drop.Invalidate();
-}
-
-void ComboBox::SetTextLabel(const wxString& label)
-{
-    TextInput::SetLabel(label);
-}
-
-wxString ComboBox::GetTextLabel() const
-{
-    return TextInput::GetLabel();
-}
-
-bool ComboBox::SetFont(wxFont const& font)
-{
-    if (GetTextCtrl() && GetTextCtrl()->IsShown())
-        return GetTextCtrl()->SetFont(font);
-    else
-        return TextInput::SetFont(font);
-}
-
-int ComboBox::Append(const wxString &item, const wxBitmap &bitmap, int style)
-{
-    if (&bitmap && bitmap.IsOk()) {
-        return Append(item, bitmap, nullptr, style);
-    }
-    return Append(item, wxNullBitmap, nullptr, style);
-}
-
-int ComboBox::Append(const wxString &text,
-                     const wxBitmap &bitmap,
-                     void *          clientData,
-                     int style)
-{
-    if (&bitmap && bitmap.IsOk()) {
-        return Append(text, bitmap, wxString{}, clientData, style);
-    }
-    return Append(text, wxNullBitmap, wxString{}, clientData, style);
-}
-
-int ComboBox::Append(const wxString &text, const wxBitmap &bitmap, const wxString &group, void *clientData, int style)
-{
-    auto valid_bit_map = (&bitmap && bitmap.IsOk()) ? bitmap : wxNullBitmap;
-    Item item{text, wxEmptyString, valid_bit_map, valid_bit_map, clientData, group};
-    item.style = style;
-    items.push_back(item);
-    SetClientDataType(wxClientData_Void);
-    drop.Invalidate();
-    return items.size() - 1;
-}
-
-int ComboBox::SetItems(const std::vector<DropDown::Item>& the_items)
-{
-    items = the_items;
-    drop.Invalidate();
-    return items.size() - 1;
-}
-
-void ComboBox::DoClear()
-{
-    SetIcon("drop_down");
-    items.clear();
-    drop.Invalidate(true);
-}
-
-void ComboBox::DoDeleteOneItem(unsigned int pos)
-{
-    if (pos >= items.size()) return;
-    items.erase(items.begin() + pos);
-    drop.Invalidate(true);
-}
-
-unsigned int ComboBox::GetCount() const { return items.size(); }
-
-void ComboBox::set_replace_text(wxString text, wxString image_name)
-{
-    replace_text = text;
-    image_for_text = image_name;
-    is_replace_text_to_image  = true;
-}
-
-wxString ComboBox::GetString(unsigned int n) const
-{ return n < items.size() ? items[n].text : wxString{}; }
-
-void ComboBox::SetString(unsigned int n, wxString const &value)
-{
-    if (n >= items.size()) return;
-    items[n].text = value;
-    drop.Invalidate();
-    if (n == drop.GetSelection()) SetLabel(value);
-}
-
-wxString ComboBox::GetItemTooltip(unsigned int n) const
-{
-    if (n >= items.size()) return wxString();
-    return items[n].tip;
-}
-
-void ComboBox::SetItemTooltip(unsigned int n, wxString const &value) {
-    if (n >= items.size()) return;
-    items[n].tip = value;
-    if (n == drop.GetSelection()) drop.SetToolTip(value);
-}
-
-wxBitmap ComboBox::GetItemBitmap(unsigned int n) { return items[n].icon; }
-
-void ComboBox::SetItemBitmap(unsigned int n, wxBitmap const &bitmap)
-{
-    if (n >= items.size()) return;
-    items[n].icon = (&bitmap && bitmap.IsOk()) ? bitmap : wxNullBitmap;
-    drop.Invalidate();
-}
-
-int ComboBox::DoInsertItems(const wxArrayStringsAdapter &items,
-                            unsigned int                 pos,
-                            void **                      clientData,
-                            wxClientDataType             type)
-{
-    if (pos > this->items.size()) return -1;
-    for (int i = 0; i < items.GetCount(); ++i) {
-        Item item { items[i], wxEmptyString, wxNullBitmap, wxNullBitmap, clientData ? clientData[i] : NULL };
-        this->items.insert(this->items.begin() + pos, item);
-        ++pos;
-    }
-    drop.Invalidate(true);
-    return pos - 1;
-}
-
-void *ComboBox::DoGetItemClientData(unsigned int n) const { return n < items.size() ? items[n].data : NULL; }
-
-void ComboBox::DoSetItemClientData(unsigned int n, void *data)
-{
-    if (n < items.size())
-        items[n].data = data;
-}
-
-void ComboBox::mouseDown(wxMouseEvent &event)
-{
-    if (!IsEnabled()) { return; } /*on mac, the event may triggered even disabled*/
-
-    SetFocus();
-    if (drop_down) {
-        drop.Hide();
-    } else if (drop.HasDismissLongTime()) {
-        drop.autoPosition();
-        drop_down = true;
-        drop.Popup(&drop);
-        wxCommandEvent e(wxEVT_COMBOBOX_DROPDOWN);
-        GetEventHandler()->ProcessEvent(e);
-    }
-}
-
-void ComboBox::mouseWheelMoved(wxMouseEvent &event)
-{
-    event.Skip();
-    if (drop_down) return;
-    auto delta = event.GetWheelRotation() < 0 ? 1 : -1;
-    unsigned int n = GetSelection() + delta;
-    if (n < GetCount()) {
-        SetSelection((int) n);
-        sendComboBoxEvent();
-    }
-}
-
-void ComboBox::keyDown(wxKeyEvent& event)
-{
-    switch (event.GetKeyCode()) {
-        case WXK_RETURN:
-        case WXK_SPACE:
-            if (drop_down) {
-                drop.DismissAndNotify();
-            } else if (drop.HasDismissLongTime()) {
-                drop.autoPosition();
-                drop_down = true;
-                drop.Popup();
-                wxCommandEvent e(wxEVT_COMBOBOX_DROPDOWN);
-                GetEventHandler()->ProcessEvent(e);
-            }
-            break;
-        case WXK_UP:
-        case WXK_DOWN:
-        case WXK_LEFT:
-        case WXK_RIGHT:
-            if ((event.GetKeyCode() == WXK_UP || event.GetKeyCode() == WXK_LEFT) && GetSelection() > 0) {
-                SetSelection(GetSelection() - 1);
-            } else if ((event.GetKeyCode() == WXK_DOWN || event.GetKeyCode() == WXK_RIGHT) && GetSelection() + 1 < items.size()) {
-                SetSelection(GetSelection() + 1);
-            } else {
-                break;
-            }
-            sendComboBoxEvent();
-            break;
-        case WXK_TAB:
-            HandleAsNavigationKey(event);
-            break;
-        default:
-            event.Skip();
-            break;
-    }
-}
-
-void ComboBox::onMove(wxMoveEvent &event)
-{
-    event.Skip();
-    drop.Hide();
-}
-
-void ComboBox::OnEdit()
-{
-    auto value = GetTextCtrl()->GetValue();
-    SetValue(value);
-}
-
-#ifdef __WIN32__
-
-WXLRESULT ComboBox::MSWWindowProc(WXUINT nMsg, WXWPARAM wParam, WXLPARAM lParam)
-{
-    if (nMsg == WM_GETDLGCODE) {
-        return DLGC_WANTALLKEYS;
-    }
-    return TextInput::MSWWindowProc(nMsg, wParam, lParam);
-}
-
-#endif
-
-void ComboBox::sendComboBoxEvent()
-{
-    wxCommandEvent event(wxEVT_COMBOBOX, GetId());
-    event.SetEventObject(this);
-    event.SetInt(drop.GetSelection());
-    event.SetString(drop.GetValue());
-    GetEventHandler()->ProcessEvent(event);
+    if (idx >= 0 && idx < (int)items.size())
+        GetTextCtrl()->setText(items[idx].alias.isEmpty() ? items[idx].text : items[idx].alias);
+    drop_down = false;
+    sendComboBoxEvent();
 }

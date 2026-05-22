@@ -1,328 +1,201 @@
-#include <wx/dc.h>
 #include "TabCtrl.hpp"
+#include "Label.hpp"
 
-wxDEFINE_EVENT( wxEVT_TAB_SEL_CHANGING, wxCommandEvent );
-wxDEFINE_EVENT( wxEVT_TAB_SEL_CHANGED, wxCommandEvent );
+#include <QPainter>
+#include <QKeyEvent>
+#include <QResizeEvent>
+#include <algorithm>
 
-BEGIN_EVENT_TABLE(TabCtrl, StaticBox)
+#define TAB_BUTTON_SPACE    2
+#define TAB_BUTTON_PADDING  2, 2
 
-EVT_KEY_DOWN(TabCtrl::keyDown)
-
-END_EVENT_TABLE()
-
-/*
- * Called by the system of by wxWidgets when the panel needs
- * to be redrawn. You can also trigger this call by
- * calling Refresh()/Update().
- */
-
-#define TAB_BUTTON_SPACE 2
-#define TAB_BUTTON_PADDING_X 2
-#define TAB_BUTTON_PADDING_Y 2
-#define TAB_BUTTON_PADDING TAB_BUTTON_PADDING_X, TAB_BUTTON_PADDING_Y
-
-TabCtrl::TabCtrl(wxWindow *      parent,
-                   wxWindowID      id,
-                   const wxPoint & pos,
-                   const wxSize &  size,
-                   long            style)
-    : StaticBox(parent, id, pos, size, style)
+TabCtrl::TabCtrl(QWidget *parent, const QPoint & /*pos*/, const QSize & /*size*/)
+    : StaticBox(parent)
 {
-#if 0
-    radius = 5;
-#else
-    radius = 1;
-#endif
+    radius       = 1;
     border_width = 1;
-    SetBorderColor(0xcecece);
-    sizer = new wxBoxSizer(wxHORIZONTAL);
-    sizer->AddSpacer(10);
-    auto hsizer = new wxBoxSizer(wxVERTICAL);
-    hsizer->Add(sizer, 0, wxEXPAND | wxBOTTOM, border_width * 4);
-    SetSizer(hsizer);
-    Bind(wxEVT_COMMAND_BUTTON_CLICKED, &TabCtrl::buttonClicked, this);
-    //wxString reason;
-    //IsTransparentBackgroundSupported(&reason);
+    border_color.append(QColor("#CECECE"), StateColor::Normal);
+
+    sizer = new QHBoxLayout;
+    sizer->setContentsMargins(10, 0, 10, 0);
+    sizer->setSpacing(TAB_BUTTON_SPACE * 2);
+    sizer->addStretch(1);
+    setLayout(sizer);
+
+    setFocusPolicy(Qt::StrongFocus);
 }
 
-TabCtrl::~TabCtrl()
-{
-    delete images;
-}
+TabCtrl::~TabCtrl() = default;
 
-int TabCtrl::GetSelection() const { return sel; }
-
-void TabCtrl::SelectItem(int item)
+bool TabCtrl::setFont(const QFont &font)
 {
-    if (item == sel || !sendTabCtrlEvent(true))
-        return;
-    if (sel >= 0) {
-        wxCommandEvent e(wxEVT_CHECKBOX);
-        auto b = btns[sel];
-        e.SetEventObject(b);
-        b->GetEventHandler()->ProcessEvent(e);
-    }
-    sel = item;
-    if (sel >= 0) {
-        wxCommandEvent e(wxEVT_CHECKBOX);
-        auto b = btns[sel];
-        e.SetEventObject(b);
-        b->GetEventHandler()->ProcessEvent(e);
-    }
-    sendTabCtrlEvent();
-    relayout();
-    Refresh();
-}
-
-void TabCtrl::Unselect()
-{
-    SelectItem(-1);
-}
-
-void TabCtrl::Rescale()
-{
-    for (auto & b : btns)
-        b->Rescale();
-}
-
-bool TabCtrl::SetFont(wxFont const& font)
-{
-    StaticBox::SetFont(font);
-    bold = font.Bold();
-    for (size_t i = 0; i < btns.size(); ++i)
-        btns[i]->SetFont(i == sel ? bold : font);
+    QWidget::setFont(font);
+    bold_font = font;
+    bold_font.setBold(true);
+    for (int i = 0; i < (int)btns.size(); ++i)
+        btns[i]->setFont(i == sel ? bold_font : font);
     return true;
 }
 
-int TabCtrl::AppendItem(const wxString &item,
-                     int image, int selImage,
-                     void * clientData)
+int TabCtrl::AppendItem(const QString &item, int /*image*/, int /*selImage*/,
+                         void *clientData)
 {
-    Button * btn = new Button();
-    btn->Create(this, item, "", wxBORDER_NONE);
-    btn->SetFont(GetFont());
+    auto *btn = new Button(this, item);
+    btn->setFont(font());
     btn->SetTextColor(StateColor(
-        std::make_pair(0x6B6B6C, (int) StateColor::NotChecked),
-        std::make_pair(*wxLIGHT_GREY, (int) StateColor::Normal)));
+        std::make_pair(QColor(0x6B, 0x6B, 0x6C), (int)StateColor::NotChecked),
+        std::make_pair(Qt::lightGray,              (int)StateColor::Normal)));
     btn->SetBackgroundColor(StateColor());
     btn->SetCornerRadius(0);
-    btn->SetPaddingSize({TAB_BUTTON_PADDING});
+    btn->SetPaddingSize(QSize(TAB_BUTTON_PADDING));
     btns.push_back(btn);
-    if (btns.size() > 1)
-        sizer->GetItem(sizer->GetItemCount() - 1)->SetMinSize({0, 0});
-    sizer->Add(btn, 0, wxALIGN_CENTER_VERTICAL | wxLEFT | wxRIGHT, TAB_BUTTON_SPACE);
-    sizer->AddStretchSpacer(1);
+    item_data.push_back(clientData);
+    // Insert before the trailing stretch
+    sizer->insertWidget(sizer->count() - 1, btn);
+    connect(btn, &Button::clicked, this, &TabCtrl::buttonClicked);
     relayout();
-    return btns.size() - 1;
+    return (int)btns.size() - 1;
 }
 
-bool TabCtrl::DeleteItem(int item)
-{
-    return false;
-}
+bool TabCtrl::DeleteItem(int /*item*/) { return false; }
 
 void TabCtrl::DeleteAllItems()
 {
-    sizer->Clear(true);
-    sizer->AddSpacer(10);
+    for (auto *b : btns) { sizer->removeWidget(b); delete b; }
     btns.clear();
+    item_data.clear();
     if (sel >= 0) {
         sel = -1;
-        sendTabCtrlEvent();
+        emit selChanged(sel);
     }
 }
 
-unsigned int TabCtrl::GetCount() const { return btns.size(); }
+unsigned int TabCtrl::GetCount() const { return (unsigned)btns.size(); }
 
-wxString TabCtrl::GetItemText(unsigned int item) const
+void TabCtrl::SelectItem(int item)
 {
-    return item < btns.size() ? btns[item]->GetLabel() : wxString{};
+    if (item == sel) return;
+    emit selChanging(item);
+    // Toggle old selection
+    if (sel >= 0 && sel < (int)btns.size())
+        btns[sel]->SetValue(false);
+    sel = item;
+    if (sel >= 0 && sel < (int)btns.size()) {
+        btns[sel]->SetValue(true);
+        btns[sel]->setFont(bold_font);
+    }
+    emit selChanged(sel);
+    relayout();
+    update();
 }
 
-void TabCtrl::SetItemText(unsigned int item, wxString const &value)
+void TabCtrl::Unselect() { SelectItem(-1); }
+
+void TabCtrl::Rescale()
 {
-    if (item >= btns.size()) return;
-    btns[item]->SetLabel(value);
+    for (auto *b : btns) b->Rescale();
 }
 
-bool TabCtrl::GetItemBold(unsigned int item) const
+QString TabCtrl::GetItemText(unsigned int i) const
 {
-    if (item >= btns.size()) return false;
-    return btns[item]->GetFont() == bold;
+    return i < btns.size() ? btns[i]->text() : QString{};
 }
-
-void TabCtrl::SetItemBold(unsigned int item, bool bold)
+void TabCtrl::SetItemText(unsigned int i, const QString &value)
 {
-    if (item >= btns.size()) return;
-    btns[item]->SetFont(bold ? this->bold : GetFont());
-    btns[item]->Rescale();
+    if (i < btns.size()) btns[i]->setText(value);
 }
-
-void* TabCtrl::GetItemData(unsigned int item) const
+bool TabCtrl::GetItemBold(unsigned int i) const
 {
-    if (item >= btns.size()) return nullptr;
-    return btns[item]->GetClientData();
+    return i < btns.size() && btns[i]->font().bold();
 }
-
-void TabCtrl::SetItemData(unsigned int item, void* clientData)
+void TabCtrl::SetItemBold(unsigned int i, bool b)
 {
-    if (item >= btns.size()) return;
-    btns[item]->SetClientData(clientData);
+    if (i >= btns.size()) return;
+    QFont f = b ? bold_font : font();
+    btns[i]->setFont(f);
+    btns[i]->Rescale();
 }
-
-void TabCtrl::AssignImageList(wxImageList* imageList)
+void *TabCtrl::GetItemData(unsigned int i) const
 {
-    if (images == imageList) return;
-    delete images;
-    images = imageList;
+    return i < item_data.size() ? item_data[i] : nullptr;
 }
-
-void TabCtrl::SetItemPaddingSize(unsigned int item, const wxSize &size)
+void TabCtrl::SetItemData(unsigned int i, void *d)
 {
-    if (item >= btns.size()) return;
-    btns[item]->SetPaddingSize(size);
+    if (i < item_data.size()) item_data[i] = d;
 }
-
-void TabCtrl::SetItemTextColour(unsigned int item, const StateColor &col)
+void TabCtrl::SetItemPaddingSize(unsigned int i, const QSize &sz)
 {
-    if (item >= btns.size()) return;
-    btns[item]->SetTextColor(col);
+    if (i < btns.size()) btns[i]->SetPaddingSize(sz);
 }
-
-int TabCtrl::GetFirstVisibleItem() const
+void TabCtrl::SetItemTextColour(unsigned int i, const StateColor &col)
 {
-    return btns.size() == 0 ? -1 : 0;
+    if (i < btns.size()) btns[i]->SetTextColor(col);
 }
-
+int TabCtrl::GetFirstVisibleItem() const { return btns.empty() ? -1 : 0; }
 int TabCtrl::GetNextVisible(int item) const
 {
-    return ++item < btns.size() ? item : -1;
+    return ++item < (int)btns.size() ? item : -1;
 }
-
-bool TabCtrl::IsVisible(unsigned int item) const
-{
-    return true;
-}
-
-void TabCtrl::DoSetSize(int x, int y, int width, int height, int sizeFlags)
-{
-    auto size = GetSize();
-    wxWindow::DoSetSize(x, y, width, height, sizeFlags);
-    if (size == GetSize()) return;
-    relayout();
-}
-
-#ifdef __WIN32__
-
-WXLRESULT TabCtrl::MSWWindowProc(WXUINT nMsg, WXWPARAM wParam, WXLPARAM lParam)
-{
-    if (nMsg == WM_GETDLGCODE) { return DLGC_WANTARROWS; }
-    return wxWindow::MSWWindowProc(nMsg, wParam, lParam);
-}
-
-#endif
 
 void TabCtrl::relayout()
 {
-    int offset = 10;
-    int item = sel + 1;
-    int first = 0;
-    for (int i = 0; i < item; ++i)
-        offset += btns[i]->GetMinSize().x + TAB_BUTTON_SPACE * 2;
-    if (item < btns.size())
-        offset += btns[item]->GetMinSize().x + TAB_BUTTON_SPACE * 2;
-    int  width = GetSize().x;
-    for (int i = 0; i < btns.size(); ++i) {
-        auto size = btns[i]->GetMinSize().x + TAB_BUTTON_SPACE * 2;
-        if (i < sel && offset > width) {
-            sizer->Show(i * 2 + 1, false);
-            sizer->Show(i * 2 + 2, false);
-            offset -= size;
-            first = i + 1;
-        } else if (i <= item) {
-            sizer->Show(i * 2 + 1, true);
-            sizer->Show(i * 2 + 2, true);
-        } else if (offset <= width) {
-            sizer->Show(i * 2 + 1, true);
-            sizer->Show(i * 2 + 2, true);
-            offset += size;
-            item = i;
-        } else {
-            sizer->Show(i * 2 + 1, false);
-            sizer->Show(i * 2 + 2, false);
-        }
-        sizer->GetItem(i * 2 + 2)->SetMinSize({0, 0});
-    }
-    if (item >= btns.size())
-        -- item;
-    // Keep spacing 2 ~ 10 TAB_BUTTON_SPACE
-    int b = GetSize().x - offset - 10 - (item + 1 - first) * TAB_BUTTON_SPACE * 8;
-    sizer->GetItem(item * 2 + 2)->SetMinSize({b > 0 ? b : 0, 0});
-    Layout();
+    // simple: just show all, let Qt handle overflow
+    for (auto *b : btns) b->setVisible(true);
+    update();
 }
 
-void TabCtrl::buttonClicked(wxCommandEvent &event)
+void TabCtrl::buttonClicked()
 {
-    SetFocus();
-    auto btn  = event.GetEventObject();
-    auto iter = std::find(btns.begin(), btns.end(), btn);
-    SelectItem(iter == btns.end() ? -1 : iter - btns.begin());
+    auto *btn = qobject_cast<Button *>(sender());
+    auto it   = std::find(btns.begin(), btns.end(), btn);
+    SelectItem(it == btns.end() ? -1 : (int)(it - btns.begin()));
 }
 
-void TabCtrl::keyDown(wxKeyEvent &event)
+void TabCtrl::keyPressEvent(QKeyEvent *event)
 {
-    switch (event.GetKeyCode()) {
-    case WXK_UP:
-    case WXK_DOWN:
-    case WXK_LEFT:
-    case WXK_RIGHT:
-        if ((event.GetKeyCode() == WXK_UP || event.GetKeyCode() == WXK_LEFT) && GetSelection() > 0) {
-            SelectItem(GetSelection() - 1);
-        } else if ((event.GetKeyCode() == WXK_DOWN || event.GetKeyCode() == WXK_RIGHT) && GetSelection() + 1 < btns.size()) {
-            SelectItem(GetSelection() + 1);
-        }
+    switch (event->key()) {
+    case Qt::Key_Left:
+    case Qt::Key_Up:
+        if (sel > 0) SelectItem(sel - 1);
         break;
+    case Qt::Key_Right:
+    case Qt::Key_Down:
+        if (sel + 1 < (int)btns.size()) SelectItem(sel + 1);
+        break;
+    default:
+        StaticBox::keyPressEvent(event);
     }
 }
 
-void TabCtrl::doRender(wxDC& dc)
+void TabCtrl::resizeEvent(QResizeEvent *event)
 {
-    wxSize size = GetSize();
-    int states = state_handler.states();
-    if (sel < 0) { return; }
-
-    auto x1 = btns[sel]->GetPosition().x;
-    auto x2 = x1 + btns[sel]->GetSize().x;
-    const int BS2 = (1 + border_width) / 2;
-#if 0
-    const int BS = border_width / 2;
-    x1 -= TAB_BUTTON_SPACE; x2 += TAB_BUTTON_SPACE;
-    dc.SetPen(wxPen(border_color.colorForStates(states), border_width));
-    dc.SetBrush(*wxTRANSPARENT_BRUSH);
-    dc.DrawLine(0, size.y - BS2, x1 - radius + BS2, size.y - BS2);
-    dc.DrawArc(x1 - radius, size.y, x1, size.y - radius, x1 - radius, size.y - radius);
-    dc.DrawLine(x1, size.y - radius, x1, radius);
-    dc.DrawArc(x1 + radius, 0, x1, radius, x1 + radius, radius);
-    dc.DrawLine(x1 + radius, BS, x2 - radius, BS);
-    dc.DrawArc(x2, radius, x2 - radius, 0, x2 - radius, radius);
-    dc.DrawLine(x2, radius, x2, size.y - radius);
-    dc.DrawArc(x2, size.y - radius, x2 + radius, size.y, x2 + radius, size.y - radius);
-    dc.DrawLine(x2 + radius - BS2, size.y - BS2, size.x, size.y - BS2);
-#else
-    dc.SetPen(wxPen(border_color.colorForStates(states), border_width));
-    dc.DrawLine(0, size.y - BS2, size.x, size.y - BS2);
-    wxColour c("#00AE42");
-    dc.SetPen(wxPen(c, 1));
-    dc.SetBrush(c);
-    dc.DrawRoundedRectangle(x1 - radius, size.y - BS2 - border_width * 3, x2 + radius * 2 - x1, border_width * 3, radius);
-#endif
+    StaticBox::resizeEvent(event);
+    relayout();
 }
 
-bool TabCtrl::sendTabCtrlEvent(bool changing)
+void TabCtrl::doRender(QPainter &painter)
 {
-    wxCommandEvent event(changing ? wxEVT_TAB_SEL_CHANGING : wxEVT_TAB_SEL_CHANGED, GetId());
-    event.SetEventObject(this);
-    event.SetInt(sel);
-    GetEventHandler()->ProcessEvent(event);
-    return true;
+    StaticBox::doRender(painter);
+
+    if (sel < 0 || sel >= (int)btns.size()) return;
+
+    const int bw  = border_width;
+    const int bs2 = (1 + bw) / 2;
+    const int hy  = height() - bs2;
+
+    // Bottom separator line
+    const int states = state_handler.states();
+    painter.setPen(QPen(border_color.colorForStates(states), bw));
+    painter.drawLine(0, hy, width(), hy);
+
+    // Green indicator under selected tab
+    const QRect btnRect = btns[sel]->geometry();
+    const double r = (double)radius;
+    const QRectF indicator(btnRect.x() - r,
+                            hy - bw * 3,
+                            btnRect.width() + r * 2,
+                            bw * 3);
+    painter.setBrush(QColor("#00AE42"));
+    painter.setPen(Qt::NoPen);
+    painter.drawRoundedRect(indicator, r, r);
 }

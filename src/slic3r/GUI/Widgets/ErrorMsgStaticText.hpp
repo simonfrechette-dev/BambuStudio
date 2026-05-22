@@ -1,23 +1,22 @@
-
 #ifndef _WX_ERRORMSGSTATTEXT_H_
 #define _WX_ERRORMSGSTATTEXT_H_
 
-#include <wx/panel.h>
-#include "wx/stattext.h"
+#include <QWidget>
+#include <QString>
 
-class WXDLLIMPEXP_CORE ErrorMsgStaticText : public wxPanel
+class ErrorMsgStaticText : public QWidget
 {
+    Q_OBJECT
 public:
-    wxString m_msg;
-    ErrorMsgStaticText();
-    ErrorMsgStaticText(wxWindow *parent,
-                 wxWindowID id = wxID_ANY,
-                 const wxPoint& pos = wxDefaultPosition,
-                 const wxSize& size = wxSize(0,0));
+    QString m_msg;
 
-    void paintEvent(wxPaintEvent &evt);
+    ErrorMsgStaticText(QWidget *parent = nullptr, int id = -1,
+                       const QPoint &pos = {}, const QSize &size = {});
 
-    void SetLabel(wxString msg){m_msg = msg;};
+    void SetLabel(const QString &msg) { m_msg = msg; update(); }
 
+protected:
+    void paintEvent(QPaintEvent *event) override;
 };
-#endif
+
+#endif // _WX_ERRORMSGSTATTEXT_H_

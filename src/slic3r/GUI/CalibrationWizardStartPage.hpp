@@ -10,43 +10,43 @@ namespace Slic3r { namespace GUI {
 class CalibrationStartPage : public CalibrationWizardPage
 {
 public:
-    CalibrationStartPage(wxWindow* parent,
-        wxWindowID id = wxID_ANY,
-        const wxPoint& pos = wxDefaultPosition,
-        const wxSize& size = wxDefaultSize,
-        long style = wxTAB_TRAVERSAL);
+    CalibrationStartPage(QWidget* parent,
+        int id = -1,
+        const QPoint& pos = QPoint(),
+        const QSize& size = QSize(),
+        long style = 0);
 
 protected:
     CalibMode m_cali_mode;
 
-    wxBoxSizer*   m_top_sizer{ nullptr };
-    wxBoxSizer*   m_images_sizer{ nullptr };
+    QBoxLayout*   m_top_sizer{ nullptr };
+    QBoxLayout*   m_images_sizer{ nullptr };
     Label*        m_when_title{ nullptr };
     Label*        m_when_content{ nullptr };
     Label*        m_about_title{ nullptr };
     Label*        m_about_content{ nullptr };
-    wxStaticBitmap* m_before_bmp{ nullptr };
-    wxStaticBitmap* m_after_bmp{ nullptr };
-    wxStaticBitmap* m_bmp_intro{ nullptr };
+    QLabel* m_before_bmp{ nullptr };
+    QLabel* m_after_bmp{ nullptr };
+    QLabel* m_bmp_intro{ nullptr };
     PAPageHelpPanel* m_help_panel{ nullptr };
 
-    void create_when(wxWindow* parent, wxString title, wxString content);
-    void create_about(wxWindow* parent, wxString title, wxString content);
-    void create_bitmap(wxWindow* parent, const wxBitmap& before_img, const wxBitmap& after_img);
-    void create_bitmap(wxWindow* parent, std::string before_img, std::string after_img);
-    void create_bitmap(wxWindow* parent, std::string img);
+    void create_when(QWidget* parent, QString title, QString content);
+    void create_about(QWidget* parent, QString title, QString content);
+    void create_bitmap(QWidget* parent, const QPixmap& before_img, const QPixmap& after_img);
+    void create_bitmap(QWidget* parent, std::string before_img, std::string after_img);
+    void create_bitmap(QWidget* parent, std::string img);
 };
 
 class CalibrationPAStartPage : public CalibrationStartPage
 {
 public:
-    CalibrationPAStartPage(wxWindow* parent,
-        wxWindowID id = wxID_ANY,
-        const wxPoint& pos = wxDefaultPosition,
-        const wxSize& size = wxDefaultSize,
-        long style = wxTAB_TRAVERSAL);
+    CalibrationPAStartPage(QWidget* parent,
+        int id = -1,
+        const QPoint& pos = QPoint(),
+        const QSize& size = QSize(),
+        long style = 0);
 
-    void create_page(wxWindow* parent);
+    void create_page(QWidget* parent);
 
     void on_reset_page();
     void on_device_connected(MachineObject* obj);
@@ -58,13 +58,13 @@ public:
 class CalibrationFlowRateStartPage : public CalibrationStartPage
 {
 public:
-    CalibrationFlowRateStartPage(wxWindow* parent,
-        wxWindowID id = wxID_ANY,
-        const wxPoint& pos = wxDefaultPosition,
-        const wxSize& size = wxDefaultSize,
-        long style = wxTAB_TRAVERSAL);
+    CalibrationFlowRateStartPage(QWidget* parent,
+        int id = -1,
+        const QPoint& pos = QPoint(),
+        const QSize& size = QSize(),
+        long style = 0);
 
-    void create_page(wxWindow* parent);
+    void create_page(QWidget* parent);
     void on_reset_page();
     void on_device_connected(MachineObject* obj);
     void msw_rescale() override;
@@ -75,13 +75,13 @@ public:
 class CalibrationMaxVolumetricSpeedStartPage : public CalibrationStartPage
 {
 public:
-    CalibrationMaxVolumetricSpeedStartPage(wxWindow* parent,
-        wxWindowID id = wxID_ANY,
-        const wxPoint& pos = wxDefaultPosition,
-        const wxSize& size = wxDefaultSize,
-        long style = wxTAB_TRAVERSAL);
+    CalibrationMaxVolumetricSpeedStartPage(QWidget* parent,
+        int id = -1,
+        const QPoint& pos = QPoint(),
+        const QSize& size = QSize(),
+        long style = 0);
 
-    void create_page(wxWindow* parent);
+    void create_page(QWidget* parent);
     void msw_rescale() override;
 };
 

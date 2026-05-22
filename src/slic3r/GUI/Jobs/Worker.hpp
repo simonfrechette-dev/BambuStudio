@@ -23,7 +23,7 @@ static inline bool execute_job(std::shared_ptr<JobNew> j)
         std::future<void> call_on_main_thread(std::function<void()> fn) override { return std::future<void>{}; }
     } ctl;
     j->process(ctl);
-    wxGetApp().plater()->CallAfter([j]() {
+    GUI::wxGetApp().plater()->CallAfter([j]() {
         std::exception_ptr e_ptr = nullptr;
         j->finalize(false, e_ptr);
     });

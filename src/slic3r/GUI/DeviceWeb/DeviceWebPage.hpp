@@ -4,7 +4,7 @@
 
 #include <memory>
 
-#include <wx/panel.h>
+#include <QWidget>
 
 #include "DeviceHttpServer.hpp"
 #include "DeviceWebBridge.hpp"
@@ -16,9 +16,9 @@ namespace Slic3r {
 namespace GUI {
 
 
-class DeviceWebPage: public wxPanel {
+class DeviceWebPage: public QWidget {
 public:
-    DeviceWebPage(wxWindow *parent);
+    DeviceWebPage(QWidget *parent = nullptr);
     ~DeviceWebPage();
 
     void LoadUrl();
@@ -37,9 +37,8 @@ public:
 
     void msw_rescale();
 
-    wxWebView *GetWebView() const {
-        if (m_device_webview) return m_device_webview->GetWebView();
-        return nullptr;
+    void *GetWebView() const {
+        return nullptr; // Qt: webview accessed via PrinterWebView
     }
 
 private:

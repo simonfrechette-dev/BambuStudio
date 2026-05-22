@@ -3,6 +3,8 @@
 
 #include <boost/filesystem/path.hpp>
 #include <boost/filesystem/operations.hpp>
+#include <QWidget>
+#include <QString>
 #include "PlaterJob.hpp"
 #include "PrintJob.hpp"
 
@@ -47,14 +49,14 @@ public:
     bool        has_sdcard { false };
     bool        task_use_ams { true };
 
-    wxWindow*   m_parent{nullptr};
+    QWidget*    m_parent{nullptr};
 
     int  status_range() const override
     {
         return 100;
     }
 
-    wxString get_http_error_msg(unsigned int status, std::string body);
+    QString get_http_error_msg(unsigned int status, std::string body);
     void set_check_mode() {m_is_check_mode = true;};
     void check_and_continue() {m_check_and_continue = true;};
     bool is_finished() { return m_job_finished;  }

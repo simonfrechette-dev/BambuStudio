@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.5...3.31)
 project(Clipper2 VERSION 1.0.6 LANGUAGES C CXX)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)

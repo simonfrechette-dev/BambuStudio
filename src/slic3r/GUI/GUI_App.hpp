@@ -1,9 +1,25 @@
+// Phase 4: Qt6 port of GUI_App.hpp
+// wx types replaced with Qt6 equivalents throughout
 #ifndef slic3r_GUI_App_hpp_
 #define slic3r_GUI_App_hpp_
 
 #include <functional>
 #include <memory>
 #include <string>
+#include <atomic>
+#include <chrono>
+#include <vector>
+#include <map>
+#include <mutex>
+#include <stack>
+
+#include <QApplication>
+#include <QColor>
+#include <QFont>
+#include <QString>
+#include <QStringList>
+#include <QLocale>
+
 #include "ImGuiWrapper.hpp"
 #include "ConfigWizard.hpp"
 #include "libslic3r/Preset.hpp"
@@ -14,7 +30,8 @@
 #include "slic3r/Utils/NetworkAgent.hpp"
 #include "slic3r/GUI/WebViewDialog.hpp"
 #include "slic3r/GUI/WebUserLoginDialog.hpp"
-#include "slic3r/GUI/BindDialog.hpp"
+// Forward-declare BindDialog classes (only needed in GUI_App.cpp)
+class PingCodeBindDialog;
 #include "slic3r/GUI/HMS.hpp"
 #include "slic3r/GUI/fila_manager/wgtFilaManagerStore.h"
 #include "slic3r/GUI/fila_manager/wgtFilaManagerSync.h"
@@ -26,17 +43,6 @@
 #include "slic3r/GUI/UnsavedChangesDialog.hpp"
 #include "../Utils/PrintHost.hpp"
 #include "slic3r/GUI/GLEnums.hpp"
-
-#include <wx/app.h>
-#include <wx/colour.h>
-#include <wx/font.h>
-#include <wx/string.h>
-#include <wx/snglinst.h>
-#include <wx/msgdlg.h>
-#include <wx/language.h>
-
-#include <mutex>
-#include <stack>
 
 #ifdef __APPLE__
 #include <IOKit/pwr_mgt/IOPMLib.h>
@@ -55,21 +61,25 @@
     #define _MSW_DARK_MODE            1
 #endif // _MSW_DARK_MODE
 
-class wxMenuItem;
-class wxMenuBar;
-class wxTopLevelWindow;
-class wxDataViewCtrl;
-class wxBookCtrlBase;
-class wxGLContext;
-class wxGLCanvas;
+// Qt forward declarations replacing wx ones
+class QAction;
+class QMenuBar;
+class QWidget;
+class QDialog;
+class QMainWindow;
+class QAbstractItemView;
+class QTabWidget;
+class QOpenGLContext;
+class QOpenGLWidget;
+
 // BBS
 class Notebook;
-struct wxLanguageInfo;
 
 namespace Slic3r {
 
 class AppConfig;
 class FilamentColorCodeQuery;
+class GLShaderProgram;
 class PresetBundle;
 class PresetUpdater;
 class ModelObject;
@@ -95,7 +105,6 @@ struct GUI_InitParams;
 class ParamsDialog;
 class HMSQuery;
 class ModelMallDialog;
-class PingCodeBindDialog;
 class NetworkErrorDialog;
 class OpenGLManager;
 
@@ -122,20 +131,11 @@ enum FileType
     FT_SIZE,
 };
 
-extern wxString file_wildcards(FileType file_type, const std::string &custom_extension = std::string{});
+extern QString file_wildcards(FileType file_type, const std::string &custom_extension = std::string{});
 
 enum ConfigMenuIDs {
-    //ConfigMenuWizard,
-    //ConfigMenuSnapshots,
-    //ConfigMenuTakeSnapshot,
-    //ConfigMenuUpdate,
-    //ConfigMenuDesktopIntegration,
     ConfigMenuPreferences,
     ConfigMenuPrinter,
-    //ConfigMenuModeSimple,
-    //ConfigMenuModeAdvanced,
-    //ConfigMenuLanguage,
-    //ConfigMenuFlashFirmware,
     ConfigMenuCnt,
 };
 
@@ -145,22 +145,16 @@ enum BambuStudioMenuIDs {
 };
 
 enum CameraMenuIDs {
-    wxID_CAMERA_PERSPECTIVE,
-    wxID_CAMERA_ORTHOGONAL,
-    wxID_CAMERA_COUNT,
+    Camera_Perspective,
+    Camera_Orthogonal,
+    Camera_Count,
 };
 
 class Tab;
 class ConfigWizard;
 class GizmoObjectManipulation;
 
-static wxString dots("...", wxConvUTF8);
-
-// Does our wxWidgets version support markup?
-#if wxUSE_MARKUP && wxCHECK_VERSION(3, 1, 1)
-    #define SUPPORTS_MARKUP
-#endif
-
+static const QString dots("...");
 
 #define  VERSION_LEN    4
 class VersionInfo
@@ -253,8 +247,9 @@ struct TryLoadLastMachine
     boost::thread local_bind_thread;
 };
 
-class GUI_App : public wxApp
+class GUI_App : public QApplication
 {
+    Q_OBJECT
 public:
 
     //BBS: remove GCodeViewer as seperate APP logic
@@ -277,46 +272,43 @@ private:
     bool            m_is_arm64{false};
 #endif
 
-//import model from mall
-    wxString       m_download_file_url;
+    QString         m_download_file_url;
 
-//#ifdef _WIN32
-    wxColour        m_color_label_modified;
-    wxColour        m_color_label_sys;
-    wxColour        m_color_label_default;
-    wxColour        m_color_window_default;
-    wxColour        m_color_highlight_label_default;
-    wxColour        m_color_hovered_btn_label;
-    wxColour        m_color_default_btn_label;
-    wxColour        m_color_highlight_default;
-    wxColour        m_color_selected_btn_bg;
+    QColor          m_color_label_modified;
+    QColor          m_color_label_sys;
+    QColor          m_color_label_default;
+    QColor          m_color_window_default;
+    QColor          m_color_highlight_label_default;
+    QColor          m_color_hovered_btn_label;
+    QColor          m_color_default_btn_label;
+    QColor          m_color_highlight_default;
+    QColor          m_color_selected_btn_bg;
     bool            m_force_colors_update { false };
-//#endif
 
-    wxFont		    m_small_font;
-    wxFont		    m_bold_font;
-	wxFont			m_normal_font;
-	wxFont			m_code_font;
-    wxFont		    m_link_font;
+    QFont           m_small_font;
+    QFont           m_bold_font;
+    QFont           m_normal_font;
+    QFont           m_code_font;
+    QFont           m_link_font;
 
     int             m_em_unit; // width of a "m"-symbol in pixels for current system font
-                               // Note: for 100% Scale m_em_unit = 10 -> it's a good enough coefficient for a size setting of controls
 
-    std::unique_ptr<wxLocale> 	  m_wxLocale;
-    // System language, from locales, owned by wxWidgets.
-    const wxLanguageInfo		 *m_language_info_system = nullptr;
-    // Best translation language, provided by Windows or OSX, owned by wxWidgets.
-    const wxLanguageInfo		 *m_language_info_best   = nullptr;
+    std::unique_ptr<QLocale>    m_wxLocale;
+    // System language locale info (replaces wxLanguageInfo*)
+    QString                     m_language_code_system;
+    // Best translation language code
+    QString                     m_language_code_best;
 
     mutable std::shared_ptr<OpenGLManager> m_p_opengl_mgr{ nullptr };
     std::unique_ptr<RemovableDriveManager> m_removable_drive_manager;
 
     std::unique_ptr<ImGuiWrapper> m_imgui;
     std::unique_ptr<PrintHostJobQueue> m_printhost_job_queue;
-	std::unique_ptr <OtherInstanceMessageHandler> m_other_instance_message_handler;
-    std::unique_ptr <wxSingleInstanceChecker> m_single_instance_checker;
+    std::unique_ptr<OtherInstanceMessageHandler> m_other_instance_message_handler;
+    // Single instance check via lock file (replaces wxSingleInstanceChecker)
+    std::unique_ptr<class QLockFile>  m_single_instance_checker;
     std::string m_instance_hash_string;
-	size_t m_instance_hash_int;
+    size_t m_instance_hash_int;
 
     //BBS
     std::atomic<bool> m_is_closing {false};
@@ -330,8 +322,8 @@ private:
     wgtFilaManagerCloudClient*      m_fila_manager_cloud_client { nullptr };
     wgtFilaManagerCloudSync*        m_fila_manager_cloud_sync   { nullptr };
     wgtFilaManagerCloudDispatcher*  m_fila_manager_cloud_disp   { nullptr };
-    std::vector<std::string> need_delete_presets;   // store setting ids of preset
-    std::vector<bool> m_create_preset_blocked { false, false, false, false, false, false }; // excceed limit
+    std::vector<std::string> need_delete_presets;
+    std::vector<bool> m_create_preset_blocked { false, false, false, false, false, false };
     bool m_networking_compatible { false };
     bool m_networking_need_update { false };
     bool m_networking_cancel_update { false };
@@ -352,8 +344,8 @@ private:
     bool             m_adding_script_handler { false };
     bool             m_side_popup_status{false};
     bool             m_show_error_msgdlg{false};
-    wxString         m_info_dialog_content;
-    wxString         m_install_preset_fail_text;
+    QString          m_info_dialog_content;
+    QString          m_install_preset_fail_text;
     HttpServer       m_http_server;
 #if !BBL_RELEASE_TO_PUBLIC
     std::function<void(const nlohmann::json&)> m_fila_debug_sink;
@@ -366,20 +358,19 @@ public:
     //try again when subscription fails
     void            on_start_subscribe_again(std::string dev_id);
     std::string     get_local_models_path();
-    bool            OnInit() override;
-    int             OnExit() override;
+    bool            OnInit();
+    int             OnExit();
     bool            initialized() const { return m_initialized; }
-    inline bool     is_enable_multi_machine() { return this->app_config&& this->app_config->get("enable_multi_machine") == "true"; }
+    inline bool     is_enable_multi_machine() { return this->app_config && this->app_config->get("enable_multi_machine") == "true"; }
 
     std::map<std::string, bool> test_url_state;
 
     //BBS: remove GCodeViewer as seperate APP logic
-    explicit GUI_App();
-    //explicit GUI_App(EAppMode mode = EAppMode::Editor);
+    explicit GUI_App(int& argc, char** argv);
     ~GUI_App() override;
 
     bool get_app_conf_exists() { return m_app_conf_exists; }
-    void show_message_box(std::string msg) { wxMessageBox(msg); }
+    void show_message_box(std::string msg);
     EAppMode get_app_mode() const { return m_app_mode; }
     Slic3r::DeviceManager* getDeviceManager() { return m_device_manager; }
     bool                   is_blocking_printing(MachineObject *obj_ = nullptr);
@@ -416,88 +407,84 @@ public:
     bool     show_3d_navigator() const { return app_config->get_bool("show_3d_navigator"); }
     void     toggle_show_3d_navigator() const { app_config->set_bool("show_3d_navigator", !show_3d_navigator()); }
 
-    wxString get_inf_dialog_contect () {return m_info_dialog_content;};
+    QString get_inf_dialog_contect () { return m_info_dialog_content; }
 
     std::vector<std::string> split_str(std::string src, std::string separator);
     // To be called after the GUI is fully built up.
-    // Process command line parameters cached in this->init_params,
-    // load configs, STLs etc.
     void            post_init();
     void            shutdown();
     // If formatted for github, plaintext with OpenGL extensions enclosed into <details>.
     // Otherwise HTML formatted for the system info dialog.
     static std::string get_gl_info(bool for_github);
-    wxGLContext*    init_glcontext(wxGLCanvas& canvas);
+    QOpenGLContext* init_glcontext(QOpenGLWidget& canvas);
     bool            init_opengl();
 
     void            init_download_path();
-    static unsigned get_colour_approx_luma(const wxColour& colour);
+    static unsigned get_colour_approx_luma(const QColor& colour);
     static bool     dark_mode();
-    const wxColour  get_label_default_clr_system();
-    const wxColour  get_label_default_clr_modified();
+    const QColor    get_label_default_clr_system();
+    const QColor    get_label_default_clr_modified();
     void            init_label_colours();
     void            update_label_colours_from_appconfig();
     void            update_publish_status();
     bool            has_model_mall();
     void            update_label_colours();
     // update color mode for window
-    void            UpdateDarkUI(wxWindow *window, bool highlited = false, bool just_font = false);
-    void            UpdateDarkUIWin(wxWindow* win);
+    void            UpdateDarkUI(QWidget *window, bool highlited = false, bool just_font = false);
+    void            UpdateDarkUIWin(QWidget* win);
     void            Update_dark_mode_flag();
     // update color mode for whole dialog including all children
-    void            UpdateDlgDarkUI(wxDialog* dlg);
-    void            UpdateFrameDarkUI(wxFrame* dlg);
+    void            UpdateDlgDarkUI(QDialog* dlg);
+    void            UpdateFrameDarkUI(QMainWindow* frame);
     // update color mode for DataViewControl
-    void            UpdateDVCDarkUI(wxDataViewCtrl* dvc, bool highlited = false);
+    void            UpdateDVCDarkUI(QAbstractItemView* dvc, bool highlited = false);
     // update color mode for panel including all static texts controls
-    void            UpdateAllStaticTextDarkUI(wxWindow* parent);
+    void            UpdateAllStaticTextDarkUI(QWidget* parent);
     void            init_fonts();
-	void            update_fonts(const MainFrame *main_frame = nullptr);
-    void            set_label_clr_modified(const wxColour& clr);
-    void            set_label_clr_sys(const wxColour& clr);
+    void            update_fonts(const MainFrame *main_frame = nullptr);
+    void            set_label_clr_modified(const QColor& clr);
+    void            set_label_clr_sys(const QColor& clr);
     //update side popup status
     bool            get_side_menu_popup_status();
     void            set_side_menu_popup_status(bool status);
     void            link_to_network_check();
     void            link_to_lan_only_wiki();
 
-    const wxColour& get_label_clr_modified() { return m_color_label_modified; }
-    const wxColour& get_label_clr_sys()     { return m_color_label_sys; }
-    const wxColour& get_label_clr_default() { return m_color_label_default; }
-    const wxColour& get_window_default_clr(){ return m_color_window_default; }
+    const QColor&   get_label_clr_modified() { return m_color_label_modified; }
+    const QColor&   get_label_clr_sys()      { return m_color_label_sys; }
+    const QColor&   get_label_clr_default()  { return m_color_label_default; }
+    const QColor&   get_window_default_clr() { return m_color_window_default; }
 
     // BBS
-//#ifdef _WIN32
-    const wxColour& get_label_highlight_clr()   { return m_color_highlight_label_default; }
-    const wxColour& get_highlight_default_clr() { return m_color_highlight_default; }
-    const wxColour& get_color_hovered_btn_label() { return m_color_hovered_btn_label; }
-    const wxColour& get_color_selected_btn_bg() { return m_color_selected_btn_bg; }
+    const QColor&   get_label_highlight_clr()   { return m_color_highlight_label_default; }
+    const QColor&   get_highlight_default_clr()  { return m_color_highlight_default; }
+    const QColor&   get_color_hovered_btn_label(){ return m_color_hovered_btn_label; }
+    const QColor&   get_color_selected_btn_bg()  { return m_color_selected_btn_bg; }
     void            force_colors_update();
 #ifdef _MSW_DARK_MODE
     void            force_menu_update();
 #endif //_MSW_DARK_MODE
-//#endif
 
-    const wxFont&   small_font()            { return m_small_font; }
-    const wxFont&   bold_font()             { return m_bold_font; }
-    const wxFont&   normal_font()           { return m_normal_font; }
-    const wxFont&   code_font()             { return m_code_font; }
-    const wxFont&   link_font()             { return m_link_font; }
-    int             em_unit() const         { return m_em_unit; }
+    const QFont&    small_font()    { return m_small_font; }
+    const QFont&    bold_font()     { return m_bold_font; }
+    const QFont&    normal_font()   { return m_normal_font; }
+    const QFont&    code_font()     { return m_code_font; }
+    const QFont&    link_font()     { return m_link_font; }
+    int             em_unit() const { return m_em_unit; }
     bool            tabs_as_menu() const;
-    wxSize          get_min_size() const;
-    float           toolbar_icon_scale(bool auto_scale, const bool is_limited = false) const;
+    QSize           get_min_size() const;
+    float           toolbar_icon_scale(bool auto_scale, bool is_limited = false) const;
     void            set_auto_toolbar_icon_scale(float scale) const;
     void            check_printer_presets();
 
-    void            recreate_GUI(const wxString& message);
+    void            recreate_GUI(const QString& message);
     void            system_info();
     void            keyboard_shortcuts();
-    void            load_project(wxWindow *parent, wxString& input_file) const;
-    void            import_model(wxWindow *parent, wxArrayString& input_files) const;
-    void            load_gcode(wxWindow* parent, wxString& input_file) const;
+    void            load_project(QWidget *parent, QString& input_file) const;
+    void            import_model(QWidget *parent, QStringList& input_files) const;
+    void            load_gcode(QWidget* parent, QString& input_file) const;
 
-    wxString        transition_tridid(int trid_id, std::optional<int> total_extruder_count = std::nullopt) const;
+    QString         transition_tridid(int trid_id, std::optional<int> total_extruder_count = std::nullopt) const;
     void            ShowUserGuide();
     void            ShowDownNetPluginDlg(bool post_login = false);
     void            ShowUserLogin(bool show = true);
@@ -514,7 +501,7 @@ public:
     int             request_user_unbind(std::string dev_id);
     std::string     handle_web_request(std::string cmd);
     void            handle_script_message(std::string msg);
-    void            request_model_download(wxString url);
+    void            request_model_download(QString url);
     std::string     sanitize_download_url(const std::string& url);
     void            download_project(std::string project_id);
     void            request_project_download(std::string project_id);
@@ -522,10 +509,10 @@ public:
     void            request_remove_project(std::string project_id);
 
     void            handle_http_error(unsigned int status, std::string body);
-    void            on_http_error(wxCommandEvent &evt);
-    void            on_update_machine_list(wxCommandEvent& evt);
-    void            on_user_login(wxCommandEvent &evt);
-    void            on_user_login_handle(wxCommandEvent& evt);
+    void            on_http_error(const std::string& body);
+    void            on_update_machine_list();
+    void            on_user_login(int login_status);
+    void            on_user_login_handle(int online_login);
     void            enable_user_preset_folder(bool enable);
     void            save_privacy_policy_history(bool agree, std::string source = "");
 
@@ -546,8 +533,8 @@ public:
     void            no_new_version();
     static std::string format_display_version();
     std::string     format_IP(const std::string& ip);
-    void            show_dialog(wxString msg);
-    void            push_notification(const MachineObject* obj, wxString msg, wxString title = wxEmptyString, UserNotificationStyle style = UserNotificationStyle::UNS_NORMAL);
+    void            show_dialog(QString msg);
+    void            push_notification(const MachineObject* obj, QString msg, QString title = QString(), UserNotificationStyle style = UserNotificationStyle::UNS_NORMAL);
     void            reload_settings();
     void            remove_user_presets();
     void            sync_preset(Preset* preset);
@@ -558,8 +545,8 @@ public:
     void            switch_staff_pick(bool on);
 
     void            on_show_check_privacy_dlg(int online_login = 0);
-    void            show_check_privacy_dlg(wxCommandEvent& evt);
-    void            on_check_privacy_update(wxCommandEvent &evt);
+    void            show_check_privacy_dlg();
+    void            on_check_privacy_update();
     bool            check_privacy_update();
     void            check_privacy_version(int online_login = 0);
     void            report_consent(std::string expand);
@@ -571,13 +558,12 @@ public:
     bool            is_helio_enable();
     static void     request_helio_pat(std::function<void(std::string)> func);
     static void     request_helio_supported_data();
-	//static std::vector<Slic3r::HelioQuery::SupportedPrinters> get_helio_support_printer_model();
 
-    void                                               persist_window_geometry(wxTopLevelWindow *window, bool default_maximized = false);
+    void                                               persist_window_geometry(QWidget *window, bool default_maximized = false);
     void            update_ui_from_settings();
 
     bool            switch_language();
-    bool            load_language(wxString language, bool initial);
+    bool            load_language(QString language, bool initial);
 
     Tab*            get_tab(Preset::Type type);
     Tab*            get_plate_tab();
@@ -585,23 +571,20 @@ public:
     Tab*            get_layer_tab();
     ConfigOptionMode get_mode();
     std::string     get_mode_str();
-    void            save_mode(const /*ConfigOptionMode*/int mode) ;
+    void            save_mode(const /*ConfigOptionMode*/int mode);
     void            update_mode();
     void            update_internal_development();
-    void            show_ip_address_enter_dialog(wxString title = wxEmptyString);
-    void            show_ip_address_enter_dialog_handler(wxCommandEvent &evt);
-    bool            show_modal_ip_address_enter_dialog(bool input_sn, wxString title = wxEmptyString);
+    void            show_ip_address_enter_dialog(QString title = QString());
+    bool            show_modal_ip_address_enter_dialog(bool input_sn, QString title = QString());
 
     // BBS
-    //void            add_config_menu(wxMenuBar *menu);
-    //void            add_config_menu(wxMenu* menu);
     bool            has_unsaved_preset_changes() const;
     bool            has_current_preset_changes() const;
     void            update_saved_preset_from_current_preset();
     std::vector<std::pair<unsigned int, std::string>> get_selected_presets() const;
-    bool            check_and_save_current_preset_changes(const wxString& caption, const wxString& header, bool remember_choice = true, bool use_dont_save_insted_of_discard = false, ForceOption force_op = ForceOption::fopDiscard);
+    bool            check_and_save_current_preset_changes(const QString& caption, const QString& header, bool remember_choice = true, bool use_dont_save_insted_of_discard = false, ForceOption force_op = ForceOption::fopDiscard);
     void            apply_keeped_preset_modifications();
-    bool            check_and_keep_current_preset_changes(const wxString& caption, const wxString& header, int action_buttons, bool* postponed_apply_of_keeped_changes = nullptr, ForceOption force_op = ForceOption::fopDiscard);
+    bool            check_and_keep_current_preset_changes(const QString& caption, const QString& header, int action_buttons, bool* postponed_apply_of_keeped_changes = nullptr, ForceOption force_op = ForceOption::fopDiscard);
     bool            can_load_project();
     bool            check_print_host_queue();
     bool            checked_tab(Tab* tab);
@@ -612,23 +595,21 @@ public:
     void            delete_preset_from_cloud(std::string setting_id);
     void            preset_deleted_from_cloud(std::string setting_id);
 
-    wxString        filter_string(wxString str);
-    wxString        current_language_code() const { return m_wxLocale->GetCanonicalName(); }
-	// Translate the language code to a code, for which Prusa Research maintains translations. Defaults to "en_US".
-    wxString 		current_language_code_safe() const;
-    bool            is_localized() const { return m_wxLocale->GetLocale() != "English"; }
+    QString         filter_string(QString str);
+    QString         current_language_code() const { return m_wxLocale->name(); }
+    // Translate the language code to a code, for which Prusa Research maintains translations. Defaults to "en_US".
+    QString         current_language_code_safe() const;
+    bool            is_localized() const { return m_wxLocale->language() != QLocale::English; }
 
     void            open_preferences(size_t open_on_tab = 0, const std::string& highlight_option = std::string());
 
     void            report_consent_common(bool agree, std::string scene, std::string formID);
-    virtual bool OnExceptionInMainLoop();
-    // Calls wxLaunchDefaultBrowser if user confirms in dialog.
-    bool            open_browser_with_warning_dialog(const wxString& url, int flags = 0);
+    // Calls to open a URL with user confirmation.
+    bool            open_browser_with_warning_dialog(const QString& url, int flags = 0);
 #ifdef __APPLE__
-    void            OSXStoreOpenFiles(const wxArrayString &files);
-    // wxWidgets override to get an event on open files.
-    void            MacOpenFiles(const wxArrayString &fileNames) override;
-    void            MacOpenURL(const wxString& url) override;
+    void            OSXStoreOpenFiles(const QStringList &files);
+    void            MacOpenFiles(const QStringList &fileNames);
+    void            MacOpenURL(const QString& url);
 #endif /* __APPLE */
 
     Sidebar&             sidebar();
@@ -640,8 +621,8 @@ public:
     const Plater*        plater() const;
     ParamsPanel*         params_panel();
     ParamsDialog*        params_dialog();
-    Model&      		 model();
-    NotificationManager * notification_manager();
+    Model&               model();
+    NotificationManager* notification_manager();
 
 
     std::string         m_mall_model_download_url;
@@ -651,23 +632,22 @@ public:
 
     NetworkErrorDialog* m_server_error_dialog { nullptr };
 
-    void            set_download_model_url(std::string url) {m_mall_model_download_url = url;}
-    void            set_download_model_name(std::string name) {m_mall_model_download_name = name;}
-    std::string     get_download_model_url() {return m_mall_model_download_url;}
-    std::string     get_download_model_name() {return m_mall_model_download_name;}
+    void            set_download_model_url(std::string url) { m_mall_model_download_url = url; }
+    void            set_download_model_name(std::string name) { m_mall_model_download_name = name; }
+    std::string     get_download_model_url() { return m_mall_model_download_url; }
+    std::string     get_download_model_name() { return m_mall_model_download_name; }
 
     std::string     get_remote_version_str() { return version_info.version_str; }
 #if defined(__WINDOWS__)
     bool            is_running_on_arm64() { return m_is_arm64; }
 #endif
 
-
-    void            load_url(wxString url);
+    void            load_url(QString url);
     void            open_mall_page_dialog();
     void            open_publish_page_dialog();
     void            remove_mall_system_dialog();
-    void            run_script(wxString js);
-    void            run_script_left(wxString js);
+    void            run_script(QString js);
+    void            run_script_left(QString js);
     bool            is_adding_script_handler() { return m_adding_script_handler; }
     void            set_adding_script_handler(bool status) { m_adding_script_handler = status; }
 
@@ -687,9 +667,9 @@ public:
     MainFrame*      mainframe{ nullptr };
     Plater*         plater_{ nullptr };
 
-	PresetUpdater*  get_preset_updater() { return preset_updater; }
+    PresetUpdater*  get_preset_updater() { return preset_updater; }
 
-    Notebook*       tab_panel() const ;
+    Notebook*       tab_panel() const;
     int             extruders_cnt() const;
     int             extruders_edited_cnt() const;
 
@@ -701,28 +681,23 @@ public:
     std::vector<Tab *>      model_tabs_list;
     Tab*                    plate_tab;
 
-	RemovableDriveManager* removable_drive_manager() { return m_removable_drive_manager.get(); }
-	OtherInstanceMessageHandler* other_instance_message_handler() { return m_other_instance_message_handler.get(); }
-    wxSingleInstanceChecker* single_instance_checker() {return m_single_instance_checker.get();}
+    RemovableDriveManager* removable_drive_manager() { return m_removable_drive_manager.get(); }
+    OtherInstanceMessageHandler* other_instance_message_handler() { return m_other_instance_message_handler.get(); }
+    QLockFile* single_instance_checker() { return m_single_instance_checker.get(); }
 
-	void        init_single_instance_checker(const std::string &name, const std::string &path);
-	void        set_instance_hash (const size_t hash) { m_instance_hash_int = hash; m_instance_hash_string = std::to_string(hash); }
-    std::string get_instance_hash_string ()           { return m_instance_hash_string; }
-	size_t      get_instance_hash_int ()              { return m_instance_hash_int; }
+    void        init_single_instance_checker(const std::string &name, const std::string &path);
+    void        set_instance_hash (const size_t hash) { m_instance_hash_int = hash; m_instance_hash_string = std::to_string(hash); }
+    std::string get_instance_hash_string () { return m_instance_hash_string; }
+    size_t      get_instance_hash_int ()    { return m_instance_hash_int; }
 
     ImGuiWrapper* imgui() { return m_imgui.get(); }
 
     PrintHostJobQueue& printhost_job_queue() { return *m_printhost_job_queue.get(); }
 
     void            open_web_page_localized(const std::string &http_address);
-    bool            may_switch_to_SLA_preset(const wxString& caption);
+    bool            may_switch_to_SLA_preset(const QString& caption);
     bool            run_wizard(ConfigWizard::RunReason reason, ConfigWizard::StartPage start_page = ConfigWizard::SP_WELCOME);
     void            show_desktop_integration_dialog();
-
-#if ENABLE_THUMBNAIL_GENERATOR_DEBUG
-    // temporary and debug only -> extract thumbnails from selected gcode and save them as png files
-    void            gcode_thumbnails_debug();
-#endif // ENABLE_THUMBNAIL_GENERATOR_DEBUG
 
     const std::shared_ptr<OpenGLManager>& get_opengl_manager() const;
     const std::shared_ptr<GLShaderProgram>& get_shader(const std::string &shader_name) const;
@@ -732,10 +707,9 @@ public:
 
     bool is_gl_version_greater_or_equal_to(unsigned int major, unsigned int minor) const;
     bool is_glsl_version_greater_or_equal_to(unsigned int major, unsigned int minor) const;
-    int  GetSingleChoiceIndex(const wxString& message, const wxString& caption, const wxArrayString& choices, int initialSelection);
+    int  GetSingleChoiceIndex(const QString& message, const QString& caption, const QStringList& choices, int initialSelection);
 
 #ifdef __WXMSW__
-    // extend is stl/3mf/gcode/step etc
     void            associate_files(std::wstring extend);
     void            disassociate_files(std::wstring extend);
 #endif // __WXMSW__
@@ -767,20 +741,19 @@ private:
     void            init_networking_callbacks();
     void            init_app_config();
     void            remove_old_networking_plugins();
-    //BBS set extra header for http request
     std::map<std::string, std::string> get_extra_header();
     void            init_http_extra_header();
     void            update_http_extra_header();
     bool            check_older_app_config(Semver current_version, bool backup);
     void            copy_older_config();
-    void            window_pos_save(wxTopLevelWindow* window, const std::string &name);
-    bool            window_pos_restore(wxTopLevelWindow* window, const std::string &name, bool default_maximized = false);
-    void            window_pos_sanitize(wxTopLevelWindow* window);
-    void            window_pos_center(wxTopLevelWindow *window);
+    void            window_pos_save(QWidget* window, const std::string &name);
+    bool            window_pos_restore(QWidget* window, const std::string &name, bool default_maximized = false);
+    void            window_pos_sanitize(QWidget* window);
+    void            window_pos_center(QWidget *window);
     bool            select_language();
 
     bool            config_wizard_startup();
-	void            check_updates(const bool verbose);
+    void            check_updates(const bool verbose);
 
     bool                    m_init_app_config_from_older { false };
     bool                    m_datadir_redefined { false };
@@ -803,35 +776,46 @@ private:
 #endif
 };
 
-DECLARE_APP(GUI_App)
-wxDECLARE_EVENT(EVT_CONNECT_LAN_MODE_PRINT, wxCommandEvent);
+// Qt equivalent of GUI::wxGetApp() — returns the singleton GUI_App instance
+inline GUI_App& wxGetApp()
+{
+    return *static_cast<GUI_App*>(QApplication::instance());
+}
+
+// Event IDs replacing wxDECLARE_EVENT
+namespace Events {
+    constexpr int EVT_CONNECT_LAN_MODE_PRINT = 0x100001;
+}
+
+// Supported display languages (QLocale equivalents)
+static const std::vector<QLocale::Language> s_supported_languages = {
+    QLocale::English,
+    QLocale::Chinese,
+    QLocale::Chinese,  // Traditional — differentiated by script in QLocale
+    QLocale::German,
+    QLocale::French,
+    QLocale::Spanish,
+    QLocale::Swedish,
+    QLocale::Dutch,
+    QLocale::Hungarian,
+    QLocale::Japanese,
+    QLocale::Italian,
+    QLocale::Korean,
+    QLocale::Russian,
+    QLocale::Czech,
+    QLocale::Ukrainian,
+    QLocale::Portuguese,
+    QLocale::Turkish,
+    QLocale::Polish,
+};
 
 bool is_support_filament(int extruder_id, bool strict_check = true);
 bool is_soluble_filament(int extruder_id);
-// check if the filament for model is in the list
-bool has_filaments(const std::vector<string>& model_filaments);
+bool has_filaments(const std::vector<std::string>& model_filaments);
 
-static std::vector<wxLanguage> s_supported_languages = {
-    wxLANGUAGE_ENGLISH,
-    wxLANGUAGE_CHINESE_SIMPLIFIED,
-    wxLANGUAGE_CHINESE_TRADITIONAL,
-    wxLANGUAGE_GERMAN,
-    wxLANGUAGE_FRENCH,
-    wxLANGUAGE_SPANISH,
-    wxLANGUAGE_SWEDISH,
-    wxLANGUAGE_DUTCH,
-    wxLANGUAGE_HUNGARIAN,
-    wxLANGUAGE_JAPANESE,
-    wxLANGUAGE_ITALIAN,
-    wxLANGUAGE_KOREAN,
-    wxLANGUAGE_RUSSIAN,
-    wxLANGUAGE_CZECH,
-    wxLANGUAGE_UKRAINIAN,
-    wxLANGUAGE_PORTUGUESE_BRAZILIAN,
-    wxLANGUAGE_TURKISH,
-    wxLANGUAGE_POLISH
-};
 } // namespace GUI
 } // Slic3r
+
+
 
 #endif // slic3r_GUI_App_hpp_

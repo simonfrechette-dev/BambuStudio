@@ -1,23 +1,26 @@
 #ifndef slic3r_GUI_StateHandler_hpp_
 #define slic3r_GUI_StateHandler_hpp_
 
+#include <QObject>
 #include <memory>
-#include <wx/event.h>
+#include <vector>
 
 #include "StateColor.hpp"
 
-wxDECLARE_EVENT(EVT_ENABLE_CHANGED, wxCommandEvent);
+class QWidget;
+class QEvent;
 
-class StateHandler : public wxEvtHandler
+class StateHandler : public QObject
 {
+    Q_OBJECT
 public:
     enum State {
-        Enabled = 1,
-        Checked = 2,
-        Focused = 4,
-        Hovered = 8,
-        Pressed = 16,
-        Disabled = 1 << 16,
+        Enabled    = 1,
+        Checked    = 2,
+        Focused    = 4,
+        Hovered    = 8,
+        Pressed    = 16,
+        Disabled   = 1 << 16,
         NotChecked = 2 << 16,
         NotFocused = 4 << 16,
         NotHovered = 8 << 16,
@@ -25,18 +28,18 @@ public:
     };
 
 public:
-    StateHandler(wxWindow * owner);
+    explicit StateHandler(QWidget *owner, QObject *parent = nullptr);
 
     ~StateHandler();
 
 public:
-    void attach(StateColor const & color);
+    void attach(StateColor const &color);
 
-    void attach(std::vector<StateColor const *> const & colors);
+    void attach(std::vector<StateColor const *> const &colors);
 
-    void attach_child(wxWindow *child);
+    void attach_child(QWidget *child);
 
-    void remove_child(wxWindow *child);
+    void remove_child(QWidget *child);
 
     void update_binds();
 
@@ -44,21 +47,22 @@ public:
 
     void set_state(int state, int mask);
 
-private:
-    StateHandler(StateHandler * parent, wxWindow *owner);
-
-    void changed(wxEvent &event);
-
-    void changed(int state2);
+protected:
+    bool eventFilter(QObject *watched, QEvent *event) override;
 
 private:
-    wxWindow * owner_;
-    std::vector<StateColor const *> colors_;
-    int bind_states_ = 0;
-    int states_ = 0;
-    int states2_ = 0; // from children
+    StateHandler(StateHandler *parent, QWidget *owner);
+
+    void triggerRefresh();
+
+private:
+    QWidget                                  *owner_;
+    std::vector<StateColor const *>           colors_;
+    int                                       bind_states_ = 0;
+    int                                       states_      = 0;
+    int                                       states2_     = 0; // accumulated from children
     std::vector<std::unique_ptr<StateHandler>> children_;
-    StateHandler * parent_ = nullptr;
+    StateHandler                             *parent_      = nullptr;
 };
 
 #endif // !slic3r_GUI_StateHandler_hpp_

@@ -1,12 +1,13 @@
 #ifndef _SyncAmsInfo_DIALOG_H_
 #define _SyncAmsInfo_DIALOG_H_
+#include <QWidget>
+#include <QString>
 
 #include <future>
 #include <thread>
 #include "GUI_App.hpp"
 #include "GUI_Utils.hpp"
 
-#include <wx/animate.h>
 #include "SelectMachine.hpp"
 #include "DeviceManager.hpp"
 #include "BaseTransparentDPIFrame.hpp"
@@ -35,14 +36,14 @@ class SyncAmsInfoDialog : public DPIDialog
     std::string       m_print_error_msg;
     std::string       m_print_error_extra;
     std::string       m_print_info;
-    wxString          m_current_project_name;
+    QString          m_current_project_name;
     PrintDialogStatus m_print_status{PrintStatusInit};
-    wxColour          m_colour_def_color{wxColour(255, 255, 255)};
-    wxColour          m_colour_bold_color{wxColour(38, 46, 48)};
+    QColor          m_colour_def_color{QColor(255, 255, 255)};
+    QColor          m_colour_bold_color{QColor(38, 46, 48)};
 
     std::shared_ptr<int>                 m_token = std::make_shared<int>(0);
     std::map<std::string, PrintOption *> m_checkbox_list;
-    std::vector<wxString>                m_bedtype_list;
+    std::vector<QString>                m_bedtype_list;
     std::vector<MachineObject *>         m_list;
     std::vector<FilamentInfo>            m_filaments;
     std::vector<FilamentInfo>            m_ams_mapping_result;
@@ -66,52 +67,52 @@ protected:
     AmsTutorialPopup  m_mapping_tutorial_popup{nullptr};
     MaterialHash      m_materialList;
     Plater *          m_plater{nullptr};
-    wxPanel *         m_options_other{nullptr};
-    wxBoxSizer *      m_sizer_options_timelapse{nullptr};
-    wxBoxSizer *      m_sizer_options_other{nullptr};
-    wxBoxSizer *      m_sizer_thumbnail{nullptr};
+    QWidget *         m_options_other{nullptr};
+    QBoxLayout *      m_sizer_options_timelapse{nullptr};
+    QBoxLayout *      m_sizer_options_other{nullptr};
+    QBoxLayout *      m_sizer_thumbnail{nullptr};
 
-    wxScrolledWindow *        m_scrolledWindow{nullptr};
-    wxBoxSizer *              m_sizer_main{nullptr};
-    wxBoxSizer *              m_sizer_this{nullptr};
+    QScrollArea *        m_scrolledWindow{nullptr};
+    QBoxLayout *              m_sizer_main{nullptr};
+    QBoxLayout *              m_sizer_this{nullptr};
 
-    wxBoxSizer *              m_basicl_sizer{nullptr};
-    wxBoxSizer *              m_sizer_autorefill{nullptr};
+    QBoxLayout *              m_basicl_sizer{nullptr};
+    QBoxLayout *              m_sizer_autorefill{nullptr};
 
-    wxStaticBitmap *          m_staticbitmap{nullptr};
-    wxStaticBitmap *          img_amsmapping_tip{nullptr};
+    QLabel *          m_staticbitmap{nullptr};
+    QLabel *          img_amsmapping_tip{nullptr};
     ThumbnailPanel *          m_thumbnailPanel{nullptr};
-    wxPanel *                 m_panel_status{nullptr};
-    wxPanel *                 m_basic_panel;
-    wxPanel *                 m_line_top{nullptr};
+    QWidget *                 m_panel_status{nullptr};
+    QWidget *                 m_basic_panel;
+    QWidget *                 m_line_top{nullptr};
     Label *                   m_ams_backup_tip{nullptr};
     Label *                   m_statictext_ams_msg{nullptr};
     Label *                   m_text_printer_msg{nullptr};
-    wxStaticText *            m_staticText_bed_title{nullptr};
-    wxStaticText *            m_original_in_colormap{nullptr};
-    wxStaticText *            m_original_in_override{nullptr};
-    wxStaticText *            m_ams_or_ext_text_in_colormap{nullptr};
-    wxStaticText *            m_ams_or_ext_text_in_override{nullptr};
-    wxTimer *                 m_refresh_timer{nullptr};
+    QLabel *            m_staticText_bed_title{nullptr};
+    QLabel *            m_original_in_colormap{nullptr};
+    QLabel *            m_original_in_override{nullptr};
+    QLabel *            m_ams_or_ext_text_in_colormap{nullptr};
+    QLabel *            m_ams_or_ext_text_in_override{nullptr};
+    QTimer *                 m_refresh_timer{nullptr};
 
     ScalableBitmap *          ams_mapping_help_icon{nullptr};
-    wxStaticBitmap *          img_ams_backup{nullptr};
+    QLabel *          img_ams_backup{nullptr};
     ThumbnailData             m_cur_input_thumbnail_data;
     ThumbnailData             m_cur_no_light_thumbnail_data;
     ThumbnailData             m_preview_thumbnail_data; // when ams map change
-    std::vector<wxColour>     m_preview_colors_in_thumbnail;
-    std::vector<wxColour>     m_cur_colors_in_thumbnail;
-    std::vector<wxColour>     m_back_cur_colors_in_thumbnail;
+    std::vector<QColor>     m_preview_colors_in_thumbnail;
+    std::vector<QColor>     m_cur_colors_in_thumbnail;
+    std::vector<QColor>     m_back_cur_colors_in_thumbnail;
     std::vector<bool>         m_edge_pixels;
 
     StaticBox * m_two_image_panel{nullptr};
-    wxBoxSizer *m_two_image_panel_sizer{nullptr};
+    QBoxLayout *m_two_image_panel_sizer{nullptr};
     StaticBox *m_two_thumbnail_panel{nullptr};
-    wxBoxSizer *m_two_thumbnail_panel_sizer{nullptr};
-    wxBoxSizer *m_choose_plate_sizer{nullptr};
+    QBoxLayout *m_two_thumbnail_panel_sizer{nullptr};
+    QBoxLayout *m_choose_plate_sizer{nullptr};
     ComboBox *  m_combobox_plate{nullptr};
     //TextInput *m_plate_number{nullptr};
-    wxArrayString    m_plate_number_choices_str;
+    QStringList    m_plate_number_choices_str;
     std::vector<int> m_plate_choices;
     ScalableButton * m_swipe_left_button{nullptr};
     ScalableButton * m_swipe_right_button{nullptr};
@@ -130,59 +131,59 @@ protected:
     StaticBox *m_filament_right_panel{nullptr};
 
     StaticBox * m_fix_filament_panel{nullptr};
-    wxFlexGridSizer *m_fix_sizer_ams_mapping{nullptr};
+    QGridLayout *m_fix_sizer_ams_mapping{nullptr};
     MaterialHash     m_fix_materialList;
-    wxBoxSizer *     m_fix_filament_panel_sizer{nullptr};
+    QBoxLayout *     m_fix_filament_panel_sizer{nullptr};
     std::vector<FilamentInfo> m_fix_filaments;
     bool             m_generate_fix_sizer_ams_mapping = false;
 
-    wxBoxSizer *m_filament_panel_sizer;
-    wxBoxSizer *m_filament_panel_left_sizer;
-    wxBoxSizer *m_filament_panel_right_sizer;
-    wxBoxSizer *m_sizer_filament_2extruder;
+    QBoxLayout *m_filament_panel_sizer;
+    QBoxLayout *m_filament_panel_left_sizer;
+    QBoxLayout *m_filament_panel_right_sizer;
+    QBoxLayout *m_sizer_filament_2extruder;
 
-    wxFlexGridSizer *m_sizer_ams_mapping{nullptr};
-    wxGridSizer *m_sizer_ams_mapping_left{nullptr};
-    wxGridSizer *m_sizer_ams_mapping_right{nullptr};
+    QGridLayout *m_sizer_ams_mapping{nullptr};
+    QGridLayout *m_sizer_ams_mapping_left{nullptr};
+    QGridLayout *m_sizer_ams_mapping_right{nullptr};
 
-    wxSimplebook *m_pages{nullptr};
-    wxPanel *     m_loading_page{nullptr};
-    wxPanel *     m_show_page{nullptr};
-    wxBoxSizer *  m_sizer_show_page{nullptr};
-    wxAnimationCtrl *m_gif_ctrl{nullptr};
+    QStackedWidget *m_pages{nullptr};
+    QWidget *     m_loading_page{nullptr};
+    QWidget *     m_show_page{nullptr};
+    QBoxLayout *  m_sizer_show_page{nullptr};
+    QLabel *m_gif_ctrl{nullptr};
 
 public:
     void check_empty_project();
     void reinit_dialog();
     void init_bind();
     void init_timer();
-    void show_print_failed_info(bool show, int code = 0, wxString description = wxEmptyString, wxString extra = wxEmptyString);
-    void check_fcous_state(wxWindow *window);
+    void show_print_failed_info(bool show, int code = 0, QString description = QString(), QString extra = QString());
+    void check_fcous_state(QWidget *window);
     void popup_filament_backup();
 
     void     prepare_mode(bool refresh_button = true);
     void     finish_mode();
     void     sync_ams_mapping_result(std::vector<FilamentInfo> &result);
     void     prepare(int print_plate_idx);
-    void     show_status(PrintDialogStatus status, std::vector<wxString> params = std::vector<wxString>());
+    void     show_status(PrintDialogStatus status, std::vector<QString> params = std::vector<QString>());
     void     reset_timeout();
     void     update_user_printer();
     void     reset_ams_material();
     void     reset_all_ams_info();
     void     reset_one_ams_material(const std::string & index_str,bool reset_to_first =false);
     void     update_show_status();
-    void     update_printer_combobox(wxCommandEvent &event);
-    void     on_cancel(wxCloseEvent &event);
-    void     show_errors(wxString &info);
+    void     update_printer_combobox(QEvent &event);
+    void     on_cancel(QCloseEvent &event);
+    void     show_errors(QString &info);
     void     Enable_Auto_Refill(bool enable);
-    void     on_refresh(wxCommandEvent &event);
-    void     on_set_finish_mapping(wxCommandEvent &evt);
-    void     on_print_job_cancel(wxCommandEvent &evt);
+    void     on_refresh(QEvent &event);
+    void     on_set_finish_mapping(QEvent &evt);
+    void     on_print_job_cancel(QEvent &evt);
     void     reset_and_sync_ams_list();
     void     generate_override_fix_ams_list();
     void     clone_thumbnail_data();
     void     record_edge_pixels_data();
-    wxColour adjust_color_for_render(const wxColour &color);
+    QColor adjust_color_for_render(const QColor &color);
     void     final_deal_edge_pixels_data(ThumbnailData &data);
     void     updata_thumbnail_data_after_connected_printer();
     void     show_ams_controls(bool flag);
@@ -190,14 +191,14 @@ public:
     void     update_thumbnail_data_accord_plate_index(bool allow_clone_ams_color);
     void     update_final_thumbnail_data();
     void     unify_deal_thumbnail_data(ThumbnailData &input_data, ThumbnailData &no_light_data,bool allow_clone_ams_color);
-    void     change_default_normal(int old_filament_id, wxColour temp_ams_color);
-    void     on_timer(wxTimerEvent &event);
+    void     change_default_normal(int old_filament_id, QColor temp_ams_color);
+    void     on_timer(QTimerEvent &event);
     void     update_user_machine_list();
     void     update_lan_machine_list();
     void     stripWhiteSpace(std::string &str);
-    void     update_ams_status_msg(wxString msg, bool is_warning = false);
-    void     update_priner_status_msg(wxString msg, bool is_warning = false);
-    void     update_print_status_msg(wxString msg, bool is_warning = false, bool is_printer = true);
+    void     update_ams_status_msg(QString msg, bool is_warning = false);
+    void     update_priner_status_msg(QString msg, bool is_warning = false);
+    void     update_print_status_msg(QString msg, bool is_warning = false, bool is_printer = true);
     void     update_print_error_info(int code, std::string msg, std::string extra);
     bool     has_timelapse_warning();
     void     update_timelapse_enable_status();
@@ -215,11 +216,11 @@ public:
     bool get_ams_mapping_result(std::string &mapping_array_str, std::string &mapping_array_str2, std::string &ams_mapping_info);
     bool build_nozzles_info(std::string &nozzles_info);
     void auto_supply_with_ext(std::vector<DevAmsTray> slots);
-    bool is_nozzle_type_match(DevExtderSystem data, wxString &error_message) const;
+    bool is_nozzle_type_match(DevExtderSystem data, QString &error_message) const;
     int  convert_filament_map_nozzle_id_to_task_nozzle_id(int nozzle_id);
 
     PrintFromType            get_print_type() { return m_print_type; };
-    wxString                 format_text(wxString &m_msg);
+    QString                 format_text(QString &m_msg);
     PrintDialogStatus        get_status() { return m_print_status; }
     std::vector<std::string> sort_string(std::vector<std::string> strArray);
 
@@ -228,7 +229,7 @@ public:
 public:
     struct SyncInfo
     {
-        wxPoint dialog_pos;
+        QPoint dialog_pos;
         bool use_dialog_pos = false;
         bool first_sync = false;
         bool cancel_text_to_later = false;
@@ -239,21 +240,21 @@ public:
         bool is_same_printer = true;
         std::map<int, AMSMapInfo> sync_maps;
     };
-    SyncAmsInfoDialog(wxWindow *parent, SyncInfo &info);
+    SyncAmsInfoDialog(QWidget *parent, SyncInfo &info);
     ~SyncAmsInfoDialog();
     void set_info(SyncInfo &info);
-    void on_dpi_changed(const wxRect &suggested_rect) override;
+    void on_dpi_changed(const QRect &suggested_rect) override;
     const SyncResult &get_result() { return m_result; }
 
 public:
-    bool Show(bool show) override;
+    void setVisible(bool show) override;
     void updata_ui_data_after_connected_printer();
     void set_default(bool hide_some = false);
     void update_select_layout(MachineObject *obj);
     void set_default_normal(const ThumbnailData &);
     bool is_must_finish_slice_then_connected_printer() ;
     void hide_no_use_controls();
-    void show_sizer(wxSizer *sizer, bool show);
+    void show_sizer(QLayout *sizer, bool show);
     void deal_ok();
     bool get_is_double_extruder();
     bool is_dirty_filament();
@@ -261,19 +262,19 @@ public:
     void set_check_dirty_fialment(bool flag) { m_check_dirty_fialment = flag; };
 
 private:
-    wxBoxSizer *create_sizer_thumbnail(wxButton *image_button, bool left);
+    QBoxLayout *create_sizer_thumbnail(QPushButton *image_button, bool left);
     void        update_when_change_plate(int);
     void        update_when_change_map_mode(int);
     void        update_plate_combox();
     void        update_map_when_change_map_mode();
-    wxColour    decode_ams_color(const std::string &color);
-    void        update_when_change_map_mode(wxCommandEvent &e);
+    QColor    decode_ams_color(const std::string &color);
+    void        update_when_change_map_mode(QEvent &e);
     void        update_panel_status(PageType page);
     void        show_color_panel(bool,bool update_layout = true);
     void        update_more_setting(bool layout = true,bool from_more_seting_text = false);
     void        add_two_image_control();
-    void        to_next_plate(wxCommandEvent &event);
-    void        to_previous_plate(wxCommandEvent &event);
+    void        to_next_plate(QEvent &event);
+    void        to_previous_plate(QEvent &event);
     void        update_swipe_button_state();
     void        updata_ui_when_priner_not_same();
     void        init_bitmaps();
@@ -286,40 +287,40 @@ private:
 
     AMSComboInfo  m_ams_combo_info;
     Label *m_after_map_text{nullptr};
-    wxStaticText *m_attention_text{nullptr};
-    wxString m_tip_attention_color_map;
-    wxString m_tip_attention_override;
+    QLabel *m_attention_text{nullptr};
+    QString m_tip_attention_color_map;
+    QString m_tip_attention_override;
     Label* m_tip_text{nullptr};
-    //wxStaticText *m_specify_color_cluster_title = nullptr;
-    //wxStaticText*  m_used_colors_tip_text{nullptr};
-    wxStaticText* m_warning_text{nullptr};
-    wxBoxSizer *  m_left_sizer_thumbnail{nullptr};
-    wxBoxSizer *  m_right_sizer_thumbnail{nullptr};
-    wxButton *      m_left_image_button = nullptr;
-    wxButton *      m_right_image_button = nullptr;
-    wxBoxSizer *    sizer_basic_right_info = nullptr;
-    wxBoxSizer *    sizer_advanced_options_title = nullptr;
+    //QLabel *m_specify_color_cluster_title = nullptr;
+    //QLabel*  m_used_colors_tip_text{nullptr};
+    QLabel* m_warning_text{nullptr};
+    QBoxLayout *  m_left_sizer_thumbnail{nullptr};
+    QBoxLayout *  m_right_sizer_thumbnail{nullptr};
+    QPushButton *      m_left_image_button = nullptr;
+    QPushButton *      m_right_image_button = nullptr;
+    QBoxLayout *    sizer_basic_right_info = nullptr;
+    QBoxLayout *    sizer_advanced_options_title = nullptr;
     Label *  m_confirm_title                = nullptr;
-    wxString        m_undone_str;
-    wxString        m_override_undone_str;
-    wxStaticText *  m_are_you_sure_title                = nullptr;
+    QString        m_undone_str;
+    QString        m_override_undone_str;
+    QLabel *  m_are_you_sure_title                = nullptr;
 
-   // wxBoxSizer *    m_plate_combox_sizer          = nullptr;
-    wxBoxSizer *    m_mode_combox_sizer           = nullptr;
-    //wxStaticText *  m_printer_title                = nullptr;
-    wxStaticText *  m_printer_device_name          = nullptr;
-    wxStaticText *  m_printer_is_map_title         = nullptr;
+   // QBoxLayout *    m_plate_combox_sizer          = nullptr;
+    QBoxLayout *    m_mode_combox_sizer           = nullptr;
+    //QLabel *  m_printer_title                = nullptr;
+    QLabel *  m_printer_device_name          = nullptr;
+    QLabel *  m_printer_is_map_title         = nullptr;
 
     CapsuleButton *  m_colormap_btn = nullptr;
     CapsuleButton *  m_override_btn = nullptr;
     ScalableButton * m_reset_all_btn{nullptr};
-    wxBoxSizer *     m_advace_setting_sizer = nullptr;
-    wxStaticText *   m_more_setting_tips = nullptr;
-    wxStaticBitmap * m_advanced_options_icon{nullptr};
-    wxBoxSizer *     m_append_color_sizer = nullptr;
+    QBoxLayout *     m_advace_setting_sizer = nullptr;
+    QLabel *   m_more_setting_tips = nullptr;
+    QLabel * m_advanced_options_icon{nullptr};
+    QBoxLayout *     m_append_color_sizer = nullptr;
     ::CheckBox*      m_append_color_checkbox = nullptr;
     Label *          m_append_color_text = nullptr;
-    wxBoxSizer *     m_merge_color_sizer     = nullptr;
+    QBoxLayout *     m_merge_color_sizer     = nullptr;
     ::CheckBox*      m_merge_color_checkbox = nullptr;
     Label *          m_merge_color_text     = nullptr;
     bool m_is_empty_project = true;
@@ -331,7 +332,7 @@ private:
     const int LEFT_THUMBNAIL_SIZE_WIDTH = 100;
     const int RIGHT_THUMBNAIL_SIZE_WIDTH = 300;
     int      m_specify_plate_idx{0};
-    wxString m_printer_name;
+    QString m_printer_name;
 
     enum class MapModeEnum {
         ColorMap = 0,
@@ -345,8 +346,8 @@ class SyncNozzleAndAmsDialog : public Slic3r::GUI::BaseTransparentDPIFrame
 public:
     struct InputInfo
     {
-        wxPoint dialog_pos{wxPoint(400, 200)};
-        wxPoint ams_btn_pos{wxPoint(400, 200)};
+        QPoint dialog_pos{QPoint(400, 200)};
+        QPoint ams_btn_pos{QPoint(400, 200)};
     };
     SyncNozzleAndAmsDialog(InputInfo &input_info);
     ~SyncNozzleAndAmsDialog() override;
@@ -363,20 +364,20 @@ class FinishSyncAmsDialog : public Slic3r::GUI::BaseTransparentDPIFrame
 public:
     struct InputInfo
     {
-        wxPoint dialog_pos{wxPoint(400, 200)};
-        wxPoint ams_btn_pos{wxPoint(400, 200)};
+        QPoint dialog_pos{QPoint(400, 200)};
+        QPoint ams_btn_pos{QPoint(400, 200)};
     };
     FinishSyncAmsDialog(InputInfo &input_info);
     ~FinishSyncAmsDialog() override;
     void deal_ok();
     void update_info(InputInfo &info);
 
-    void set_custom_message(const wxString &message)
+    void set_custom_message(const QString &message)
     {
         if (m_finish_text) {
-            m_finish_text->SetLabel(message);
-            Layout();
-            Fit();
+            m_finish_text->setText(message);
+            if (layout()) layout()->activate();
+            adjustSize();
         }
     }
 
@@ -394,20 +395,20 @@ class ExtruderWarningDialog : public Slic3r::GUI::BaseTransparentDPIFrame
 public:
     struct InputInfo
     {
-        wxPoint dialog_pos{wxPoint(400, 200)};
-        wxPoint ams_btn_pos{wxPoint(400, 200)};
+        QPoint dialog_pos{QPoint(400, 200)};
+        QPoint ams_btn_pos{QPoint(400, 200)};
     };
     ExtruderWarningDialog(InputInfo &input_info, std::string icon_name = "warning");
     ~ExtruderWarningDialog() override;
     void deal_ok();
     void update_info(InputInfo &info);
 
-    void set_custom_message(const wxString &message)
+    void set_custom_message(const QString &message)
     {
         if (m_finish_text) {
-            m_finish_text->SetLabel(message);
-            Layout();
-            Fit();
+            m_finish_text->setText(message);
+            if (layout()) layout()->activate();
+            adjustSize();
         }
     }
 

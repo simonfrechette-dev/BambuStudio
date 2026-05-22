@@ -1,373 +1,241 @@
-#include "libslic3r/libslic3r.h"
 #include "KBShortcutsDialog.hpp"
 #include "I18N.hpp"
-#include "libslic3r/Utils.hpp"
-#include "GUI.hpp"
-#include "Notebook.hpp"
-#include <wx/scrolwin.h>
-#include <wx/display.h>
-#include "GUI_App.hpp"
 #include "wxExtensions.hpp"
-#include "MainFrame.hpp"
-#include <wx/notebook.h>
+#include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QGridLayout>
+#include <QScrollArea>
+#include <QLabel>
+#include <QFont>
+#include <QStackedWidget>
+#include <QPushButton>
+#include <QFrame>
 
-namespace Slic3r {
-namespace GUI {
+namespace Slic3r { namespace GUI {
 
-wxDEFINE_EVENT(EVT_PREFERENCES_SELECT_TAB, wxCommandEvent);
-
-KBShortcutsDialog::KBShortcutsDialog()
-    : DPIDialog(static_cast<wxWindow*>(wxGetApp().mainframe), wxID_ANY,_L("Keyboard Shortcuts"),
-    wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE)
-{
-    // fonts
-    const wxFont& font = wxGetApp().normal_font();
-    const wxFont& bold_font = wxGetApp().bold_font();
-    SetFont(font);
-
-    std::string icon_path = (boost::format("%1%/images/BambuStudioTitle.ico") % resources_dir()).str();
-    SetIcon(wxIcon(encode_path(icon_path.c_str()), wxBITMAP_TYPE_ICO));
-
-    this->SetSizeHints(wxDefaultSize, wxDefaultSize);
-    this->SetBackgroundColour(wxColour(255, 255, 255));
-
-    wxBoxSizer *m_sizer_top = new wxBoxSizer(wxVERTICAL);
-
-    auto m_top_line = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(-1, 1), wxTAB_TRAVERSAL);
-    m_top_line->SetBackgroundColour(wxColour(166, 169, 170));
-
-    m_sizer_top->Add(m_top_line, 0, wxEXPAND, 0);
-    m_sizer_body = new wxBoxSizer(wxHORIZONTAL);
-
-    m_panel_selects = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
-    m_panel_selects->SetBackgroundColour(wxColour(248, 248, 248));
-    wxBoxSizer *m_sizer_left = new wxBoxSizer(wxVERTICAL);
-
-    m_sizer_left->Add(0, 0, 0, wxEXPAND | wxTOP, FromDIP(20));
-
-    m_sizer_left->Add(create_button(0, _L("Global")), 0, wxEXPAND, 0);
-    m_sizer_left->Add(create_button(1, _L("Prepare")), 0, wxEXPAND, 0);
-    m_sizer_left->Add(create_button(2, _L("Toolbar")), 0, wxEXPAND, 0);
-    m_sizer_left->Add(create_button(3, _L("Objects list")), 0, wxEXPAND, 0);
-    m_sizer_left->Add(create_button(4, _L("Preview")), 0, wxEXPAND, 0);
-
-    m_panel_selects->SetSizer(m_sizer_left);
-    m_panel_selects->Layout();
-    m_sizer_left->Fit(m_panel_selects);
-    m_sizer_body->Add(m_panel_selects, 0, wxEXPAND, 0);
-
-    m_sizer_right = new wxBoxSizer(wxHORIZONTAL);
-
-    m_sizer_right->Add(0, 0, 0, wxEXPAND | wxLEFT,  FromDIP(12));
-
-    m_simplebook = new wxSimplebook(this, wxID_ANY, wxDefaultPosition, wxSize(FromDIP(870), FromDIP(500)), 0);
-
-    m_sizer_right->Add(m_simplebook, 1, wxEXPAND, 0);
-    m_sizer_body->Add(m_sizer_right, 1, wxEXPAND, 0);
-    m_sizer_top->Add(m_sizer_body, 1, wxEXPAND, 0);
-
-    fill_shortcuts();
-    for (size_t i = 0; i < m_full_shortcuts.size(); ++i) {
-        wxPanel *page = create_page(m_simplebook, m_full_shortcuts[i], font, bold_font);
-        m_pages.push_back(page);
-        m_simplebook->AddPage(page, m_full_shortcuts[i].first.first, i == 0);
-    }
-
-    Bind(EVT_PREFERENCES_SELECT_TAB, &KBShortcutsDialog::OnSelectTabel, this);
-
-    SetSizer(m_sizer_top);
-    Layout();
-    Fit();
-    CenterOnParent();
-
-    // select first
-    auto event = wxCommandEvent(EVT_PREFERENCES_SELECT_TAB);
-    event.SetInt(0);
-    event.SetEventObject(this);
-    wxPostEvent(this, event);
-    wxGetApp().UpdateDlgDarkUI(this);
-}
-
-void KBShortcutsDialog::OnSelectTabel(wxCommandEvent &event)
-{
-    auto                   id = event.GetInt();
-    SelectHash::iterator i  = m_hash_selector.begin();
-    while (i != m_hash_selector.end()) {
-        Select *sel = i->second;
-        if (id == sel->m_index) {
-            sel->m_tab_button->SetBackgroundColour(StateColor::darkModeColorFor(wxColour("#FFFFFF")));
-            sel->m_tab_text->SetBackgroundColour(StateColor::darkModeColorFor(wxColour("#FFFFFF")));
-            sel->m_tab_text->SetFont(::Label::Head_13);
-            sel->m_tab_button->Refresh();
-            sel->m_tab_text->Refresh();
-
-            m_simplebook->SetSelection(id);
-        } else {
-            sel->m_tab_button->SetBackgroundColour(StateColor::darkModeColorFor(wxColour("#F8F8F8")));
-            sel->m_tab_text->SetBackgroundColour(StateColor::darkModeColorFor(wxColour("#F8F8F8")));
-            sel->m_tab_text->SetFont(::Label::Body_13);
-            sel->m_tab_button->Refresh();
-            sel->m_tab_text->Refresh();
-        }
-        i++;
-    }
-    wxGetApp().UpdateDlgDarkUI(this);
-}
-
-wxWindow *KBShortcutsDialog::create_button(int id, wxString text)
-{
-    auto tab_button = new wxWindow(m_panel_selects, wxID_ANY, wxDefaultPosition, wxSize( FromDIP(150),  FromDIP(28)), wxTAB_TRAVERSAL);
-
-    wxBoxSizer *sizer = new wxBoxSizer(wxHORIZONTAL);
-
-    sizer->Add(0, 0, 0, wxEXPAND | wxLEFT, FromDIP(22));
-
-    auto stext = new wxStaticText(tab_button, wxID_ANY, text, wxDefaultPosition, wxDefaultSize, 0);
-    stext->SetFont(::Label::Body_13);
-    stext->SetForegroundColour(wxColour(38, 46, 48));
-    stext->Wrap(-1);
-    sizer->Add(stext, 1, wxALIGN_CENTER, 0);
-
-    tab_button->Bind(wxEVT_LEFT_DOWN, [this, id](auto &e) {
-        auto event = wxCommandEvent(EVT_PREFERENCES_SELECT_TAB);
-        event.SetInt(id);
-        event.SetEventObject(this);
-        wxPostEvent(this, event);
-    });
-
-    stext->Bind(wxEVT_LEFT_DOWN, [this, id](wxMouseEvent &e) {
-        auto event = wxCommandEvent(EVT_PREFERENCES_SELECT_TAB);
-        event.SetInt(id);
-        event.SetEventObject(this);
-        wxPostEvent(this, event);
-    });
-
-    Select *sel                   = new Select;
-    sel->m_index                  = id;
-    sel->m_tab_button             = tab_button;
-    sel->m_tab_text               = stext;
-    m_hash_selector[sel->m_index] = sel;
-
-    tab_button->SetSizer(sizer);
-    tab_button->Layout();
-    return tab_button;
-}
-
-void KBShortcutsDialog::on_dpi_changed(const wxRect& suggested_rect)
-{
-    m_logo_bmp.msw_rescale();
-    m_header_bitmap->SetBitmap(m_logo_bmp.bmp());
-    msw_buttons_rescale(this, em_unit(), { wxID_OK });
-
-    Layout();
-    Fit();
-    Refresh();
-}
+// ---------------------------------------------------------------------------
+// KBShortcutsDialog
+// ---------------------------------------------------------------------------
 
 void KBShortcutsDialog::fill_shortcuts()
 {
-    const std::string& ctrl = GUI::shortkey_ctrl_prefix();
-    const std::string& alt = GUI::shortkey_alt_prefix();
-
-    if (wxGetApp().is_editor()) {
-        Shortcuts global_shortcuts = {
-            // File
-            { ctrl + "N", L("New Project") },
-            { ctrl + "O", L("Open Project") },
-            { ctrl + "S", L("Save Project") },
-            { ctrl + "Shift+S", L("Save Project as")},
-            // File>Import
-            { ctrl + "I", L("Import geometry data from STL/STEP/3MF/OBJ/AMF files") },
-            // File>Export
-            { ctrl + "G", L("Export plate sliced file")},
-            // Slice plate
-            { ctrl + "R", L("Slice plate")},
-            // Send to Print
-            { ctrl+ "Shift+G", L("Print plate")},
-
-            // Edit
-            { ctrl + "X", L("Cut") },
-            { ctrl + "C", L("Copy to clipboard") },
-            { ctrl + "V", L("Paste from clipboard") },
-            // Configuration
-            #ifdef __APPLE__
-                { ctrl + ",", L("Preferences") },
-            #else
-                { ctrl + "P", L("Preferences") },
-            #endif
-            //3Dconnexion control
-#ifndef __APPLE__
-            {ctrl + "Shift+M", L("Show/Hide 3Dconnexion devices settings dialog")},
-#else
-            {ctrl + "M", L("Show/Hide 3Dconnexion devices settings dialog")},
-#endif
-            // Switch table page
-            #ifndef __APPLE__
-                { ctrl + "Tab", L("Switch tab page")},
-            #endif
-            //DEL
-            #ifdef __APPLE__
-                {"BackSpace", L("Delete selected")},
-            #else
-                {"Delete", L("Delete selected")},
-            #endif
-            // Help
-#ifdef __WINDOWS__
-            { "Shift+Alt+?", L("Show keyboard shortcuts list") }
-#else
-            {"Shift+?", L("Show keyboard shortcuts list")}
-#endif
-        };
-        m_full_shortcuts.push_back({{_L("Global shortcuts"), ""}, global_shortcuts});
-
-        Shortcuts plater_shortcuts = {
-            { L("Left mouse button"), L("Rotate View") },
-            { L("Right mouse button"), L("Pan View") },
-            { L("Mouse wheel"), L("Zoom View") },
-            { "A", L("Arrange all objects") },
-            { L("Shift+A"), L("Arrange objects on selected plates") },
-
-            //{ "R", L("Auto orientates selected objects or all objects.If there are selected objects, it just orientates the selected ones.Otherwise, it will orientates all objects in the project.") },
-            {L("Shift+R"), L("Auto orientates selected objects or all objects.If there are selected objects, it just orientates the selected ones.Otherwise, it will orientates all objects in the current disk.")},
-
-            {L("Shift+Tab"), L("Collapse/Expand the sidebar")},
-            {L(ctrl+"Any arrow"), L("Movement in camera space")},
-            {L(alt+"Left mouse button"), L("Select a part")},
-            {L(ctrl+"Left mouse button"), L("Select multiple objects")},
-            {L("Shift+Left mouse button"), L("Select objects by rectangle")},
-            {L("Arrow Up"), L("Move selection 10 mm in positive Y direction")},
-            {L("Arrow Down"), L("Move selection 10 mm in negative Y direction")},
-            {L("Arrow Left"), L("Move selection 10 mm in negative X direction")},
-            {L("Arrow Right"), L("Move selection 10 mm in positive X direction")},
-            {L("Shift+Any arrow"), L("Movement step set to 1 mm")},
-            {"Esc", L("Deselect all")},
-            {"1-9", L("keyboard 1-9: set filament for object/part")},
-            {ctrl + "0", L("Camera view - Default")},
-            {ctrl + "1", L("Camera view - Top")},
-            {ctrl + "2", L("Camera view - Bottom")},
-            {ctrl + "3", L("Camera view - Front")},
-            {ctrl + "4", L("Camera view - Behind")},
-            {ctrl + "5", L("Camera view - Left")},
-            {ctrl + "6", L("Camera view - Right")},
-            {ctrl + "7", L("Camera view - Isometric")},
-            {       "Z", L("Camera view - Fit to scene or selection")},
-            {ctrl + "W", L("Reset Window Layout")},
-            {ctrl + "E", L("Show Labels by Layer")},
-            {L("Shift+E"), L("Show Labels by Object")},
-            {ctrl + "L", L("Show &Overhang")},
-
-            {ctrl + "A", L("Select all objects")},
-            {ctrl + L("Shift+D"), L("Delete all")},
-            {ctrl + "Z", L("Undo")},
-            {ctrl + "Shift+Z", L("Redo")},
-            {ctrl + "Y", L("Redo")},
-            { "M", L("Gizmo move") },
-            { "S", L("Gizmo scale") },
-            { "R", L("Gizmo rotate") },
-            { "C", L("Gizmo cut") },
-            { "F", L("Gizmo Place face on bed") },
-            { "L", L("Gizmo SLA support points") },
-            { "P", L("Gizmo FDM paint-on seam") },
-
-        };
-        m_full_shortcuts.push_back({ { _L("Plater"), "" }, plater_shortcuts });
-
-        Shortcuts gizmos_shortcuts = {
-            {"Esc", L("Deselect all")},
-            {ctrl + L("Mouse wheel"), L("Support/Color Painting: adjust pen radius")},
-            {alt + L("Mouse wheel"), L("Support/Color Painting: adjust section position")},
-        };
-        m_full_shortcuts.push_back({{_L("Gizmo"), ""}, gizmos_shortcuts});
-
-        Shortcuts object_list_shortcuts = {
-            {"1-9", L("Set extruder number for the objects and parts") },
-#ifdef __APPLE__
-            {"BackSpace", L("Delete objects, parts, modifiers  ")},
-#else
-            {"Delete", L("Delete objects, parts, modifiers  ")},
-#endif
-            {"Esc", L("Deselect all")},
-            {ctrl + "C", L("Copy to clipboard")},
-            {ctrl + "V", L("Paste from clipboard")},
-            {ctrl + "X", L("Cut")},
-            {ctrl + "A", L("Select all objects")},
-            {ctrl + "K", L("Clone selected")},
-            {ctrl + "Z", L("Undo")},
-            {ctrl + "Shift+Z", L("Redo")},
-            {ctrl + "Y", L("Redo")},
-            {L("Space"), L("Select the object/part and press space to change the name")},
-            {L("Mouse click"), L("Select the object/part and mouse click to change the name")},
-        };
-        m_full_shortcuts.push_back({ { _L("Objects List"), "" }, object_list_shortcuts });
-    }
-
-    Shortcuts preview_shortcuts = {
-        { L("Arrow Up"),    L("Vertical slider - Move active thumb Up")},
-        { L("Arrow Down"),  L("Vertical slider - Move active thumb Down")},
-        { L("Arrow Left"),  L("Horizontal slider - Move active thumb Left")},
-        { L("Arrow Right"), L("Horizontal slider - Move active thumb Right")},
-        { "L", L("On/Off one layer mode of the vertical slider")},
-        {L("Shift+Any arrow"), L("Move slider 5x faster")},
-        {L("Shift+Mouse wheel"), L("Move slider 5x faster")},
-		{L(ctrl+"Any arrow"), L("Move slider 5x faster")},
-		{L(ctrl+"Mouse wheel"), L("Move slider 5x faster")},
-
+    // --- 3D Scene shortcuts ---
+    Shortcuts scene_shortcuts = {
+        {"A",                  std::string(_L("Arrange objects").toStdString())},
+        {"Shift+A",            std::string(_L("Arrange objects on current plate").toStdString())},
+        {"L",                  std::string(_L("Split to objects").toStdString())},
+        {"M",                  std::string(_L("Split to parts").toStdString())},
+        {"Delete",             std::string(_L("Delete selected").toStdString())},
+        {"Ctrl+A",             std::string(_L("Select all objects").toStdString())},
+        {"Ctrl+C",             std::string(_L("Copy").toStdString())},
+        {"Ctrl+V",             std::string(_L("Paste").toStdString())},
+        {"Ctrl+D",             std::string(_L("Duplicate").toStdString())},
+        {"Ctrl+Z",             std::string(_L("Undo").toStdString())},
+        {"Ctrl+Y",             std::string(_L("Redo").toStdString())},
+        {"Ctrl+S",             std::string(_L("Save").toStdString())},
+        {"Ctrl+Shift+S",       std::string(_L("Save as").toStdString())},
+        {"F5",                 std::string(_L("Slice").toStdString())},
+        {"+",                  std::string(_L("Zoom in").toStdString())},
+        {"-",                  std::string(_L("Zoom out").toStdString())},
+        {"Z",                  std::string(_L("Zoom to fit").toStdString())},
+        {"Shift+Z",            std::string(_L("Zoom to selection").toStdString())},
+        {"B",                  std::string(_L("Zoom to bed").toStdString())},
+        {"N",                  std::string(_L("Show next layer").toStdString())},
+        {"I",                  std::string(_L("Scale up by 10%").toStdString())},
+        {"O",                  std::string(_L("Scale down by 10%").toStdString())},
     };
-    m_full_shortcuts.push_back({ { _L("Preview"), "" }, preview_shortcuts });
+    m_full_shortcuts.push_back({{ _L("3D Scene"), "" }, scene_shortcuts});
+
+    // --- Preview shortcuts ---
+    Shortcuts preview_shortcuts = {
+        {"Arrow Up",           std::string(_L("Move layer up").toStdString())},
+        {"Arrow Down",         std::string(_L("Move layer down").toStdString())},
+        {"Shift+Arrow Up",     std::string(_L("Move layer up by 10").toStdString())},
+        {"Shift+Arrow Down",   std::string(_L("Move layer down by 10").toStdString())},
+        {"W/S",                std::string(_L("Move layer range selection up/down").toStdString())},
+    };
+    m_full_shortcuts.push_back({{ _L("Preview"), "" }, preview_shortcuts});
+
+    // --- Gizmo: Move ---
+    Shortcuts move_shortcuts = {
+        {"Arrow Left/Right",   std::string(_L("Move along X axis").toStdString())},
+        {"Arrow Up/Down",      std::string(_L("Move along Y axis").toStdString())},
+        {"Shift+...",          std::string(_L("Move by 1 mm step").toStdString())},
+    };
+    m_full_shortcuts.push_back({{ _L("Gizmo: Move"), "" }, move_shortcuts});
+
+    // --- Gizmo: Rotate ---
+    Shortcuts rotate_shortcuts = {
+        {"Arrow Left/Right",   std::string(_L("Rotate around Z").toStdString())},
+        {"Arrow Up/Down",      std::string(_L("Rotate around X").toStdString())},
+        {"Shift+...",          std::string(_L("Rotate by 1 deg step").toStdString())},
+    };
+    m_full_shortcuts.push_back({{ _L("Gizmo: Rotate"), "" }, rotate_shortcuts});
 }
 
-wxPanel* KBShortcutsDialog::create_page(wxWindow* parent, const ShortcutsItem& shortcuts, const wxFont& font, const wxFont& bold_font)
+KBShortcutsDialog::KBShortcutsDialog()
+    : DPIDialog(nullptr)
 {
-    wxPanel* main_page = new wxPanel(parent);
-    wxBoxSizer* main_sizer = new wxBoxSizer(wxVERTICAL);
+    setWindowTitle(_L("Keyboard shortcuts"));
+    setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
+    setAttribute(Qt::WA_StyledBackground, true);
+    setStyleSheet("background-color: white;");
+    setMinimumSize(640, 480);
 
-    if (!shortcuts.first.second.empty()) {
-        main_sizer->AddSpacer(FromDIP(10));
-        wxBoxSizer* info_sizer = new wxBoxSizer(wxHORIZONTAL);
-        info_sizer->AddStretchSpacer();
-        info_sizer->Add(new wxStaticText(main_page, wxID_ANY, shortcuts.first.second), 0);
-        info_sizer->AddStretchSpacer();
-        main_sizer->Add(info_sizer, 0, wxEXPAND);
-        main_sizer->AddSpacer(FromDIP(10));
+    fill_shortcuts();
+
+    QFont normal_font = font();
+    QFont bold_font = normal_font;
+    bold_font.setBold(true);
+
+    auto *outer = new QVBoxLayout(this);
+    outer->setContentsMargins(0, 0, 0, 0);
+    outer->setSpacing(0);
+
+    // Header with logo
+    auto *header_widget = create_header(this, bold_font);
+    outer->addWidget(header_widget);
+
+    // Body: tab selector (left) + stacked pages (right)
+    m_sizer_body = new QHBoxLayout;
+    m_sizer_body->setContentsMargins(8, 8, 8, 8);
+    m_sizer_body->setSpacing(0);
+
+    m_panel_selects = new QWidget(this);
+    auto *select_vbox = new QVBoxLayout(m_panel_selects);
+    select_vbox->setContentsMargins(0, 0, 0, 0);
+    select_vbox->setSpacing(0);
+
+    m_simplebook = new QStackedWidget(this);
+
+    for (int i = 0; i < (int)m_full_shortcuts.size(); ++i) {
+        const auto &item = m_full_shortcuts[i];
+        auto *tab_btn = create_button(i, item.first.first);
+        select_vbox->addWidget(tab_btn);
+
+        auto *page = create_page(m_simplebook, item, normal_font, bold_font);
+        m_pages.push_back(page);
+        m_simplebook->addWidget(page);
+    }
+    select_vbox->addStretch(1);
+
+    // Select the first tab
+    if (!m_hash_selector.empty()) {
+        auto *sel = m_hash_selector[0];
+        if (sel) {
+            m_simplebook->setCurrentIndex(0);
+        }
     }
 
-    int items_count = (int) shortcuts.second.size();
-    wxScrolledWindow *scrollable_panel = new wxScrolledWindow(main_page);
-    wxGetApp().UpdateDarkUI(scrollable_panel);
-    scrollable_panel->SetScrollbars(20, 20, 50, 50);
-    scrollable_panel->SetInitialSize(wxSize(FromDIP(850), FromDIP(450)));
+    m_sizer_right = new QVBoxLayout;
+    m_sizer_right->addWidget(m_simplebook, 1);
 
-    wxBoxSizer *     scrollable_panel_sizer = new wxBoxSizer(wxVERTICAL);
-    wxFlexGridSizer *grid_sizer             = new wxFlexGridSizer(items_count, 2, FromDIP(10), FromDIP(20));
+    m_sizer_body->addWidget(m_panel_selects);
+    m_sizer_body->addLayout(m_sizer_right, 1);
 
-    for (int i = 0; i < items_count; ++i) {
-        const auto &[shortcut, description] = shortcuts.second[i];
-        wxStaticText* key                    = nullptr;
-        if (shortcut == "Delete" || shortcut == "BackSpace") {
-            key = new wxStaticText(scrollable_panel, wxID_ANY, shortcut);
-        }
-        else {
-            key = new wxStaticText(scrollable_panel, wxID_ANY, _(shortcut));
-        }
-        key->SetForegroundColour(wxColour(50, 58, 61));
-        key->SetFont(bold_font);
-        grid_sizer->Add(key, 0, wxALIGN_CENTRE_VERTICAL);
+    outer->addLayout(m_sizer_body, 1);
 
-        auto desc = new wxStaticText(scrollable_panel, wxID_ANY, _(description));
-        desc->SetFont(font);
-        desc->SetForegroundColour(wxColour(50, 58, 61));
-        desc->Wrap(FromDIP(600));
-        grid_sizer->Add(desc, 0, wxALIGN_CENTRE_VERTICAL);
-    }
+    // Close button
+    auto *btn_row = new QHBoxLayout;
+    btn_row->setContentsMargins(8, 4, 8, 8);
+    btn_row->addStretch(1);
+    auto *close_btn = new QPushButton(_L("Close"), this);
+    connect(close_btn, &QPushButton::clicked, this, &QDialog::accept);
+    btn_row->addWidget(close_btn);
+    outer->addLayout(btn_row);
 
-    scrollable_panel_sizer->Add(grid_sizer, 1, wxEXPAND | wxALL, FromDIP(20));
-    scrollable_panel->SetSizer(scrollable_panel_sizer);
-
-    main_sizer->Add(scrollable_panel, 1, wxEXPAND);
-    main_page->SetSizer(main_sizer);
-
-    return main_page;
+    adjustSize();
 }
 
-} // namespace GUI
-} // namespace Slic3r
+QWidget *KBShortcutsDialog::create_button(int id, QString text)
+{
+    auto *btn = new QPushButton(text, m_panel_selects);
+    btn->setFlat(true);
+    btn->setCheckable(true);
+    if (id == 0) btn->setChecked(true);
+
+    auto *sel = new Select;
+    sel->m_index      = id;
+    sel->m_tab_button = btn;
+    sel->m_tab_text   = btn;
+    m_hash_selector[id] = sel;
+
+    connect(btn, &QPushButton::clicked, this, [this, id] {
+        m_simplebook->setCurrentIndex(id);
+        for (auto &[idx, s] : m_hash_selector) {
+            auto *b = qobject_cast<QPushButton *>(s->m_tab_button);
+            if (b) b->setChecked(idx == id);
+        }
+    });
+    return btn;
+}
+
+void KBShortcutsDialog::OnSelectTabel(QEvent &) {}
+
+QWidget *KBShortcutsDialog::create_header(QWidget *parent, const QFont &bold_font)
+{
+    auto *w = new QWidget(parent);
+    w->setStyleSheet("background-color: #1F2637;");
+    auto *hbox = new QHBoxLayout(w);
+    hbox->setContentsMargins(16, 12, 16, 12);
+
+    m_logo_bmp   = ScalableBitmap(w, "BambuStudio_about", 32);
+    m_header_bitmap = new QLabel(w);
+    if (!m_logo_bmp.bmp().isNull())
+        m_header_bitmap->setPixmap(m_logo_bmp.bmp());
+    hbox->addWidget(m_header_bitmap);
+
+    auto *title = new QLabel(_L("Keyboard shortcuts"), w);
+    title->setFont(bold_font);
+    title->setStyleSheet("color: white;");
+    hbox->addWidget(title);
+    hbox->addStretch(1);
+    return w;
+}
+
+QWidget *KBShortcutsDialog::create_page(QWidget *parent,
+                                         const ShortcutsItem &item,
+                                         const QFont &font,
+                                         const QFont &bold_font)
+{
+    auto *scroll = new QScrollArea(parent);
+    scroll->setWidgetResizable(true);
+    scroll->setFrameShape(QFrame::NoFrame);
+
+    auto *inner = new QWidget;
+    auto *grid  = new QGridLayout(inner);
+    grid->setContentsMargins(12, 8, 12, 8);
+    grid->setSpacing(6);
+
+    // Column header
+    auto *hdr_key = new QLabel(_L("Key"), inner);
+    hdr_key->setFont(bold_font);
+    auto *hdr_desc = new QLabel(_L("Description"), inner);
+    hdr_desc->setFont(bold_font);
+    grid->addWidget(hdr_key,  0, 0);
+    grid->addWidget(hdr_desc, 0, 1);
+
+    // Separator
+    auto *sep = new QFrame(inner);
+    sep->setFrameShape(QFrame::HLine);
+    sep->setFrameShadow(QFrame::Sunken);
+    grid->addWidget(sep, 1, 0, 1, 2);
+
+    int row = 2;
+    for (const auto &sh : item.second) {
+        auto *key_lbl  = new QLabel(QString::fromStdString(sh.first),  inner);
+        auto *desc_lbl = new QLabel(QString::fromStdString(sh.second), inner);
+        key_lbl->setFont(font);
+        desc_lbl->setFont(font);
+        grid->addWidget(key_lbl,  row, 0);
+        grid->addWidget(desc_lbl, row, 1);
+        ++row;
+    }
+    grid->setColumnStretch(1, 1);
+    scroll->setWidget(inner);
+    return scroll;
+}
+
+void KBShortcutsDialog::on_dpi_changed(const QRect &) {}
+
+}} // namespace Slic3r::GUI

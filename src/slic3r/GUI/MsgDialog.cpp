@@ -1,887 +1,612 @@
-﻿#include "MsgDialog.hpp"
+// Qt6 port of MsgDialog.cpp
+#include "MsgDialog.hpp"
 
-#include <wx/settings.h>
-#include <wx/sizer.h>
-#include <wx/stattext.h>
-#include <wx/button.h>
-#include <wx/statbmp.h>
-#include <wx/scrolwin.h>
-#include <wx/clipbrd.h>
-#include <wx/checkbox.h>
-#include <wx/html/htmlwin.h>
-#include <wx/textctrl.h>
+#include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QLabel>
+#include <QFrame>
+#include <QPushButton>
+#include <QApplication>
+#include <QStyle>
+#include <QDesktopServices>
+#include <QUrl>
+#include <QScrollArea>
+#include <QSizePolicy>
+#include <QTextEdit>
 
-#include <boost/algorithm/string/replace.hpp>
-
-#include "Widgets/Label.hpp"
-#include "libslic3r/libslic3r.h"
-#include "libslic3r/Utils.hpp"
-#include "GUI.hpp"
-#include "I18N.hpp"
-//#include "ConfigWizard.hpp"
-#include "wxExtensions.hpp"
-#include "slic3r/GUI/MainFrame.hpp"
 #include "GUI_App.hpp"
-#define MSG_DLG_MAX_SIZE wxSize(-1, FromDIP(464))//notice:ban setting the maximum width value
-namespace Slic3r {
-namespace GUI {
+#include "I18N.hpp"
+#include "Widgets/Button.hpp"
+#include "Widgets/CheckBox.hpp"
 
-MsgDialog::MsgDialog(wxWindow *parent, const wxString &title, const wxString &headline, long style, wxBitmap bitmap, const wxString &forward_str)
-    : DPIDialog(parent ? parent : dynamic_cast<wxWindow*>(wxGetApp().mainframe), wxID_ANY, title, wxDefaultPosition, wxSize(360, -1),wxDEFAULT_DIALOG_STYLE)
-    , boldfont(wxGetApp().normal_font())
-    , content_sizer(new wxBoxSizer(wxVERTICAL))
-    , btn_sizer(new wxBoxSizer(wxHORIZONTAL))
+namespace Slic3r { namespace GUI {
+
+// ---------------------------------------------------------------------------
+// MsgDialog — base
+// ---------------------------------------------------------------------------
+
+MsgDialog::MsgDialog(QWidget *parent,
+                     const QString &title,
+                     const QString &headline,
+                     long           style,
+                     const QPixmap &bitmap,
+                     const QString &forward_str)
+    : DPIDialog(parent)
     , m_forward_str(forward_str)
 {
-    boldfont.SetWeight(wxFONTWEIGHT_BOLD);
-    SetBackgroundColour(0xFFFFFF);
-    SetFont(wxGetApp().normal_font());
-    CenterOnParent();
+    setWindowTitle(title);
+    setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
+    setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
 
-    auto *main_sizer = new wxBoxSizer(wxVERTICAL);
-    auto *topsizer = new wxBoxSizer(wxHORIZONTAL);
-    auto *rightsizer = new wxBoxSizer(wxVERTICAL);
+    boldfont = font();
+    boldfont.setBold(true);
 
-    //auto *headtext = new wxStaticText(this, wxID_ANY, headline);
-    //headtext->SetFont(boldfont);
- //   headtext->Wrap(CONTENT_WIDTH*wxGetApp().em_unit());
-    //rightsizer->Add(headtext);
-    //rightsizer->AddSpacer(VERT_SPACING);
+    // Outer vertical layout
+    auto *outer = new QVBoxLayout(this);
+    outer->setContentsMargins(BORDER, BORDER, BORDER, BORDER);
+    outer->setSpacing(VERT_SPACING);
 
-    rightsizer->Add(content_sizer, 1, wxEXPAND | wxRIGHT, FromDIP(10));
+    // Top row: logo + content area
+    auto *top_row = new QHBoxLayout;
+    top_row->setSpacing(LOGO_GAP);
+    outer->addLayout(top_row);
 
-    logo = new wxStaticBitmap(this, wxID_ANY, bitmap.IsOk() ? bitmap : wxNullBitmap);
-    topsizer->Add(LOGO_SPACING, 0, 0, wxEXPAND, 0);
-    topsizer->Add(logo, 0, wxTOP, BORDER);
-    topsizer->Add(LOGO_GAP, 0, 0, wxEXPAND, 0);
-    topsizer->Add(rightsizer, 1, wxTOP | wxEXPAND, BORDER);
+    // Logo label (left) — use actual BambuStudio SVG icons
+    logo = new QLabel(this);
+    logo->setAlignment(Qt::AlignTop | Qt::AlignLeft);
+    logo->setFixedSize(LOGO_SPACING, LOGO_SPACING);
+    if (!bitmap.isNull()) {
+        logo->setPixmap(bitmap.scaled(LOGO_SPACING, LOGO_SPACING, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    } else {
+        std::string icon_name = "info";
+        if (style & MsgICON_ERROR)
+            icon_name = "error";
+        else if (style & MsgICON_WARN)
+            icon_name = "dev_warning";
+        else if (style & MsgICON_QUESTION)
+            icon_name = "question";
+        ScalableBitmap sb(this, icon_name, LOGO_SPACING);
+        if (!sb.bmp().isNull())
+            logo->setPixmap(sb.bmp());
+    }
+    top_row->addWidget(logo, 0, Qt::AlignTop);
 
-    main_sizer->Add(topsizer, 1, wxEXPAND);
+    // Right-side content column
+    auto *right_col = new QVBoxLayout;
+    right_col->setSpacing(VERT_SPACING / 2);
+    top_row->addLayout(right_col, 1);
 
-    m_dsa_sizer = new wxBoxSizer(wxHORIZONTAL);
-    btn_sizer->Add(0, 0, 0, wxLEFT, FromDIP(120));
-    btn_sizer->AddStretchSpacer();
-    btn_sizer->Add(m_dsa_sizer, 0, wxEXPAND);
-    main_sizer->Add(btn_sizer, 0, wxBOTTOM | wxRIGHT | wxEXPAND | wxTOP, FromDIP(10));
+    // Headline
+    if (!headline.isEmpty()) {
+        auto *hl = new QLabel(headline, this);
+        hl->setFont(boldfont);
+        hl->setWordWrap(true);
+        right_col->addWidget(hl);
+    }
+
+    // content_sizer: subclasses add widgets here
+    content_sizer = right_col;
+
+    // Horizontal separator
+    auto *sep = new QFrame(this);
+    sep->setFrameShape(QFrame::HLine);
+    sep->setFrameShadow(QFrame::Sunken);
+    outer->addWidget(sep);
+
+    // DSA sizer row (hidden initially)
+    m_dsa_sizer = new QHBoxLayout;
+    outer->addLayout(m_dsa_sizer);
+
+    // Button row
+    btn_sizer = new QHBoxLayout;
+    btn_sizer->addStretch(1);
+    btn_sizer->setSpacing(BTN_SPACING);
+    outer->addLayout(btn_sizer);
 
     apply_style(style);
-    SetSizerAndFit(main_sizer);
-    wxGetApp().UpdateDlgDarkUI(this);
 }
 
- MsgDialog::~MsgDialog()
-{
-    for (auto mb : m_buttons) { delete mb.second->buttondata ; delete mb.second; }
-}
+MsgDialog::~MsgDialog() = default;
 
-void MsgDialog::show_dsa_button(wxString const &title)
+void MsgDialog::on_dpi_changed(const QRect &) {}
+
+Button *MsgDialog::add_button(int btn_id, bool set_focus, const QString &label)
 {
-    m_checkbox_dsa = new CheckBox(this);
-    m_dsa_sizer->Add(m_checkbox_dsa, 0, wxALL | wxALIGN_CENTER, FromDIP(2));
-    m_checkbox_dsa->Bind(wxEVT_TOGGLEBUTTON, [this](wxCommandEvent& e) {
-        auto event = wxCommandEvent(EVT_CHECKBOX_CHANGE);
-        event.SetInt(m_checkbox_dsa->GetValue()?1:0);
-        event.SetEventObject(this);
-        wxPostEvent(this, event);
-        e.Skip();
+    QString lbl = label;
+    if (lbl.isEmpty()) {
+        switch (btn_id) {
+        case MsgID_OK:     lbl = _L("OK");     break;
+        case MsgID_CANCEL: lbl = _L("Cancel"); break;
+        case MsgID_YES:    lbl = _L("Yes");    break;
+        case MsgID_NO:     lbl = _L("No");     break;
+        case MsgID_APPLY:  lbl = _L("Apply");  break;
+        case MsgID_CLOSE:  lbl = _L("Close");  break;
+        case MsgID_HELP:   lbl = _L("Help");   break;
+        default:           lbl = _L("OK");     break;
+        }
+    }
+
+    auto *btn = new Button(this, "");
+    btn->setText(lbl);
+
+    // Primary buttons (OK/Yes/Apply) get green accent style; secondary stay white
+    bool is_primary = (btn_id == MsgID_OK || btn_id == MsgID_YES || btn_id == MsgID_APPLY);
+    btn->setMinimumSize(QSize(58, 24));
+    if (is_primary)
+        btn->SetValue(true);
+
+    // Wire accept / reject
+    connect(btn, &Button::clicked, this, [this, btn_id]() {
+        switch (btn_id) {
+        case MsgID_OK:
+        case MsgID_YES:
+        case MsgID_APPLY:
+        case MsgID_CLOSE:
+            done(btn_id);
+            break;
+        case MsgID_CANCEL:
+        case MsgID_NO:
+        default:
+            done(btn_id);
+            break;
+        }
     });
 
-    auto  m_text_dsa = new wxStaticText(this, wxID_ANY, title.IsEmpty() ? _L("Don't show again") : title, wxDefaultPosition, wxDefaultSize, 0);
-    m_dsa_sizer->Add(m_text_dsa, 0, wxALL | wxALIGN_CENTER, FromDIP(2));
-    m_text_dsa->SetFont(::Label::Body_13);
-    m_text_dsa->SetForegroundColour(StateColor::darkModeColorFor(wxColour("#323A3D")));
-    btn_sizer->Layout();
-    Fit();
-}
-
-bool MsgDialog::get_checkbox_state()
-{
-    if (m_checkbox_dsa) {
-        return m_checkbox_dsa->GetValue();
-    }
-    return false;
-}
-
-void MsgDialog::on_dpi_changed(const wxRect &suggested_rect)
- {
-     if (m_buttons.size() > 0) {
-         MsgButtonsHash::iterator i = m_buttons.begin();
-
-         while (i != m_buttons.end()) {
-             MsgButton *bd   = i->second;
-             wxSize     bsize;
-
-
-             switch (bd->buttondata->type) {
-                case ButtonSizeNormal:bsize = MSG_DIALOG_BUTTON_SIZE;break;
-                case ButtonSizeMiddle: bsize = MSG_DIALOG_MIDDLE_BUTTON_SIZE; break;
-                case ButtonSizeLong: bsize = MSG_DIALOG_LONG_BUTTON_SIZE; break;
-                default: break;
-             }
-
-             bd->buttondata->button->SetMinSize(bsize);
-             i++;
-         }
-     }
- }
-
-void MsgDialog::SetButtonLabel(wxWindowID btn_id, const wxString& label, bool set_focus/* = false*/)
-{
-    if (Button* btn = get_button(btn_id)) {
-        btn->SetLabel(label);
-        if (set_focus)
-            btn->SetFocus();
-    }
-}
-
-Button* MsgDialog::add_button(wxWindowID btn_id, bool set_focus /*= false*/, const wxString& label/* = wxString()*/)
-{
-    Button* btn = new Button(this, label, "", 0, 0, btn_id);
-    ButtonSizeType type;
-
-    if (label.length() < 5) {
-        type = ButtonSizeNormal;
-        btn->SetMinSize(MSG_DIALOG_BUTTON_SIZE); }
-    else if (label.length() >= 5 && label.length() < 8) {
-        type = ButtonSizeMiddle;
-        btn->SetMinSize(MSG_DIALOG_MIDDLE_BUTTON_SIZE);
-    } else {
-        type = ButtonSizeLong;
-        btn->SetMinSize(MSG_DIALOG_LONG_BUTTON_SIZE);
-    }
-
-    btn->SetCornerRadius(FromDIP(12));
-    StateColor btn_bg_green(
-        std::pair<wxColour, int>(wxColour(27, 136, 68), StateColor::Pressed),
-        std::pair<wxColour, int>(wxColour(61, 203, 115), StateColor::Hovered),
-        std::pair<wxColour, int>(wxColour(0, 174, 66), StateColor::Normal)
-    );
-
-    StateColor btn_bd_green(
-        std::pair<wxColour, int>(wxColour(0, 174, 66), StateColor::Normal)
-    );
-
-    StateColor btn_text_green(
-        std::pair<wxColour, int>(wxColour(255, 255, 254), StateColor::Normal)
-    );
-
-    StateColor btn_bg_white(
-        std::pair<wxColour, int>(wxColour(206, 206, 206), StateColor::Pressed),
-        std::pair<wxColour, int>(wxColour(238, 238, 238), StateColor::Hovered),
-        std::pair<wxColour, int>(wxColour(255, 255, 255), StateColor::Normal)
-    );
-
-    StateColor btn_bd_white(
-        std::pair<wxColour, int>(wxColour(38, 46, 48), StateColor::Normal)
-    );
-
-    StateColor btn_text_white(
-        std::pair<wxColour, int>(wxColour(38, 46, 48), StateColor::Normal)
-    );
-
-    if (set_focus) {
-        btn->SetBackgroundColor(btn_bg_green);
-        btn->SetBorderColor(btn_bd_green);
-        btn->SetTextColor(btn_text_green);
-    } else {
-        btn->SetBackgroundColor(btn_bg_white);
-        btn->SetBorderColor(btn_bd_white);
-        btn->SetTextColor(btn_text_white);
-    }
-
+    btn_sizer->addWidget(btn);
     if (set_focus)
-        btn->SetFocus();
-    btn_sizer->Add(btn, 0, wxRIGHT | wxALIGN_CENTER_VERTICAL, BTN_SPACING);
-    btn->Bind(wxEVT_BUTTON, [this, btn_id](wxCommandEvent&) { EndModal(btn_id); });
+        btn->setFocus();
 
-    MsgButton *mb = new MsgButton;
-    ButtonData *bd = new ButtonData;
-
+    auto *mb = new MsgButton;
+    mb->id = QString::number(btn_id);
+    auto *bd = new ButtonData;
     bd->button = btn;
-    bd->type   = type;
-
-    mb->id        = wxString::Format("%d", m_buttons.size());
+    bd->type = ButtonSizeNormal;
     mb->buttondata = bd;
-    m_buttons[ wxString::Format("%d", m_buttons.size())] = mb;
-    return btn;
-};
+    m_buttons.insert(mb->id, mb);
 
-Button* MsgDialog::get_button(wxWindowID btn_id){
-    return static_cast<Button*>(FindWindowById(btn_id, this));
+    return btn;
+}
+
+Button *MsgDialog::get_button(int btn_id)
+{
+    QString key = QString::number(btn_id);
+    auto it = m_buttons.find(key);
+    if (it != m_buttons.end())
+        return it.value()->buttondata->button;
+    return nullptr;
 }
 
 void MsgDialog::apply_style(long style)
 {
-    bool focus = (style & wxNO_DEFAULT) == 0;
-    if (style & wxFORWARD)
-        add_button(wxFORWARD, true, _L("Go to") + " " + m_forward_str);
-    if (style & wxOK) {
-        if (style & wxFORWARD) { add_button(wxID_OK, false, _L("Later")); }
-        else {
-            add_button(wxID_OK, focus, _L("OK"));
-        }
+    if (style & MsgYES_NO) {
+        add_button(MsgID_NO,  false);
+        add_button(MsgID_YES, true);
+    } else if (style & MsgOK) {
+        add_button(MsgID_OK, true);
+        if (style & MsgCANCEL)
+            add_button(MsgID_CANCEL, false);
+    } else if (style & MsgCANCEL) {
+        add_button(MsgID_CANCEL, false);
     }
-    if (style & wxYES)      add_button(wxID_YES, focus, _L("Yes"));
-    if (style & wxNO)       add_button(wxID_NO, false,_L("No"));
-    if (style & wxCANCEL)   add_button(wxID_CANCEL, false, _L("Cancel"));
-
-    logo->SetBitmap( create_scaled_bitmap(style & wxAPPLY        ? "completed" :
-                                          style & wxICON_WARNING        ? "obj_warning" :
-                                          style & wxICON_INFORMATION    ? "info"        :
-                                          style & wxICON_QUESTION       ? "question"    : "BambuStudio", this, 64, style & wxICON_ERROR));
 }
 
 void MsgDialog::finalize()
 {
-    Layout();
-    Fit();
-    CenterOnParent();
-    wxGetApp().UpdateDlgDarkUI(this);
+    setMinimumWidth(CONTENT_WIDTH + LOGO_SPACING + LOGO_GAP + 2 * BORDER);
+    adjustSize();
 }
 
-
-// Text shown as HTML, so that mouse selection and Ctrl-V to copy will work.
-static void add_msg_content(wxWindow   *parent,
-                            wxBoxSizer *content_sizer,
-                            wxString    msg,
-                            bool        monospaced_font = false,
-                            bool        is_marked_msg   = false,
-                            const wxString &link_text = "",
-                            std::function<void(const wxString &)> link_callback = nullptr)
+void MsgDialog::show_dsa_button(const QString &title)
 {
-    wxHtmlWindow* html = new wxHtmlWindow(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxHW_SCROLLBAR_AUTO);
-    html->SetBackgroundColour(StateColor::darkModeColorFor(*wxWHITE));
-
-    // count lines in the message
-    int msg_lines = 0;
-    if (!monospaced_font) {
-        int line_len = 55;// count of symbols in one line
-        int start_line = 0;
-        for (auto i = msg.begin(); i != msg.end(); ++i) {
-            if (*i == '\n') {
-                int cur_line_len = i - msg.begin() - start_line;
-                start_line = i - msg.begin();
-                if (cur_line_len == 0 || line_len > cur_line_len)
-                    msg_lines++;
-                else
-                    msg_lines += std::lround((double)(cur_line_len) / line_len);
-            }
-        }
-        msg_lines++;
-    }
-
-    wxFont      font = wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT);
-    wxFont      monospace = wxGetApp().code_font();
-    wxColour    text_clr = wxGetApp().get_label_clr_default();
-    wxColour    bgr_clr = parent->GetBackgroundColour(); //wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW);
-    auto        text_clr_str = wxString::Format(wxT("#%02X%02X%02X"), text_clr.Red(), text_clr.Green(), text_clr.Blue());
-    auto        bgr_clr_str = wxString::Format(wxT("#%02X%02X%02X"), bgr_clr.Red(), bgr_clr.Green(), bgr_clr.Blue());
-    const int   font_size = font.GetPointSize();
-    int         size[] = { font_size, font_size, font_size, font_size, font_size, font_size, font_size };
-    html->SetFonts(font.GetFaceName(), monospace.GetFaceName(), size);
-    html->SetBorders(2);
-
-    // calculate html page size from text
-    wxSize page_size;
-    int em = wxGetApp().em_unit();
-    if (!wxGetApp().mainframe) {
-        // If mainframe is nullptr, it means that GUI_App::on_init_inner() isn't completed
-        // (We just show information dialog about configuration version now)
-        // And as a result the em_unit value wasn't created yet
-        // So, calculate it from the scale factor of Dialog
-#if defined(__WXGTK__)
-        // Linux specific issue : get_dpi_for_window(this) still doesn't responce to the Display's scale in new wxWidgets(3.1.3).
-        // So, initialize default width_unit according to the width of the one symbol ("m") of the currently active font of this window.
-        em = std::max<size_t>(10, parent->GetTextExtent("m").x - 1);
-#else
-        double scale_factor = (double)get_dpi_for_window(parent) / (double)DPI_DEFAULT;
-        em = std::max<size_t>(10, 10.0f * scale_factor);
-#endif // __WXGTK__
-    }
-    auto info_width = 68 * em;
-    // if message containes the table
-    if (msg.Contains("<tr>")) {
-        int lines = msg.Freq('\n') + 1;
-        int pos = 0;
-        while (pos < (int)msg.Len() && pos != wxNOT_FOUND) {
-            pos = msg.find("<tr>", pos + 1);
-            lines += 2;
-        }
-        int page_height = std::min(int(font.GetPixelSize().y + 2) * lines, info_width);
-        page_size       = wxSize(info_width, page_height);
-    }
-    else {
-        wxClientDC dc(parent);
-        wxSize     msg_sz = dc.GetMultiLineTextExtent(msg);
-
-        page_size = wxSize(std::min(msg_sz.GetX(), info_width), std::min(msg_sz.GetY(), info_width));
-        // Extra line breaks in message dialog
-        if (link_text.IsEmpty() && !link_callback && is_marked_msg == false) {//for common text
-            html->Destroy();
-            if (msg_sz.GetX() < info_width) {//No need for line breaks
-                info_width = msg_sz.GetX();
-            }
-            wxScrolledWindow *scrolledWindow = new wxScrolledWindow(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxVSCROLL);
-            scrolledWindow->SetBackgroundColour(*wxWHITE);
-            scrolledWindow->SetScrollRate(0, 20);
-            scrolledWindow->EnableScrolling(false, true);
-            wxBoxSizer *sizer_scrolled = new wxBoxSizer(wxHORIZONTAL);
-            Label *wrapped_text = new Label(scrolledWindow, font, msg, LB_AUTO_WRAP, wxSize(info_width, -1));
-            wrapped_text->SetMinSize(wxSize(info_width, -1));
-            wrapped_text->SetMaxSize(wxSize(info_width, -1));
-            wrapped_text->Wrap(info_width);
-            sizer_scrolled->Add(wrapped_text, wxALIGN_LEFT ,0);
-            sizer_scrolled->AddSpacer(5);
-            sizer_scrolled->AddStretchSpacer();
-            scrolledWindow->SetSizer(sizer_scrolled);
-            auto info_height = 48 * em;
-            if (sizer_scrolled->GetMinSize().GetHeight() < info_height) {
-                info_height = sizer_scrolled->GetMinSize().GetHeight();
-            }
-            scrolledWindow->SetMinSize(wxSize(info_width, info_height));
-            scrolledWindow->SetMaxSize(wxSize(info_width, info_height));
-            scrolledWindow->FitInside();
-            content_sizer->Add(scrolledWindow, 1, wxEXPAND | wxRIGHT, 8);
-            return;
-        }
-    }
-    html->SetMinSize(page_size);
-
-    std::string msg_escaped = xml_escape(msg.ToUTF8().data(), is_marked_msg);
-    boost::replace_all(msg_escaped, "\r\n", "<br>");
-    boost::replace_all(msg_escaped, "\n", "<br>");
-    if (monospaced_font)
-        // Code formatting will be preserved. This is useful for reporting errors from the placeholder parser.
-        msg_escaped = std::string("<pre><code>") + msg_escaped + "</code></pre>";
-
-    if (!link_text.IsEmpty() && link_callback) {
-        msg_escaped += "<span><a href=\"#\" style=\"color:rgb(8, 153, 46); text-decoration:underline;\">" + std::string(link_text.ToUTF8().data()) + "</a></span>";
-    }
-
-    html->SetPage("<html><body bgcolor=\"" + bgr_clr_str + "\"><font color=\"" + text_clr_str + "\">" + wxString::FromUTF8(msg_escaped.data()) + "</font></body></html>");
-    content_sizer->Add(html, 1, wxEXPAND|wxRIGHT, 8);
-    wxGetApp().UpdateDarkUIWin(html);
-
-    html->Bind(wxEVT_HTML_LINK_CLICKED, [=](wxHtmlLinkEvent& event) {
-        if (link_callback)
-            link_callback(event.GetLinkInfo().GetHref());
-    });
+    if (!m_dsa_sizer)
+        return;
+    m_checkbox_dsa = new CheckBox(this);
+    m_checkbox_dsa->setChecked(false);
+    auto *lbl = new QLabel(title.isEmpty() ? _L("Don't show again") : title, this);
+    m_dsa_sizer->addWidget(m_checkbox_dsa);
+    m_dsa_sizer->addWidget(lbl, 1);
 }
 
-// ErrorDialog
+bool MsgDialog::get_checkbox_state()
+{
+    return m_checkbox_dsa ? m_checkbox_dsa->isChecked() : false;
+}
 
-ErrorDialog::ErrorDialog(wxWindow *parent, const wxString &temp_msg, bool monospaced_font)
-    : MsgDialog(parent, wxString::Format(_(L("%s error")), SLIC3R_APP_FULL_NAME),
-                        wxString::Format(_(L("%s has encountered an error")), SLIC3R_APP_FULL_NAME), wxOK)
+void MsgDialog::SetButtonLabel(int btn_id, const QString &label, bool set_focus)
+{
+    if (Button *btn = get_button(btn_id)) {
+        btn->setText(label);
+        if (set_focus)
+            btn->setFocus();
+    }
+}
+
+// ---------------------------------------------------------------------------
+// ErrorDialog
+// ---------------------------------------------------------------------------
+
+ErrorDialog::ErrorDialog(QWidget *parent, const QString &temp_msg, bool courier_font)
+    : MsgDialog(parent, _L("Error"), _L("Error"), MsgOK | MsgICON_ERROR)
     , msg(temp_msg)
 {
-    add_msg_content(this, content_sizer, msg, monospaced_font);
-
-    // Use a small bitmap with monospaced font, as the error text will not be wrapped.
-    logo->SetBitmap(create_scaled_bitmap("BambuStudio_192px_grayscale.png", this, monospaced_font ? 48 : /*1*/84));
-
-    SetMaxSize(MSG_DLG_MAX_SIZE);
-
+    auto *label = new QLabel(msg, this);
+    label->setWordWrap(true);
+    label->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
+    if (courier_font) {
+        QFont f("Courier New", label->font().pointSize());
+        f.setFixedPitch(true);
+        label->setFont(f);
+    }
+    content_sizer->addWidget(label);
     finalize();
 }
 
+// ---------------------------------------------------------------------------
 // WarningDialog
+// ---------------------------------------------------------------------------
 
-WarningDialog::WarningDialog(wxWindow *parent,
-                             const wxString& message,
-                             const wxString& caption/* = wxEmptyString*/,
-                             long style/* = wxOK*/)
-    : MsgDialog(parent, caption.IsEmpty() ? wxString::Format(_L("%s warning"), SLIC3R_APP_FULL_NAME) : caption,
-                        wxString::Format(_L("%s has a warning")+":", SLIC3R_APP_FULL_NAME), style)
-{
-    add_msg_content(this, content_sizer, message);
-    finalize();
-}
-
-PostProcessScriptDialog::PostProcessScriptDialog(wxWindow* parent, const wxString& message, const wxString& script_content)
+WarningDialog::WarningDialog(QWidget *parent,
+                             const QString &message,
+                             const QString &caption,
+                             long           style)
     : MsgDialog(parent,
-        wxString::Format(_L("%s warning"), SLIC3R_APP_FULL_NAME),
-        wxString::Format(_L("%s has a warning") + ":", SLIC3R_APP_FULL_NAME),
-        wxICON_WARNING)
+                caption.isEmpty() ? _L("Warning") : caption,
+                caption.isEmpty() ? _L("Warning") : caption,
+                (style == 0 ? MsgOK : style) | MsgICON_WARN)
 {
-    const int content_width = FromDIP(500);
-    wxFont msg_font = wxGetApp().normal_font();
-    msg_font.SetPointSize(wxGetApp().code_font().GetPointSize());
-    auto* msg = new Label(this, msg_font, message, LB_AUTO_WRAP, wxSize(content_width, -1));
-    msg->SetMinSize(wxSize(content_width, -1));
-    msg->SetForegroundColour(wxGetApp().get_label_clr_default());
-    msg->Wrap(content_width);
-    content_sizer->Add(msg, 0, wxEXPAND | wxBOTTOM, FromDIP(8));
+    auto *label = new QLabel(message, this);
+    label->setWordWrap(true);
+    content_sizer->addWidget(label);
+    finalize();
+}
 
-    m_script_text = new wxTextCtrl(this, wxID_ANY, script_content, wxDefaultPosition,
-        wxSize(content_width, FromDIP(140)), wxTE_MULTILINE | wxTE_READONLY | wxTE_WORDWRAP);
-    m_script_text->SetFont(wxGetApp().code_font());
-    m_details_expanded = true;
-    content_sizer->Add(m_script_text, 0, wxEXPAND | wxBOTTOM, FromDIP(8));
+// ---------------------------------------------------------------------------
+// PostProcessScriptDialog
+// ---------------------------------------------------------------------------
 
-    m_toggle_details = new Button(this, _L("Collapse") + " \u2227", "", 0, 0, wxID_ANY);
-    m_toggle_details->SetMinSize(wxSize(FromDIP(120), FromDIP(24)));
-    m_toggle_details->SetCornerRadius(FromDIP(12));
-    m_toggle_details->SetFont(Label::Body_12);
-    StateColor btn_bg_white(
-        std::pair<wxColour, int>(wxColour(255, 255, 255), StateColor::Pressed),
-        std::pair<wxColour, int>(wxColour(255, 255, 255), StateColor::Hovered),
-        std::pair<wxColour, int>(wxColour(255, 255, 255), StateColor::Normal)
-    );
-    StateColor btn_bd_white(
-        std::pair<wxColour, int>(WXCOLOUR_GREY500, StateColor::Pressed),
-        std::pair<wxColour, int>(WXCOLOUR_GREY500, StateColor::Hovered),
-        std::pair<wxColour, int>(WXCOLOUR_GREY500, StateColor::Normal)
-    );
-    StateColor btn_text_white(
-        std::pair<wxColour, int>(WXCOLOUR_GREY700, StateColor::Pressed),
-        std::pair<wxColour, int>(WXCOLOUR_GREY700, StateColor::Hovered),
-        std::pair<wxColour, int>(WXCOLOUR_GREY700, StateColor::Normal)
-    );
-    m_toggle_details->SetBackgroundColor(btn_bg_white);
-    m_toggle_details->SetBorderColor(btn_bd_white);
-    m_toggle_details->SetTextColor(btn_text_white);
-    m_toggle_details->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
+PostProcessScriptDialog::PostProcessScriptDialog(QWidget *parent,
+                                                 const QString &message,
+                                                 const QString &script_content)
+    : MsgDialog(parent, _L("Post-processing Script"), _L("Post-processing Script"), MsgOK | MsgCANCEL | MsgICON_WARN)
+{
+    auto *label = new QLabel(message, this);
+    label->setWordWrap(true);
+    content_sizer->addWidget(label);
+
+    m_toggle_details = add_button(MsgID_HELP, false, _L("Show script"));
+    m_script_text = new QLineEdit(script_content, this);
+    m_script_text->setReadOnly(true);
+    m_script_text->hide();
+    content_sizer->addWidget(m_script_text);
+
+    connect(m_toggle_details, &Button::clicked, this, [this]() {
         m_details_expanded = !m_details_expanded;
-        m_script_text->Show(m_details_expanded);
-        m_toggle_details->SetLabel(m_details_expanded ? (_L("Collapse") + " \u2227") : (_L("View details") + " \u2228"));
-        Layout();
-        Fit();
+        m_script_text->setVisible(m_details_expanded);
+        m_toggle_details->setText(m_details_expanded ? _L("Hide script") : _L("Show script"));
+        adjustSize();
     });
-    content_sizer->Add(m_toggle_details, 0, wxBOTTOM, FromDIP(4));
-
-    add_button(wxID_YES, false, _L("Execute"));
-    add_button(wxID_NO, true, _L("Do not execute"));
-    if (Button* execute_btn = get_button(wxID_YES)) {
-        execute_btn->SetBorderColor(WXCOLOUR_GREY500);
-        execute_btn->SetTextColor(WXCOLOUR_GREY700);
-    }
-    SetMaxSize(MSG_DLG_MAX_SIZE);
     finalize();
-    CallAfter([this]() {
-        Layout();
-        Fit();
-        CenterOnParent();
-    });
 }
 
-#if 1
+// ---------------------------------------------------------------------------
 // MessageDialog
+// ---------------------------------------------------------------------------
 
-MessageDialog::MessageDialog(wxWindow* parent,
-    const wxString& message,
-    const wxString& caption/* = wxEmptyString*/,
-    long style /* = wxOK*/,
-    const wxString &forward_str /* = wxEmptyString*/,
-    const wxString &link_text   /* = wxEmptyString*/,
-    std::function<void(const wxString &)> link_callback /* = nullptr*/)
-    : MessageDialog(parent, message, caption, style, forward_str, link_text, link_callback, false)
+MessageDialog::MessageDialog(QWidget *parent,
+                             const QString &message,
+                             const QString &caption,
+                             long           style,
+                             const QString &forward_str,
+                             const QString &link_text,
+                             std::function<void(const QString &)> link_callback)
+    : MsgDialog(parent,
+                caption.isEmpty() ? _L("Info") : caption,
+                caption.isEmpty() ? _L("Info") : caption,
+                style == 0 ? MsgOK : style,
+                QPixmap(),
+                forward_str)
 {
-}
+    auto *label = new QLabel(message, this);
+    label->setWordWrap(true);
+    content_sizer->addWidget(label);
 
-MessageDialog::MessageDialog(wxWindow* parent,
-    const wxString& message,
-    const wxString& caption,
-    long style,
-    const wxString &forward_str,
-    const wxString &link_text,
-    std::function<void(const wxString &)> link_callback,
-    bool is_marked_msg)
-    : MsgDialog(parent, caption.IsEmpty() ? wxString::Format(_L("%s info"), SLIC3R_APP_FULL_NAME) : caption, wxEmptyString, style, wxBitmap(),forward_str)
-{
-    add_msg_content(this, content_sizer, message, false, is_marked_msg, link_text, link_callback);
-    SetMaxSize(MSG_DLG_MAX_SIZE);
-    finalize();
-}
-
-
-// RichMessageDialog
-
-RichMessageDialog::RichMessageDialog(wxWindow* parent,
-    const wxString& message,
-    const wxString& caption/* = wxEmptyString*/,
-    long style/* = wxOK*/)
-    : MsgDialog(parent, caption.IsEmpty() ? wxString::Format(_L("%s info"), SLIC3R_APP_FULL_NAME) : caption, wxEmptyString, style)
-{
-    add_msg_content(this, content_sizer, message);
-
-
-    finalize();
-}
-
-int RichMessageDialog::ShowModal()
-{
-    if (!m_checkBoxText.IsEmpty()) {
-        show_dsa_button(m_checkBoxText);
-        m_checkbox_dsa->SetValue(m_checkBoxValue);
+    if (!link_text.isEmpty()) {
+        auto *link = new QLabel(QString("<a href='link'>%1</a>").arg(link_text), this);
+        link->setOpenExternalLinks(false);
+        if (link_callback) {
+            connect(link, &QLabel::linkActivated, this, [link_callback, link_text](const QString &) {
+                link_callback(link_text);
+            });
+        }
+        content_sizer->addWidget(link);
     }
-    Layout();
+    finalize();
+}
 
-    return wxDialog::ShowModal();
+MessageDialog::MessageDialog(QWidget *parent,
+                             const QString &message,
+                             const QString &caption,
+                             long           style,
+                             const QString &forward_str,
+                             const QString &link_text,
+                             std::function<void(const QString &)> link_callback,
+                             bool           /*is_marked_msg*/)
+    : MessageDialog(parent, message, caption, style, forward_str, link_text, link_callback)
+{}
+
+// ---------------------------------------------------------------------------
+// RichMessageDialog
+// ---------------------------------------------------------------------------
+
+RichMessageDialog::RichMessageDialog(QWidget *parent,
+                                     const QString &message,
+                                     const QString &caption,
+                                     long           style)
+    : MsgDialog(parent,
+                caption.isEmpty() ? _L("Info") : caption,
+                caption.isEmpty() ? _L("Info") : caption,
+                style == 0 ? MsgOK : style)
+{
+    auto *label = new QLabel(message, this);
+    label->setWordWrap(true);
+    content_sizer->addWidget(label);
+    finalize();
+}
+
+int RichMessageDialog::exec()
+{
+    // If checkbox was configured, add it now before showing
+    if (!m_checkBoxText.isEmpty() && !m_checkBox) {
+        m_checkBox = new QCheckBox(m_checkBoxText, this);
+        m_checkBox->setChecked(m_checkBoxValue);
+        layout()->addWidget(m_checkBox);
+    }
+    int r = MsgDialog::exec();
+    if (m_checkBox)
+        m_checkBoxValue = m_checkBox->isChecked();
+    return r;
 }
 
 bool RichMessageDialog::IsCheckBoxChecked() const
 {
-    if (m_checkbox_dsa)
-        return m_checkbox_dsa->GetValue();
-
-    return m_checkBoxValue;
+    return m_checkBox ? m_checkBox->isChecked() : m_checkBoxValue;
 }
-#endif
 
+// ---------------------------------------------------------------------------
 // InfoDialog
-InfoDialog::InfoDialog(wxWindow* parent, const wxString &title, const wxString& msg, bool is_marked_msg/* = false*/, long style/* = wxOK | wxICON_INFORMATION*/)
-    : MsgDialog(parent, wxString::Format(_L("%s information"), SLIC3R_APP_FULL_NAME), title, style)
-    , msg(msg)
+// ---------------------------------------------------------------------------
+
+InfoDialog::InfoDialog(QWidget *parent,
+                       const QString &title,
+                       const QString &msg_text,
+                       bool           /*is_marked*/,
+                       long           style)
+    : MsgDialog(parent,
+                title,
+                title,
+                (style == 0 ? MsgOK : style) | MsgICON_INFO)
+    , msg(msg_text)
 {
-    add_msg_content(this, content_sizer, msg, false, is_marked_msg);
+    auto *label = new QLabel(msg, this);
+    label->setWordWrap(true);
+    content_sizer->addWidget(label);
     finalize();
 }
 
-// InfoDialog
-DownloadDialog::DownloadDialog(wxWindow *parent, const wxString &msg, const wxString &title, bool is_marked_msg /* = false*/, long style /* = wxOK | wxICON_INFORMATION*/)
-    : MsgDialog(parent, title, msg, style), msg(msg)
-{
-    add_button(wxID_YES, true, _L("Download"));
-    add_button(wxID_CANCEL, true, _L("Skip"));
+// ---------------------------------------------------------------------------
+// DownloadDialog
+// ---------------------------------------------------------------------------
 
+DownloadDialog::DownloadDialog(QWidget *parent,
+                               const QString &title,
+                               const QString &msg_text,
+                               bool           /*is_marked*/,
+                               long           style)
+    : MsgDialog(parent,
+                title,
+                title,
+                (style == 0 ? MsgOK : style) | MsgICON_INFO)
+    , msg(msg_text)
+{
+    auto *label = new QLabel(msg, this);
+    label->setWordWrap(true);
+    content_sizer->addWidget(label);
     finalize();
 }
 
-
-void DownloadDialog::SetExtendedMessage(const wxString &extendedMessage)
+void DownloadDialog::SetExtendedMessage(const QString &extendedMessage)
 {
-    add_msg_content(this, content_sizer, msg + "\n" + extendedMessage, false, false);
-    Layout();
-    Fit();
+    auto *label = new QLabel(extendedMessage, this);
+    label->setWordWrap(true);
+    content_sizer->addWidget(label);
+    adjustSize();
 }
 
-DeleteConfirmDialog::DeleteConfirmDialog(wxWindow *parent, const wxString &title, const wxString &msg)
-    : DPIDialog(parent ? parent : nullptr, wxID_ANY, title, wxDefaultPosition, wxDefaultSize, wxCAPTION | wxCLOSE_BOX)
+// ---------------------------------------------------------------------------
+// DeleteConfirmDialog
+// ---------------------------------------------------------------------------
+
+DeleteConfirmDialog::DeleteConfirmDialog(QWidget *parent, const QString &title, const QString &msg_text)
+    : DPIDialog(parent)
+    , msg(msg_text)
 {
-    this->SetBackgroundColour(*wxWHITE);
-    this->SetSize(wxSize(FromDIP(450), FromDIP(200)));
-    std::string icon_path = (boost::format("%1%/images/BambuStudioTitle.ico") % resources_dir()).str();
-    SetIcon(wxIcon(encode_path(icon_path.c_str()), wxBITMAP_TYPE_ICO));
+    setWindowTitle(title);
+    setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
 
-    wxBoxSizer *m_main_sizer = new wxBoxSizer(wxVERTICAL);
-    // top line
-    auto m_line_top = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(-1, 1), wxTAB_TRAVERSAL);
-    m_line_top->SetBackgroundColour(wxColour(0xA6, 0xa9, 0xAA));
-    m_main_sizer->Add(m_line_top, 0, wxEXPAND, 0);
-    m_main_sizer->Add(0, 0, 0, wxTOP, FromDIP(5));
+    auto *outer = new QVBoxLayout(this);
+    outer->setContentsMargins(20, 20, 20, 20);
+    outer->setSpacing(15);
 
-    m_msg_text = new wxStaticText(this, wxID_ANY, msg);
-    m_main_sizer->Add(m_msg_text, 0, wxEXPAND | wxALL, FromDIP(10));
+    m_msg_text = new QLabel(msg, this);
+    m_msg_text->setWordWrap(true);
+    outer->addWidget(m_msg_text);
 
-    wxBoxSizer *bSizer_button = new wxBoxSizer(wxHORIZONTAL);
-    bSizer_button->Add(0, 0, 1, wxEXPAND, 0);
-    StateColor btn_bg_white(std::pair<wxColour, int>(wxColour(206, 206, 206), StateColor::Pressed), std::pair<wxColour, int>(wxColour(238, 238, 238), StateColor::Hovered),
-                            std::pair<wxColour, int>(*wxWHITE, StateColor::Normal));
-    m_cancel_btn = new Button(this, _L("Cancel"));
-    m_cancel_btn->SetBackgroundColor(btn_bg_white);
-    m_cancel_btn->SetBorderColor(*wxBLACK);
-    m_cancel_btn->SetTextColor(wxColour(*wxBLACK));
-    m_cancel_btn->SetFont(Label::Body_12);
-    m_cancel_btn->SetSize(wxSize(FromDIP(58), FromDIP(24)));
-    m_cancel_btn->SetMinSize(wxSize(FromDIP(58), FromDIP(24)));
-    m_cancel_btn->SetCornerRadius(FromDIP(12));
-    bSizer_button->Add(m_cancel_btn, 0, wxRIGHT | wxBOTTOM, FromDIP(10));
+    auto *sep = new QFrame(this);
+    sep->setFrameShape(QFrame::HLine);
+    outer->addWidget(sep);
 
+    auto *btn_row = new QHBoxLayout;
+    btn_row->addStretch(1);
 
-    m_del_btn = new Button(this, _L("Delete"));
-    m_del_btn->SetBackgroundColor(*wxRED);
-    m_del_btn->SetBorderColor(*wxWHITE);
-    m_del_btn->SetTextColor(wxColour("#FFFFFE"));
-    m_del_btn->SetFont(Label::Body_12);
-    m_del_btn->SetSize(wxSize(FromDIP(58), FromDIP(24)));
-    m_del_btn->SetMinSize(wxSize(FromDIP(58), FromDIP(24)));
-    m_del_btn->SetCornerRadius(FromDIP(12));
-    bSizer_button->Add(m_del_btn, 0, wxRIGHT | wxBOTTOM, FromDIP(10));
+    m_cancel_btn = new Button(this, "");
+    m_cancel_btn->setText(_L("Cancel"));
+    connect(m_cancel_btn, &Button::clicked, this, &QDialog::reject);
+    btn_row->addWidget(m_cancel_btn);
 
-    m_main_sizer->Add(bSizer_button, 0, wxEXPAND, 0);
-    m_del_btn->Bind(wxEVT_BUTTON, [this](wxCommandEvent &e) { EndModal(wxID_OK); });
-    m_cancel_btn->Bind(wxEVT_BUTTON, [this](wxCommandEvent &e) { EndModal(wxID_CANCEL); });
+    m_del_btn = new Button(this, "");
+    m_del_btn->setText(_L("Delete"));
+    connect(m_del_btn, &Button::clicked, this, &QDialog::accept);
+    btn_row->addWidget(m_del_btn);
 
-    SetSizer(m_main_sizer);
-    Layout();
-    Fit();
-    wxGetApp().UpdateDlgDarkUI(this);
+    outer->addLayout(btn_row);
+    adjustSize();
 }
 
-DeleteConfirmDialog::~DeleteConfirmDialog() {}
+DeleteConfirmDialog::~DeleteConfirmDialog() = default;
 
+void DeleteConfirmDialog::on_dpi_changed(const QRect &) {}
 
-void DeleteConfirmDialog::on_dpi_changed(const wxRect &suggested_rect) {}
+// ---------------------------------------------------------------------------
+// Newer3mfVersionDialog
+// ---------------------------------------------------------------------------
 
-
-Newer3mfVersionDialog::Newer3mfVersionDialog(wxWindow *parent, const Semver *file_version, const Semver *cloud_version, wxString new_keys)
-    : DPIDialog(parent ? parent : nullptr, wxID_ANY, wxString(SLIC3R_APP_FULL_NAME " - ") + _L("Newer 3mf version"), wxDefaultPosition, wxDefaultSize, wxCAPTION | wxCLOSE_BOX)
+Newer3mfVersionDialog::Newer3mfVersionDialog(QWidget *parent,
+                                             const Semver *file_version,
+                                             const Semver *cloud_version,
+                                             const QString &new_keys)
+    : DPIDialog(parent)
     , m_file_version(file_version)
     , m_cloud_version(cloud_version)
     , m_new_keys(new_keys)
 {
-    this->SetBackgroundColour(*wxWHITE);
-    std::string icon_path = (boost::format("%1%/images/BambuStudioTitle.ico") % resources_dir()).str();
-    SetIcon(wxIcon(encode_path(icon_path.c_str()), wxBITMAP_TYPE_ICO));
+    setWindowTitle(_L("Newer 3MF version"));
+    setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
 
-    wxBoxSizer *main_sizer = new wxBoxSizer(wxVERTICAL);
-    // top line
-    auto m_line_top = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(-1, 1), wxTAB_TRAVERSAL);
-    m_line_top->SetBackgroundColour(wxColour(0xA6, 0xa9, 0xAA));
-    main_sizer->Add(m_line_top, 0, wxEXPAND, 0);
-    main_sizer->Add(0, 0, 0, wxTOP, FromDIP(5));
-
-    wxBoxSizer *    content_sizer = new wxBoxSizer(wxHORIZONTAL);
-    wxStaticBitmap *info_bitmap   = new wxStaticBitmap(this, wxID_ANY, create_scaled_bitmap("info", nullptr, 60), wxDefaultPosition, wxSize(FromDIP(70), FromDIP(70)), 0);
-    wxBoxSizer *    msg_sizer     = get_msg_sizer();
-    content_sizer->Add(info_bitmap, 0, wxEXPAND | wxALL, FromDIP(5));
-    content_sizer->Add(msg_sizer, 0, wxEXPAND | wxALL, FromDIP(5));
-    main_sizer->Add(content_sizer, 0, wxEXPAND | wxALL, FromDIP(5));
-    main_sizer->Add(get_btn_sizer(), 0, wxEXPAND | wxALL, FromDIP(5));
-
-    this->SetSizer(main_sizer);
-    Layout();
-    Fit();
-    wxGetApp().UpdateDlgDarkUI(this);
+    auto *outer = new QVBoxLayout(this);
+    outer->addLayout(get_msg_sizer());
+    outer->addLayout(get_btn_sizer());
+    adjustSize();
 }
 
-wxBoxSizer *Newer3mfVersionDialog::get_msg_sizer()
+QBoxLayout *Newer3mfVersionDialog::get_msg_sizer()
 {
-    wxBoxSizer *vertical_sizer     = new wxBoxSizer(wxVERTICAL);
-    bool        file_version_newer = (*m_file_version) > (*m_cloud_version);
-    wxStaticText *text1;
-    wxBoxSizer *     horizontal_sizer = new wxBoxSizer(wxHORIZONTAL);
-    wxString    msg_str;
-    if (file_version_newer) {
-        text1 = new wxStaticText(this, wxID_ANY, _L("The 3mf file version is in Beta and it is newer than the current Bambu Studio version."));
-        wxStaticText *   text2       = new wxStaticText(this, wxID_ANY, _L("If you would like to try Bambu Studio Beta, you may click to"));
-        wxHyperlinkCtrl *github_link = new wxHyperlinkCtrl(this, wxID_ANY, _L("Download Beta Version"), "https://github.com/bambulab/BambuStudio/releases");
-        horizontal_sizer->Add(text2, 0, wxEXPAND, 0);
-        horizontal_sizer->Add(github_link, 0, wxEXPAND | wxLEFT, 5);
-
+    auto *vbox = new QVBoxLayout;
+    QString txt;
+    if (m_file_version && m_cloud_version) {
+        txt = _L("The 3MF file was created by a newer version of BambuStudio. "
+                 "Some features may not be available.");
     } else {
-        text1 = new wxStaticText(this, wxID_ANY, _L("The 3mf file version is newer than the current Bambu Studio version."));
-        wxStaticText *text2 = new wxStaticText(this, wxID_ANY, _L("Update your Bambu Studio could enable all functionality in the 3mf file."));
-        horizontal_sizer->Add(text2, 0, wxEXPAND, 0);
+        txt = _L("The 3MF file format version is newer than the current version of BambuStudio supports.");
     }
-    Semver        app_version = *(Semver::parse(SLIC3R_VERSION));
-    wxStaticText *cur_version = new wxStaticText(this, wxID_ANY, _L("Current Version: ") + app_version.to_string());
-
-    vertical_sizer->Add(text1, 0, wxEXPAND | wxTOP, FromDIP(5));
-    vertical_sizer->Add(horizontal_sizer, 0, wxEXPAND | wxTOP, FromDIP(5));
-    vertical_sizer->Add(cur_version, 0, wxEXPAND | wxTOP, FromDIP(5));
-    if (!file_version_newer) {
-        wxStaticText *latest_version = new wxStaticText(this, wxID_ANY, _L("Latest Version: ") + m_cloud_version->to_string());
-        vertical_sizer->Add(latest_version, 0, wxEXPAND | wxTOP, FromDIP(5));
+    if (!m_new_keys.isEmpty()) {
+        txt += "\n\n" + _L("New features:") + "\n" + m_new_keys;
     }
-
-    wxStaticText *unrecognized_keys = new wxStaticText(this, wxID_ANY, m_new_keys);
-    vertical_sizer->Add(unrecognized_keys, 0, wxEXPAND | wxTOP, FromDIP(10));
-
-    return vertical_sizer;
+    m_msg_text = new QLabel(txt, this);
+    m_msg_text->setWordWrap(true);
+    vbox->addWidget(m_msg_text);
+    return vbox;
 }
 
-wxBoxSizer *Newer3mfVersionDialog::get_btn_sizer()
+QBoxLayout *Newer3mfVersionDialog::get_btn_sizer()
 {
-    wxBoxSizer *horizontal_sizer = new wxBoxSizer(wxHORIZONTAL);
-    horizontal_sizer->Add(0, 0, 1, wxEXPAND, 0);
-    StateColor btn_bg_green(std::pair<wxColour, int>(wxColour(27, 136, 68), StateColor::Pressed), std::pair<wxColour, int>(wxColour(61, 203, 115), StateColor::Hovered),
-                            std::pair<wxColour, int>(wxColour(0, 174, 66), StateColor::Normal));
-    StateColor btn_bg_white(std::pair<wxColour, int>(wxColour(206, 206, 206), StateColor::Pressed), std::pair<wxColour, int>(wxColour(238, 238, 238), StateColor::Hovered),
-                            std::pair<wxColour, int>(*wxWHITE, StateColor::Normal));
-    bool       file_version_newer = (*m_file_version) > (*m_cloud_version);
-    if (!file_version_newer) {
-        m_update_btn = new Button(this, _CTX(L_CONTEXT("Update", "Software"), "Software"));
-        m_update_btn->SetBackgroundColor(btn_bg_green);
-        m_update_btn->SetBorderColor(*wxWHITE);
-        m_update_btn->SetTextColor(wxColour("#FFFFFE"));
-        m_update_btn->SetFont(Label::Body_12);
-        m_update_btn->SetSize(wxSize(FromDIP(58), FromDIP(24)));
-        m_update_btn->SetMinSize(wxSize(FromDIP(58), FromDIP(24)));
-        m_update_btn->SetCornerRadius(FromDIP(12));
-        horizontal_sizer->Add(m_update_btn, 0, wxRIGHT, FromDIP(10));
+    auto *hbox = new QHBoxLayout;
+    hbox->addStretch(1);
 
-        m_update_btn->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent &e) {
-            EndModal(wxID_OK);
-            if (wxGetApp().app_config->has("app", "cloud_software_url")) {
-                std::string download_url = wxGetApp().app_config->get("app", "cloud_software_url");
-                wxLaunchDefaultBrowser(download_url);
-            } else {
-                BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << "Bambu Studio conf has no cloud_software_url and file_version: " << m_file_version->to_string()
-                                        << " and cloud_version: " << m_cloud_version->to_string();
-            }
-        });
-    }
+    m_later_btn = new Button(this, "");
+    m_later_btn->setText(_L("Later"));
+    connect(m_later_btn, &Button::clicked, this, &QDialog::reject);
+    hbox->addWidget(m_later_btn);
 
-    if (!file_version_newer) {
-        m_later_btn = new Button(this, _L("Not for now"));
-        m_later_btn->SetBackgroundColor(btn_bg_white);
-        m_later_btn->SetBorderColor(wxColour(38, 46, 48));
-    } else {
-        m_later_btn = new Button(this, _L("OK"));
-        m_later_btn->SetBackgroundColor(btn_bg_green);
-        m_later_btn->SetBorderColor(*wxWHITE);
-        m_later_btn->SetTextColor(wxColour("#FFFFFE"));
-    }
-    m_later_btn->SetFont(Label::Body_12);
-    m_later_btn->SetSize(wxSize(FromDIP(58), FromDIP(24)));
-    m_later_btn->SetMinSize(wxSize(FromDIP(58), FromDIP(24)));
-    m_later_btn->SetCornerRadius(FromDIP(12));
-    horizontal_sizer->Add(m_later_btn, 0, wxRIGHT, FromDIP(10));
-    m_later_btn->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent &e) {
-        EndModal(wxID_OK);
-    });
-    return horizontal_sizer;
+    m_update_btn = new Button(this, "");
+    m_update_btn->setText(_L("Update"));
+    connect(m_update_btn, &Button::clicked, this, &QDialog::accept);
+    hbox->addWidget(m_update_btn);
+
+    return hbox;
 }
 
-NetworkErrorDialog::NetworkErrorDialog(wxWindow* parent)
-    : DPIDialog(parent ? parent : nullptr, wxID_ANY, _L("Server Exception"), wxDefaultPosition, wxDefaultSize, wxCAPTION | wxCLOSE_BOX)
+// ---------------------------------------------------------------------------
+// NetworkErrorDialog
+// ---------------------------------------------------------------------------
+
+NetworkErrorDialog::NetworkErrorDialog(QWidget *parent)
+    : DPIDialog(parent)
 {
-    this->SetBackgroundColour(*wxWHITE);
-    std::string icon_path = (boost::format("%1%/images/BambuStudioTitle.ico") % resources_dir()).str();
-    SetIcon(wxIcon(encode_path(icon_path.c_str()), wxBITMAP_TYPE_ICO));
+    setWindowTitle(_L("Network Error"));
+    setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
 
-    wxBoxSizer* sizer_main = new wxBoxSizer(wxVERTICAL);
+    auto *outer = new QVBoxLayout(this);
+    outer->setContentsMargins(20, 20, 20, 20);
+    outer->setSpacing(10);
 
-    auto m_line_top = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(-1, 1), wxTAB_TRAVERSAL);
-    m_line_top->SetBackgroundColour(wxColour(166, 169, 170));
+    m_text_basic = new QLabel(_L("A network error occurred. Please check your internet connection."), this);
+    m_text_basic->setWordWrap(true);
+    outer->addWidget(m_text_basic);
 
-    wxBoxSizer* sizer_bacis_text = new wxBoxSizer(wxVERTICAL);
+    m_text_proposal = new QLabel(_L("Please try again later."), this);
+    m_text_proposal->setWordWrap(true);
+    outer->addWidget(m_text_proposal);
 
-    m_text_basic = new Label(this, _L("The server is unable to respond. Please click the link below to check the server status."));
-    m_text_basic->SetForegroundColour(0x323A3C);
-    m_text_basic->SetMinSize(wxSize(FromDIP(470), -1));
-    m_text_basic->SetMaxSize(wxSize(FromDIP(470), -1));
-    m_text_basic->Wrap(FromDIP(470));
-    m_text_basic->SetFont(::Label::Body_14);
-    sizer_bacis_text->Add(m_text_basic, 0, wxALL, 0);
+    m_link_server_state = new QLabel(
+        QString("<a href='https://status.bambulab.com'>%1</a>").arg(_L("Check server status")), this);
+    m_link_server_state->setOpenExternalLinks(true);
+    outer->addWidget(m_link_server_state);
 
+    auto *sep = new QFrame(this);
+    sep->setFrameShape(QFrame::HLine);
+    outer->addWidget(sep);
 
-    wxBoxSizer* sizer_link = new wxBoxSizer(wxVERTICAL);
+    auto *btn_row = new QHBoxLayout;
+    btn_row->addStretch(1);
 
-    m_link_server_state = new wxHyperlinkCtrl(this, wxID_ANY, _L("Check the status of current system services"), "");
-    m_link_server_state->SetFont(::Label::Body_13);
-    m_link_server_state->Bind(wxEVT_LEFT_DOWN, [this](auto& e) {wxGetApp().link_to_network_check(); });
-    m_link_server_state->Bind(wxEVT_ENTER_WINDOW, [this](auto& e) {SetCursor(wxCURSOR_HAND); });
-    m_link_server_state->Bind(wxEVT_LEAVE_WINDOW, [this](auto& e) {SetCursor(wxCURSOR_ARROW); });
+    auto *chk = new CheckBox(this);
+    chk->setChecked(false);
+    auto *chk_lbl = new QLabel(_L("Don't show again"), this);
+    btn_row->addWidget(chk);
+    btn_row->addWidget(chk_lbl);
+    btn_row->addStretch(1);
 
-    sizer_link->Add(m_link_server_state, 0, wxALL, 0);
-
-
-    wxBoxSizer* sizer_help = new wxBoxSizer(wxVERTICAL);
-
-    m_text_proposal = new Label(this, _L("If the server is in a fault state, you can temporarily use offline printing or local network printing."));
-    m_text_proposal->SetMinSize(wxSize(FromDIP(470), -1));
-    m_text_proposal->SetMaxSize(wxSize(FromDIP(470), -1));
-    m_text_proposal->Wrap(FromDIP(470));
-    m_text_proposal->SetFont(::Label::Body_14);
-    m_text_proposal->SetForegroundColour(0x323A3C);
-
-    m_text_wiki = new wxHyperlinkCtrl(this, wxID_ANY, _L("How to use LAN only mode"), "");
-    m_text_wiki->SetFont(::Label::Body_13);
-    m_text_wiki->Bind(wxEVT_LEFT_DOWN, [this](auto& e) {wxGetApp().link_to_lan_only_wiki(); });
-    m_text_wiki->Bind(wxEVT_ENTER_WINDOW, [this](auto& e) {SetCursor(wxCURSOR_HAND); });
-    m_text_wiki->Bind(wxEVT_LEAVE_WINDOW, [this](auto& e) {SetCursor(wxCURSOR_ARROW); });
-
-    sizer_help->Add(m_text_proposal, 0, wxEXPAND, 0);
-    sizer_help->Add(m_text_wiki, 0, wxALL, 0);
-
-    wxBoxSizer* sizer_button = new wxBoxSizer(wxHORIZONTAL);
-
-    /*dont show again*/
-    auto checkbox = new ::CheckBox(this);
-    checkbox->SetValue(false);
-
-
-    auto checkbox_title = new Label(this, _L("Don't show this dialog again"));
-    checkbox_title->SetForegroundColour(0x323A3C);
-    checkbox_title->SetFont(::Label::Body_14);
-    checkbox_title->Wrap(-1);
-
-    checkbox->Bind(wxEVT_TOGGLEBUTTON, [this, checkbox](wxCommandEvent &e) {
-        m_show_again = checkbox->GetValue();
-        e.Skip();
+    m_button_confirm = new Button(this, "");
+    m_button_confirm->setText(_L("OK"));
+    connect(m_button_confirm, &Button::clicked, this, [this, chk]() {
+        m_show_again = !chk->isChecked();
+        accept();
     });
+    btn_row->addWidget(m_button_confirm);
 
-    auto bt_enable = StateColor(std::pair<wxColour, int>(wxColour(27, 136, 68), StateColor::Pressed), std::pair<wxColour, int>(wxColour(61, 203, 115), StateColor::Hovered),
-        std::pair<wxColour, int>(wxColour(0, 174, 66), StateColor::Normal));
-
-    m_button_confirm = new Button(this, _L("Confirm"));
-    m_button_confirm->SetBackgroundColor(bt_enable);
-    m_button_confirm->SetBorderColor(bt_enable);
-    m_button_confirm->SetTextColor(StateColor::darkModeColorFor("#FFFFFE"));
-    m_button_confirm->SetMinSize(wxSize(FromDIP(68), FromDIP(23)));
-    m_button_confirm->SetMinSize(wxSize(FromDIP(68), FromDIP(23)));
-    m_button_confirm->SetCornerRadius(12);
-    m_button_confirm->Bind(wxEVT_LEFT_DOWN, [this](auto& e) {EndModal(wxCLOSE);});
-
-    sizer_button->Add(checkbox, 0, wxALL, 5);
-    sizer_button->Add(checkbox_title, 0, wxALL, 5);
-    sizer_button->Add(0, 0, 1, wxEXPAND, 5);
-    sizer_button->Add(m_button_confirm, 0, wxALL, 5);
-
-    sizer_main->Add(m_line_top, 0, wxEXPAND, 0);
-    sizer_main->Add(0, 0, 0, wxTOP, 20);
-    sizer_main->Add(sizer_bacis_text, 0, wxEXPAND | wxLEFT | wxRIGHT, 15);
-    sizer_main->Add(0, 0, 0, wxTOP, 6);
-    sizer_main->Add(sizer_link, 0, wxLEFT | wxRIGHT, 15);
-    sizer_main->Add(0, 0, 0, wxEXPAND | wxTOP, FromDIP(20));
-    sizer_main->Add(sizer_help, 1, wxLEFT | wxRIGHT, 15);
-    sizer_main->Add(0, 0, 0, wxEXPAND | wxTOP, FromDIP(20));
-    sizer_main->Add(sizer_button, 1, wxEXPAND | wxLEFT | wxRIGHT, 15);
-    sizer_main->Add(0, 0, 0, wxTOP, 18);
-
-    SetSizer(sizer_main);
-    Layout();
-    sizer_main->Fit(this);
-    Centre(wxBOTH);
+    outer->addLayout(btn_row);
+    adjustSize();
 }
 
+// ---------------------------------------------------------------------------
+// FilamentWarningDialog
+// ---------------------------------------------------------------------------
 
-FilamentWarningDialog::FilamentWarningDialog(wxWindow *parent, const wxString &title, std::vector<FilamentWarningInfo> infos)
-    : MsgDialog(parent, title.IsEmpty() ? wxString::Format(_L("%s warning"), SLIC3R_APP_FULL_NAME) : title, wxEmptyString, wxOK | wxICON_WARNING), m_messages(infos)
+FilamentWarningDialog::FilamentWarningDialog(QWidget *parent,
+                                             const QString &title,
+                                             std::vector<FilamentWarningInfo> infos)
+    : MsgDialog(parent, title, title, MsgOK | MsgICON_WARN)
+    , m_messages(std::move(infos))
 {
     BuildContent();
     finalize();
 }
 
-
-
 void FilamentWarningDialog::BuildContent()
 {
-    wxBoxSizer *messages_sizer = new wxBoxSizer(wxVERTICAL);
-
-    int message_count = 0;
-    for (int i = 0; i < m_messages.size(); i++)
-    {
-        const wxString &message  = m_messages[i].info_msg;
-        const wxString &wiki_url = m_messages[i].wiki_url;
-        if (message_count > 0) { messages_sizer->AddSpacer(FromDIP(10)); }
-
-        if (wiki_url.IsEmpty()) {
-            // No wiki link - just display as regular text
-            Label *text = new Label(this, message);
-            text->SetFont(::Label::Body_12);
-            text->Wrap(FromDIP(400));
-            messages_sizer->Add(text, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(5));
-        } else {
-            Label *link = new Label(this, message + " " + _L("Please refer to Wiki before use->"));
-            link->SetForegroundColour(wxColour(8, 153, 46));
-            link->SetFont(::Label::Body_12);
-            link->Wrap(FromDIP(400));
-            link->Bind(wxEVT_ENTER_WINDOW, [this](auto &e) { SetCursor(wxCURSOR_HAND); });
-            link->Bind(wxEVT_LEAVE_WINDOW, [this](auto &e) { SetCursor(wxCURSOR_ARROW); });
-            link->Bind(wxEVT_LEFT_DOWN, [wiki_url](auto &event) { wxLaunchDefaultBrowser(wiki_url); });
-            messages_sizer->Add(link, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(5));
+    for (const auto &info : m_messages) {
+        if (!info.info_msg.isEmpty()) {
+            auto *label = new QLabel(info.info_msg, this);
+            label->setWordWrap(true);
+            content_sizer->addWidget(label);
         }
-        message_count++;
+        if (!info.wiki_url.isEmpty()) {
+            auto *link = new QLabel(
+                QString("<a href='%1'>%2</a>").arg(info.wiki_url).arg(_L("Learn more")), this);
+            link->setOpenExternalLinks(true);
+            content_sizer->addWidget(link);
+        }
     }
-
-    content_sizer->Add(messages_sizer, 1, wxEXPAND | wxALL, FromDIP(5));
 }
 
-
-} // namespace GUI
-
-} // namespace Slic3r
+}} // namespace Slic3r::GUI

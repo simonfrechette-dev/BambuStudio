@@ -1,593 +1,392 @@
 #include "SwitchButton.hpp"
-#include "Label.hpp"
-#include "StaticBox.hpp"
+#include "../QtExtensions.hpp"
 
-#include "../wxExtensions.hpp"
-#include "../Utils/MacDarkMode.hpp"
-#include "../Utils/WxFontUtils.hpp"
-#include "../GUI_App.hpp"
-#ifdef __APPLE__
-#include "libslic3r/MacUtils.hpp"
-#endif
+#include <QPainter>
+#include <QPainterPath>
+#include <QMouseEvent>
+#include <QEnterEvent>
+#include <QFontMetrics>
+#include <QHBoxLayout>
+#include <QApplication>
 
-#include <wx/dcclient.h>
-#include <wx/dcgraph.h>
-#include <wx/dcmemory.h>
+// ============================================================
+// SwitchButton
+// ============================================================
 
-wxDEFINE_EVENT(wxCUSTOMEVT_SWITCH_POS, wxCommandEvent);
-wxDEFINE_EVENT(wxCUSTOMEVT_MULTISWITCH_SELECTION, wxCommandEvent);
-wxDEFINE_EVENT(wxEXPAND_LEFT_DOWN, wxCommandEvent);
-
-SwitchButton::SwitchButton(wxWindow* parent, wxWindowID id)
-	: wxBitmapToggleButton(parent, id, wxNullBitmap, wxDefaultPosition, wxDefaultSize, wxBORDER_NONE | wxBU_EXACTFIT)
-	, m_on(this, "toggle_on", 16)
-	, m_off(this, "toggle_off", 16)
-    , text_color(std::pair{0xfffffe, (int) StateColor::Checked}, std::pair{0x6B6B6B, (int) StateColor::Normal})
-	, track_color(0xD9D9D9)
-    , thumb_color(std::pair{0x00AE42, (int) StateColor::Checked}, std::pair{0xD9D9D9, (int) StateColor::Normal})
+SwitchButton::SwitchButton(QWidget *parent, int /*id*/)
+    : QAbstractButton(parent)
+    , m_on(this,  "toggle_on",  16)
+    , m_off(this, "toggle_off", 16)
+    , text_color(std::make_pair(QColor(0xFF, 0xFF, 0xFE), (int)StateColor::Checked),
+                 std::make_pair(QColor(0x6B, 0x6B, 0x6B), (int)StateColor::Normal))
+    , track_color(QColor(0xD9, 0xD9, 0xD9))
+    , thumb_color(std::make_pair(QColor(0x00, 0xAE, 0x42), (int)StateColor::Checked),
+                  std::make_pair(QColor(0xD9, 0xD9, 0xD9), (int)StateColor::Normal))
 {
-	SetBackgroundColour(StaticBox::GetParentBackgroundColor(parent));
-	Bind(wxEVT_TOGGLEBUTTON, [this](auto& e) { update(); e.Skip(); });
-	SetFont(Label::Body_12);
-	Rescale();
+    setCheckable(true);
+    setFont(Label::Body_12);
+    const QSize sz = m_on.GetBmpSize();
+    setFixedSize(sz);
 }
 
-void SwitchButton::SetLabels(wxString const& lbl_on, wxString const& lbl_off)
+void SwitchButton::SetLabels(const QString &lbl_on, const QString &lbl_off)
 {
-	labels[0] = lbl_on;
-	labels[1] = lbl_off;
-	Rescale();
+    m_labels[0] = lbl_on;
+    m_labels[1] = lbl_off;
+    Rescale();
 }
 
-void SwitchButton::SetTextColor(StateColor const& color)
-{
-	text_color = color;
-}
-
-void SwitchButton::SetTextColor2(StateColor const &color)
-{
-	text_color2 = color;
-}
-
-void SwitchButton::SetTrackColor(StateColor const& color)
-{
-	track_color = color;
-}
-
-void SwitchButton::SetThumbColor(StateColor const& color)
-{
-	thumb_color = color;
-}
+void SwitchButton::SetTextColor(const StateColor &color)  { text_color  = color; }
+void SwitchButton::SetTextColor2(const StateColor &color) { text_color2 = color; }
+void SwitchButton::SetTrackColor(const StateColor &color) { track_color = color; update(); }
+void SwitchButton::SetThumbColor(const StateColor &color) { thumb_color = color; update(); }
 
 void SwitchButton::SetValue(bool value)
 {
-    if (value != GetValue()) {
-        wxBitmapToggleButton::SetValue(value);
+    if (m_value != value) {
+        m_value = value;
         update();
+        emit toggled(m_value);
     }
 }
 
 void SwitchButton::Rescale()
 {
-	if (labels[0].IsEmpty()) {
-		m_on.msw_rescale();
-		m_off.msw_rescale();
-	}
-	else {
-        SetBackgroundColour(StaticBox::GetParentBackgroundColor(GetParent()));
-#ifdef __WXOSX__
-        auto scale = Slic3r::GUI::mac_max_scaling_factor();
-        int BS = (int) scale;
-#else
-        constexpr int BS = 1;
-#endif
-		wxSize thumbSize;
-		wxSize trackSize;
-		wxClientDC dc(this);
-#ifdef __WXOSX__
-        dc.SetFont(dc.GetFont().Scaled(scale));
-#endif
-        wxSize textSize[2];
-		{
-			textSize[0] = dc.GetTextExtent(labels[0]);
-			textSize[1] = dc.GetTextExtent(labels[1]);
-		}
-		float fontScale = 0;
-		{
-			thumbSize = textSize[0];
-			auto size = textSize[1];
-			if (size.x > thumbSize.x) thumbSize.x = size.x;
-			else size.x = thumbSize.x;
-			thumbSize.x += BS * 12;
-			thumbSize.y += BS * 6;
-			trackSize.x = thumbSize.x + size.x + BS * 10;
-			trackSize.y = thumbSize.y + BS * 2;
-            auto maxWidth = GetMaxWidth();
-#ifdef __WXOSX__
-            maxWidth *= scale;
-#endif
-			if (trackSize.x > maxWidth) {
-                fontScale   = float(maxWidth) / trackSize.x;
-                thumbSize.x -= (trackSize.x - maxWidth) / 2;
-                trackSize.x = maxWidth;
-			}
-		}
-		for (int i = 0; i < 2; ++i) {
-			wxMemoryDC memdc(&dc);
-#ifdef __WXMSW__
-			wxBitmap bmp(trackSize.x, trackSize.y);
-			memdc.SelectObject(bmp);
-			memdc.SetBackground(wxBrush(GetBackgroundColour()));
-			memdc.Clear();
-#else
-            wxImage image(trackSize);
-            image.InitAlpha();
-            memset(image.GetAlpha(), 0, trackSize.GetWidth() * trackSize.GetHeight());
-            wxBitmap bmp(std::move(image));
-            memdc.SelectObject(bmp);
-#endif
-            memdc.SetFont(dc.GetFont());
-            if (fontScale) {
-                memdc.SetFont(dc.GetFont().Scaled(fontScale));
-                textSize[0] = memdc.GetTextExtent(labels[0]);
-                textSize[1] = memdc.GetTextExtent(labels[1]);
-			}
-			auto state = i == 0 ? StateColor::Enabled : (StateColor::Checked | StateColor::Enabled);
-            {
-#ifdef __WXMSW__
-				wxGCDC dc2(memdc);
-#else
-                wxDC &dc2(memdc);
-#endif
-				dc2.SetBrush(wxBrush(track_color.colorForStates(state)));
-				dc2.SetPen(wxPen(track_color.colorForStates(state)));
-                dc2.DrawRoundedRectangle(wxRect({0, 0}, trackSize), trackSize.y / 2);
-				dc2.SetBrush(wxBrush(thumb_color.colorForStates(StateColor::Checked | StateColor::Enabled)));
-				dc2.SetPen(wxPen(thumb_color.colorForStates(StateColor::Checked | StateColor::Enabled)));
-				dc2.DrawRoundedRectangle(wxRect({ i == 0 ? BS : (trackSize.x - thumbSize.x - BS), BS}, thumbSize), thumbSize.y / 2);
-			}
-            memdc.SetTextForeground(text_color.colorForStates(state ^ StateColor::Checked));
-            auto text_y = BS + (thumbSize.y - textSize[0].y) / 2;
-#ifdef __APPLE__
-            if (Slic3r::is_mac_version_15()) {
-                text_y -= FromDIP(2);
-            }
-#endif
-            memdc.DrawText(labels[0], {BS + (thumbSize.x - textSize[0].x) / 2, text_y});
-            memdc.SetTextForeground(text_color2.count() == 0 ? text_color.colorForStates(state) : text_color2.colorForStates(state));
-            auto text_y_1 = BS + (thumbSize.y - textSize[1].y) / 2;
-#ifdef __APPLE__
-            if (Slic3r::is_mac_version_15()) {
-                text_y_1 -= FromDIP(2);
-            }
-#endif
-            memdc.DrawText(labels[1], {trackSize.x - thumbSize.x - BS + (thumbSize.x - textSize[1].x) / 2, text_y_1});
-			memdc.SelectObject(wxNullBitmap);
-#ifdef __WXOSX__
-            bmp = wxBitmap(bmp.ConvertToImage(), -1, scale);
-#endif
-			(i == 0 ? m_off : m_on).bmp() = bmp;
-		}
-	}
-	SetSize(m_on.GetBmpSize());
-	update();
+    if (m_labels[0].isEmpty()) {
+        const QSize sz = m_on.GetBmpSize();
+        setFixedSize(sz);
+    } else {
+        // Size based on text labels
+        QFontMetrics fm(font());
+        const QSize t0 = fm.boundingRect(m_labels[0]).size();
+        const QSize t1 = fm.boundingRect(m_labels[1]).size();
+        const int thumbW = std::max(t0.width(), t1.width()) + 12;
+        const int thumbH = std::max(t0.height(), t1.height()) + 6;
+        const int trackW = thumbW + t1.width() + 10;
+        const int trackH = thumbH + 2;
+        setFixedSize(trackW, trackH);
+    }
+    update();
 }
+
+QSize SwitchButton::sizeHint() const { return size(); }
 
 void SwitchButton::update()
 {
-	SetBitmap((GetValue() ? m_on : m_off).bmp());
+    QWidget::update();
 }
 
-SwitchBoard::SwitchBoard(wxWindow *parent, wxString leftL, wxString right, wxSize size)
- : wxWindow(parent, wxID_ANY, wxDefaultPosition, size)
+void SwitchButton::paintEvent(QPaintEvent *)
 {
-#ifdef __WINDOWS__
-    SetDoubleBuffered(true);
-#endif //__WINDOWS__
+    QPainter p(this);
+    p.setRenderHint(QPainter::Antialiasing);
 
-    SetBackgroundColour(*wxWHITE);
-	leftLabel = leftL;
-    rightLabel = right;
-
-	SetMinSize(size);
-	SetMaxSize(size);
-
-    Bind(wxEVT_PAINT, &SwitchBoard::paintEvent, this);
-    Bind(wxEVT_LEFT_DOWN, &SwitchBoard::on_left_down, this);
-
-    Bind(wxEVT_ENTER_WINDOW, [this](auto &e) { SetCursor(wxCURSOR_HAND); });
-    Bind(wxEVT_LEAVE_WINDOW, [this](auto &e) { SetCursor(wxCURSOR_ARROW); });
-}
-
-void SwitchBoard::updateState(wxString target)
-{
-    if (target.empty()) {
-        if (!switch_left && !switch_right) {
-            return;
-        }
-
-        switch_left = false;
-        switch_right = false;
-    } else {
-        if (target == "left") {
-            if (switch_left && !switch_right) {
-                return;
-            }
-
-            switch_left = true;
-            switch_right = false;
-        } else if (target == "right") {
-            if (!switch_left && switch_right) {
-                return;
-            }
-
-            switch_left  = false;
-            switch_right = true;
-        }
-    }
-
-    Refresh();
-}
-
-void SwitchBoard::SetLabels(const wxString &left, const wxString &right)
-{
-    if (leftLabel == left && rightLabel == right)
-        return;
-    leftLabel  = left;
-    rightLabel = right;
-    Refresh();
-}
-
-void SwitchBoard::paintEvent(wxPaintEvent &evt)
-{
-    wxPaintDC dc(this);
-    render(dc);
-}
-
-void SwitchBoard::render(wxDC &dc)
-{
-#ifdef __WXMSW__
-    wxSize     size = GetSize();
-    wxMemoryDC memdc;
-    wxBitmap   bmp(size.x, size.y);
-    memdc.SelectObject(bmp);
-    memdc.Blit({0, 0}, size, &dc, {0, 0});
-
-    {
-        wxGCDC dc2(memdc);
-        doRender(dc2);
-    }
-
-    memdc.SelectObject(wxNullBitmap);
-    dc.DrawBitmap(bmp, 0, 0);
-#else
-    doRender(dc);
-#endif
-}
-
-void SwitchBoard::doRender(wxDC &dc)
-{
-    wxColour disable_color = wxColour("#CECECE");
-
-    dc.SetPen(*wxTRANSPARENT_PEN);
-
-    if (is_enable) {dc.SetBrush(wxBrush(0xeeeeee));
-    } else {dc.SetBrush(disable_color);}
-    dc.DrawRoundedRectangle(0, 0, GetSize().x, GetSize().y, 8);
-
-	/*left*/
-    if (switch_left) {
-        is_enable ? dc.SetBrush(wxBrush(wxColour(0, 174, 66))) : dc.SetBrush(disable_color);
-        dc.DrawRoundedRectangle(0, 0, GetSize().x / 2, GetSize().y, 8);
-	}
-
-    if (switch_left) {
-		dc.SetTextForeground(*wxWHITE);
-    } else {
-        dc.SetTextForeground(0x333333);
-	}
-
-    dc.SetFont(::Label::Body_13);
-    Slic3r::GUI::WxFontUtils::get_suitable_font_size(0.6 * GetSize().GetHeight(), dc);
-
-    auto left_txt_size = dc.GetTextExtent(leftLabel);
-    dc.DrawText(leftLabel, wxPoint((GetSize().x / 2 - left_txt_size.x) / 2, (GetSize().y - left_txt_size.y) / 2));
-
-	/*right*/
-    if (switch_right) {
-        if (is_enable) {dc.SetBrush(wxBrush(wxColour(0, 174, 66)));
-        } else {dc.SetBrush(disable_color);}
-        dc.DrawRoundedRectangle(GetSize().x / 2, 0, GetSize().x / 2, GetSize().y, 8);
-	}
-
-    auto right_txt_size = dc.GetTextExtent(rightLabel);
-    if (switch_right) {
-        dc.SetTextForeground(*wxWHITE);
-    } else {
-        dc.SetTextForeground(0x333333);
-    }
-    dc.DrawText(rightLabel, wxPoint((GetSize().x / 2 - right_txt_size.x) / 2 + GetSize().x / 2, (GetSize().y - right_txt_size.y) / 2));
-
-}
-
-void SwitchBoard::on_left_down(wxMouseEvent &evt)
-{
-    if (!is_enable) {
+    if (m_labels[0].isEmpty()) {
+        // Bitmap mode
+        const QPixmap &px = m_value ? m_on.bmp() : m_off.bmp();
+        p.drawPixmap(QPoint(0, 0), px);
         return;
     }
 
-    switch_left = evt.GetPosition().x < GetSize().GetWidth() / 2;
+    // Text-label mode
+    const QRect rc = rect();
+    const int   h  = rc.height();
+    const int   r  = h / 2;
+    QFontMetrics fm(font());
+    const QSize t0 = fm.boundingRect(m_labels[0]).size();
+    const QSize t1 = fm.boundingRect(m_labels[1]).size();
+    const int   tw = std::max(t0.width(), t1.width());
+    const int   th = h - 2;
+
+    // Track
+    const int state0 = StateColor::Enabled | (m_value ? StateColor::Checked : 0);
+    const int state1 = StateColor::Enabled | (m_value ? 0 : StateColor::Checked);
+    p.setBrush(track_color.colorForStates(m_value ? StateColor::Checked | StateColor::Enabled : StateColor::Enabled));
+    p.setPen(Qt::NoPen);
+    p.drawRoundedRect(rc, r, r);
+
+    // Thumb
+    const int thumbX = m_value ? rc.width() - tw - 12 - 1 : 1;
+    p.setBrush(thumb_color.colorForStates(StateColor::Checked | StateColor::Enabled));
+    p.drawRoundedRect(thumbX, 1, tw + 12, th, (th) / 2, (th) / 2);
+
+    // Labels
+    p.setFont(font());
+    // left label
+    p.setPen(text_color.colorForStates(m_value ? StateColor::Checked | StateColor::Enabled : StateColor::Enabled));
+    p.drawText(QRect(1, 1, tw + 12, th), Qt::AlignCenter, m_labels[0]);
+    // right label
+    const int tc2 = text_color2.count();
+    p.setPen((tc2 ? text_color2 : text_color).colorForStates(m_value ? StateColor::Enabled : StateColor::Checked | StateColor::Enabled));
+    p.drawText(QRect(rc.width() - tw - 12 - 1, 1, tw + 12, th), Qt::AlignCenter, m_labels[1]);
+}
+
+void SwitchButton::mousePressEvent(QMouseEvent *event)
+{
+    if (event->button() == Qt::LeftButton) event->accept();
+    else QAbstractButton::mousePressEvent(event);
+}
+
+void SwitchButton::mouseReleaseEvent(QMouseEvent *event)
+{
+    if (event->button() == Qt::LeftButton && rect().contains(event->pos())) {
+        SetValue(!m_value);
+        event->accept();
+    } else {
+        QAbstractButton::mouseReleaseEvent(event);
+    }
+}
+
+// ============================================================
+// SwitchBoard
+// ============================================================
+
+SwitchBoard::SwitchBoard(QWidget *parent, const QString &leftL,
+                         const QString &right, const QSize &size)
+    : QWidget(parent)
+    , leftLabel(leftL)
+    , rightLabel(right)
+{
+    if (!size.isEmpty()) setFixedSize(size);
+    setCursor(Qt::PointingHandCursor);
+    setAttribute(Qt::WA_NoSystemBackground);
+}
+
+void SwitchBoard::updateState(const QString &target)
+{
+    if (target.isEmpty()) {
+        if (!switch_left && !switch_right) return;
+        switch_left = switch_right = false;
+    } else if (target == QStringLiteral("left")) {
+        if (switch_left && !switch_right) return;
+        switch_left = true; switch_right = false;
+    } else if (target == QStringLiteral("right")) {
+        if (!switch_left && switch_right) return;
+        switch_left = false; switch_right = true;
+    }
+    update();
+}
+
+void SwitchBoard::SetLabels(const QString &left, const QString &right)
+{
+    if (leftLabel == left && rightLabel == right) return;
+    leftLabel = left; rightLabel = right;
+    update();
+}
+
+void SwitchBoard::paintEvent(QPaintEvent *)
+{
+    QPainter p(this);
+    p.setRenderHint(QPainter::Antialiasing);
+    doRender(p);
+}
+
+void SwitchBoard::doRender(QPainter &p)
+{
+    const QColor disable_color(0xCE, 0xCE, 0xCE);
+    const QRectF rc = rect();
+    const double r  = 8.0;
+    const int    hw = rc.width() / 2;
+
+    // Background
+    p.setPen(Qt::NoPen);
+    p.setBrush(is_enable ? QColor(0xEE, 0xEE, 0xEE) : disable_color);
+    p.drawRoundedRect(rc, r, r);
+
+    // Left highlight
+    if (switch_left) {
+        p.setBrush(is_enable ? QColor(0, 174, 66) : disable_color);
+        p.drawRoundedRect(QRectF(0, 0, hw, rc.height()), r, r);
+    }
+    // Right highlight
+    if (switch_right) {
+        p.setBrush(is_enable ? QColor(0, 174, 66) : disable_color);
+        p.drawRoundedRect(QRectF(hw, 0, hw, rc.height()), r, r);
+    }
+
+    QFontMetrics fm(Label::Body_13);
+    p.setFont(Label::Body_13);
+
+    // Left text
+    p.setPen(switch_left ? Qt::white : QColor(0x33, 0x33, 0x33));
+    p.drawText(QRectF(0, 0, hw, rc.height()), Qt::AlignCenter, leftLabel);
+
+    // Right text
+    p.setPen(switch_right ? Qt::white : QColor(0x33, 0x33, 0x33));
+    p.drawText(QRectF(hw, 0, hw, rc.height()), Qt::AlignCenter, rightLabel);
+}
+
+void SwitchBoard::mousePressEvent(QMouseEvent *event)
+{
+    if (!is_enable) { event->accept(); return; }
+    switch_left  = event->pos().x() < width() / 2;
     switch_right = !switch_left;
-
-    if (auto_disable_when_switch)
-    {
-        is_enable = false;// make it disable while switching
-    }
-    Refresh();
-
-    wxCommandEvent event(wxCUSTOMEVT_SWITCH_POS);
-    event.SetInt((int)switch_left);
-    wxPostEvent(this, event);
+    if (auto_disable_when_switch) is_enable = false;
+    update();
+    emit switchPos(switch_left);
 }
 
-void SwitchBoard::Enable()
+// ============================================================
+// CustomToggleButton
+// ============================================================
+
+CustomToggleButton::CustomToggleButton(QWidget *parent, const QString &label,
+                                       int /*id*/, const QPoint & /*pos*/,
+                                       const QSize & /*size*/)
+    : QWidget(parent)
+    , m_label(label)
 {
-    if (is_enable == true)
-    {
-        return;
-    }
-
-    is_enable = true;
-    Refresh();
+    SetSelectedIcon(QStringLiteral("switch_send_mode_tag_on"));
+    SetUnSelectedIcon(QStringLiteral("switch_send_mode_tag_off"));
+    setAutoFillBackground(false);
+    setCursor(Qt::PointingHandCursor);
 }
 
-void SwitchBoard::Disable()
+void CustomToggleButton::setText(const QString &label) { m_label = label; update(); }
+
+void CustomToggleButton::SetSelectedIcon(const QString &iconPath)
 {
-    if (is_enable == false)
-    {
-        return;
-    }
-
-    is_enable = false;
-    Refresh();
+    m_selected_icon = Slic3r::GUI::create_scaled_pixmap(iconPath.toStdString(), this, 16);
+    update();
 }
 
-CustomToggleButton::CustomToggleButton(wxWindow* parent, const wxString& label, wxWindowID id, const wxPoint& pos, const wxSize& size)
-    : wxWindow(parent, id, pos, size), m_isSelected(false) {
-    m_label = label;
-    SetSelectedIcon("switch_send_mode_tag_on"); // Default icon
-    SetUnSelectedIcon("switch_send_mode_tag_off"); // Default icon
-    Connect(wxEVT_PAINT, wxPaintEventHandler(CustomToggleButton::OnPaint));
-    Connect(wxEVT_SIZE, wxSizeEventHandler(CustomToggleButton::OnSize));
-    Bind(wxEVT_LEFT_DOWN, &CustomToggleButton::on_left_down, this);
-    SetBackgroundColour(*wxWHITE);
-    Slic3r::GUI::wxGetApp().UpdateDarkUIWin(this);
-}
-
-void CustomToggleButton::on_left_down(wxMouseEvent& e)
+void CustomToggleButton::SetUnSelectedIcon(const QString &iconPath)
 {
-    SetIsSelected(true);
+    m_unselected_icon = Slic3r::GUI::create_scaled_pixmap(iconPath.toStdString(), this, 16);
+    update();
 }
 
-void CustomToggleButton::SetLabel(const wxString& label) {
-    m_label = label;
-    Refresh();
-}
+void CustomToggleButton::SetIsSelected(bool selected) { m_isSelected = selected; update(); }
 
-void CustomToggleButton::SetSelectedIcon(const wxString& iconPath) {
-    m_selected_icon = create_scaled_bitmap(iconPath.ToStdString(), nullptr,  16);
-    Refresh();
-}
-
-void CustomToggleButton::SetUnSelectedIcon(const wxString& iconPath) {
-    m_unselected_icon = create_scaled_bitmap(iconPath.ToStdString(), nullptr,  16);
-    Refresh();
-}
-
-void CustomToggleButton::SetIsSelected(bool selected) {
-    m_isSelected = selected;
-    Refresh();
-}
-
-
-bool CustomToggleButton::IsSelected() const {
-    return m_isSelected;
-}
-
-void CustomToggleButton::OnPaint(wxPaintEvent& event) {
-    wxPaintDC dc(this);
-    render(dc);
-}
-
-void CustomToggleButton::render(wxDC& dc)
+void CustomToggleButton::mousePressEvent(QMouseEvent *event)
 {
-#ifdef __WXMSW__
-    wxSize     size = GetSize();
-    wxMemoryDC memdc;
-    wxBitmap   bmp(size.x, size.y);
-    memdc.SelectObject(bmp);
-    memdc.Blit({ 0, 0 }, size, &dc, { 0, 0 });
-
-    {
-        wxGCDC dc2(memdc);
-        doRender(dc2);
-    }
-
-    memdc.SelectObject(wxNullBitmap);
-    dc.DrawBitmap(bmp, 0, 0);
-#else
-    doRender(dc);
-#endif
-}
-
-void CustomToggleButton::doRender(wxDC& dc)
-{
-    wxRect rect = GetClientRect();
-    wxSize textRect = dc.GetMultiLineTextExtent(m_label);
-    wxSize iconRect = m_selected_icon.GetSize();
-    int iconRectWidth = iconRect.GetWidth();
-    int iconRectHeight = iconRect.GetHeight();
-#ifdef __APPLE__
-    iconRectWidth = FromDIP(16);
-    iconRectHeight = FromDIP(16);
-#endif
-    int left = (rect.GetSize().x -  textRect.GetWidth() - iconRectWidth - FromDIP(6)) / 2;
-
-    // Draw background
-    if (m_isSelected) {
-        dc.SetBrush(wxBrush(m_secondary_colour));
-        dc.SetPen(wxPen(m_primary_colour));
-    }
-    else {
-        dc.SetBrush(*wxTRANSPARENT_BRUSH);
-        dc.SetPen(wxPen(wxColour("#EEEEEE")));
-    }
-    
-    dc.DrawRoundedRectangle(rect, 5);
-
-    // Draw icon
-    if (m_isSelected) {
-        if (m_selected_icon.IsOk()) {
-            int iconY = (rect.GetHeight() - iconRectHeight) / 2;
-            dc.DrawBitmap(m_selected_icon, left, iconY, true);
-            left += iconRectWidth + FromDIP(6);
-        }
+    if (event->button() == Qt::LeftButton) {
+        SetIsSelected(true);
+        emit clicked();
+        event->accept();
     } else {
-        if (m_unselected_icon.IsOk()) {
-            int iconY = (rect.GetHeight() - iconRectHeight) / 2;
-            dc.DrawBitmap(m_unselected_icon, left, iconY, true);
-            left += iconRectWidth + FromDIP(6);
-        }
+        QWidget::mousePressEvent(event);
     }
+}
 
-    // Draw text
-    dc.SetFont(::Label::Head_13);
+void CustomToggleButton::paintEvent(QPaintEvent *)
+{
+    QPainter p(this);
+    p.setRenderHint(QPainter::Antialiasing);
 
+    const QRectF rc = rect();
+    QFontMetrics fm(Label::Head_13);
+    const QSize  textSz = fm.boundingRect(m_label).size();
+    const QPixmap &icon = m_isSelected ? m_selected_icon : m_unselected_icon;
+    const int iw = icon.isNull() ? 0 : icon.width();
+    const int gap = iw > 0 ? 6 : 0;
+    const int totalW = iw + gap + textSz.width();
+    int left = (rc.width() - totalW) / 2;
+
+    // Background
     if (m_isSelected) {
-        dc.SetTextForeground(m_primary_colour);
+        p.setBrush(m_secondary_colour);
+        p.setPen(QPen(m_primary_colour));
+    } else {
+        p.setBrush(Qt::NoBrush);
+        p.setPen(QPen(QColor("#EEEEEE")));
     }
-    else {
-        dc.SetTextForeground(Slic3r::GUI::wxGetApp().dark_mode() ? *wxWHITE:wxColour("#5C5C5C"));
+    p.drawRoundedRect(rc, 5, 5);
+
+    // Icon
+    if (!icon.isNull()) {
+        int iy = (rc.height() - icon.height()) / 2;
+        p.drawPixmap(QPoint(left, iy), icon);
+        left += iw + gap;
     }
 
-    int textY = (rect.GetHeight() - dc.GetCharHeight()) / 2;
-    dc.DrawText(m_label, left, textY);
-}
-void CustomToggleButton::OnSize(wxSizeEvent& event) {
-    Refresh();
-    event.Skip();
+    // Text
+    p.setFont(Label::Head_13);
+    p.setPen(m_isSelected ? m_primary_colour : QColor("#5C5C5C"));
+    int ty = (rc.height() - textSz.height()) / 2;
+    p.drawText(QPoint(left, ty + fm.ascent()), m_label);
 }
 
-// RichTooltipPopup implementation
-RichTooltipPopup::RichTooltipPopup(wxWindow* parent, const wxString& iconName, const wxString& text)
-    : wxPopupTransientWindow(parent, wxBORDER_NONE)
+// ============================================================
+// RichTooltipPopup
+// ============================================================
+
+RichTooltipPopup::RichTooltipPopup(QWidget *parent,
+                                   const QString &iconName,
+                                   const QString &text)
+    : QWidget(parent, Qt::ToolTip | Qt::FramelessWindowHint)
     , m_text(text)
 {
-    SetBackgroundColour(wxColour(50, 50, 50));
-    
-    wxBoxSizer* sizer = new wxBoxSizer(wxHORIZONTAL);
-    
-    // Add icon if provided
-    if (!iconName.IsEmpty()) {
-        m_icon = create_scaled_bitmap(iconName.ToStdString(), this, 32);
-        if (m_icon.IsOk()) {
-            wxStaticBitmap* iconCtrl = new wxStaticBitmap(this, wxID_ANY, m_icon);
-            sizer->Add(iconCtrl, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, FromDIP(12));
-        }
+    if (!iconName.isEmpty())
+        m_icon = Slic3r::GUI::create_scaled_pixmap(iconName.toStdString(), this, 32);
+    setAttribute(Qt::WA_TranslucentBackground);
+    setAutoFillBackground(false);
+
+    // Compute size
+    QFontMetrics fm(Label::Body_13);
+    const QSize textSz = fm.boundingRect(m_text).size();
+    const int iw = m_icon.isNull() ? 0 : m_icon.width() + 12;
+    resize(iw + textSz.width() + 24, std::max(textSz.height() + 16,
+           m_icon.isNull() ? 0 : m_icon.height() + 16));
+}
+
+void RichTooltipPopup::ShowAtPosition(QWidget *anchor)
+{
+    const QPoint pos = anchor->mapToGlobal(QPoint(0, anchor->height() + 4));
+    const int cx = pos.x() + (anchor->width() - width()) / 2;
+    move(cx, pos.y());
+    show();
+    raise();
+}
+
+void RichTooltipPopup::paintEvent(QPaintEvent *)
+{
+    QPainter p(this);
+    p.setRenderHint(QPainter::Antialiasing);
+    p.setBrush(QColor(50, 50, 50));
+    p.setPen(Qt::NoPen);
+    p.drawRoundedRect(rect(), 4, 4);
+
+    int x = 12;
+    if (!m_icon.isNull()) {
+        p.drawPixmap(QPoint(x, (height() - m_icon.height()) / 2), m_icon);
+        x += m_icon.width() + 12;
     }
-    
-    // Add text
-    wxStaticText* textCtrl = new wxStaticText(this, wxID_ANY, m_text);
-    textCtrl->SetFont(Label::Body_13);
-    textCtrl->SetForegroundColour(*wxWHITE);
-    sizer->Add(textCtrl, 0, wxALIGN_CENTER_VERTICAL | wxLEFT | wxRIGHT, FromDIP(12));
-    
-    SetSizer(sizer);
-    sizer->Fit(this);
-    
-    // Add vertical padding
-    wxSize size = GetSize();
-    size.SetHeight(size.GetHeight() + FromDIP(16));
-    SetSize(size);
-    SetMinSize(size);
-    
-    Bind(wxEVT_PAINT, &RichTooltipPopup::OnPaint, this);
+    p.setFont(Label::Body_13);
+    p.setPen(Qt::white);
+    p.drawText(QRect(x, 0, width() - x - 12, height()), Qt::AlignVCenter | Qt::AlignLeft, m_text);
 }
 
-void RichTooltipPopup::OnPaint(wxPaintEvent& event)
-{
-    wxPaintDC dc(this);
-    // Just fill background - controls handle their own drawing
-    dc.SetBrush(wxBrush(wxColour(50, 50, 50)));
-    dc.SetPen(*wxTRANSPARENT_PEN);
-    dc.DrawRectangle(GetClientRect());
-    event.Skip();
-}
+// ============================================================
+// ExpandButton
+// ============================================================
 
-void RichTooltipPopup::ShowAtPosition(wxWindow* anchor)
+ExpandButton::ExpandButton(QWidget *parent, const std::string &bmp,
+                           int /*id*/, const QPoint & /*pos*/,
+                           const QSize & /*size*/)
+    : QWidget(parent)
+    , m_bmp_str(bmp)
 {
-    wxPoint pos = anchor->ClientToScreen(wxPoint(0, 0));
-    wxSize anchorSize = anchor->GetSize();
-    wxSize tipSize = GetSize();
-    
-    // Position below the anchor, centered
-    pos.x += (anchorSize.GetWidth() - tipSize.GetWidth()) / 2;
-    pos.y += anchorSize.GetHeight() + FromDIP(4);
-    
-    SetPosition(pos);
-    Popup();
-}
-
-ExpandButton::ExpandButton(wxWindow* parent,  std::string bmp, wxWindowID id, const wxPoint& pos, const wxSize& size)
-    : wxWindow(parent, id, pos, size)
-    , m_tooltip_popup(nullptr)
-{
-    m_bmp_str = bmp;
-    m_bmp = create_scaled_bitmap(m_bmp_str, this, 18);
-    SetMinSize(wxSize(FromDIP(24), FromDIP(24)));
-    SetMaxSize(wxSize(FromDIP(24), FromDIP(24)));
-    Bind(wxEVT_PAINT, &ExpandButton::OnPaint, this);
-    Bind(wxEVT_ENTER_WINDOW, [this](auto& e) { 
-        SetCursor(wxCURSOR_HAND);
-        ShowRichTooltip();
-    });
-    Bind(wxEVT_LEAVE_WINDOW, [this](auto& e) { 
-        SetCursor(wxCURSOR_ARROW);
-        HideRichTooltip();
-    });
-    Bind(wxEVT_LEFT_DOWN, [this](auto& e) {
-        HideRichTooltip();
-        wxCommandEvent event(wxEXPAND_LEFT_DOWN);
-        event.SetInt(GetId());
-        wxPostEvent(GetParent(), event);
-    });
+    m_bmp = Slic3r::GUI::create_scaled_pixmap(bmp, this, 18);
+    setFixedSize(24, 24);
+    setCursor(Qt::PointingHandCursor);
 }
 
 ExpandButton::~ExpandButton()
 {
-    // Clean up tooltip popup to prevent memory leak
-    if (m_tooltip_popup) {
-        if (m_tooltip_popup->IsShown()) {
-            m_tooltip_popup->Dismiss();
-        }
-        m_tooltip_popup->Destroy();
-        m_tooltip_popup = nullptr;
-    }
+    HideRichTooltip();
 }
 
-void ExpandButton::update_bitmap(std::string bmp)
+void ExpandButton::update_bitmap(const std::string &bmp)
 {
-    m_bmp = create_scaled_bitmap(bmp, this, 18);
-    Refresh();
+    m_bmp_str = bmp;
+    m_bmp = Slic3r::GUI::create_scaled_pixmap(bmp, this, 18);
+    update();
 }
 
-void ExpandButton::msw_rescale() 
-{
-    m_bmp = create_scaled_bitmap(m_bmp_str, this, 18);
-    Refresh();
-}
+void ExpandButton::msw_rescale() { update_bitmap(m_bmp_str); }
 
-void ExpandButton::SetRichTooltip(const wxString& iconName, const wxString& text)
+void ExpandButton::SetRichTooltip(const QString &iconName, const QString &text)
 {
     m_tooltip_icon = iconName;
     m_tooltip_text = text;
@@ -595,19 +394,8 @@ void ExpandButton::SetRichTooltip(const wxString& iconName, const wxString& text
 
 void ExpandButton::ShowRichTooltip()
 {
-    if (m_tooltip_text.IsEmpty()) return;
-    
-    // Clean up any existing popup before creating a new one to prevent memory leaks
-    if (m_tooltip_popup) {
-        // Dismiss and destroy the existing popup
-        if (m_tooltip_popup->IsShown()) {
-            m_tooltip_popup->Dismiss();
-        }
-        m_tooltip_popup->Destroy();
-        m_tooltip_popup = nullptr;
-    }
-    
-    // Create a new popup instance
+    if (m_tooltip_text.isEmpty()) return;
+    HideRichTooltip();
     m_tooltip_popup = new RichTooltipPopup(this, m_tooltip_icon, m_tooltip_text);
     m_tooltip_popup->ShowAtPosition(this);
 }
@@ -615,487 +403,221 @@ void ExpandButton::ShowRichTooltip()
 void ExpandButton::HideRichTooltip()
 {
     if (m_tooltip_popup) {
-        // Dismiss the popup if it's currently shown
-        if (m_tooltip_popup->IsShown()) {
-            m_tooltip_popup->Dismiss();
-        }
-        // Destroy the popup to prevent memory leak
-        m_tooltip_popup->Destroy();
+        m_tooltip_popup->hide();
+        m_tooltip_popup->deleteLater();
         m_tooltip_popup = nullptr;
     }
 }
 
-void ExpandButton::OnPaint(wxPaintEvent& event) {
-    wxPaintDC dc(this);
-    render(dc);
-}
-
-void ExpandButton::render(wxDC& dc)
+void ExpandButton::paintEvent(QPaintEvent *)
 {
-#ifdef __WXMSW__
-    wxSize     size = GetSize();
-    wxMemoryDC memdc;
-    wxBitmap   bmp(size.x, size.y);
-    memdc.SelectObject(bmp);
-    memdc.Blit({ 0, 0 }, size, &dc, { 0, 0 });
-
-    {
-        wxGCDC dc2(memdc);
-        doRender(dc2);
-    }
-
-    memdc.SelectObject(wxNullBitmap);
-    dc.DrawBitmap(bmp, 0, 0);
-#else
-    doRender(dc);
-#endif
-}
-
-void ExpandButton::doRender(wxDC& dc)
-{
-    wxSize size = GetSize();
-    int left = (size.GetWidth() - FromDIP(18)) / 2;
-    int top = (size.GetHeight() - FromDIP(18)) / 2;
-    dc.DrawBitmap(m_bmp, left, top);
-}
-
-ExpandButtonHolder::ExpandButtonHolder(wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size)
-    : wxPanel(parent, id, pos, size)
-{
-#ifdef __APPLE__
-    SetBackgroundColour(wxColour("#2D2D30"));
-#else
-    SetBackgroundColour(wxColour("#3B4446"));
-#endif
-    
-    hsizer = new wxBoxSizer(wxHORIZONTAL);
-    hsizer->AddStretchSpacer(1);
-    vsizer = new wxBoxSizer(wxVERTICAL);
-
-    vsizer->Add(hsizer, 0, wxALIGN_CENTER, 0);
-
-    Bind(wxEVT_PAINT, &ExpandButtonHolder::OnPaint, this);
-    Bind(wxEVT_ENTER_WINDOW, [=](auto& e) {
-        auto a = 1;
-        });
-
-    SetSizer(vsizer);
-    Layout();
-    Fit();
-}
-
-void ExpandButtonHolder::addExpandButton(wxWindowID id, std::string img)
-{
-    ExpandButton* expand_program = new ExpandButton(this, img, id);
-    hsizer->Add(expand_program, 0, wxALIGN_CENTER|wxALL, FromDIP(3));
-    ShowExpandButton(id, true);
-}
-
-void ExpandButtonHolder::ShowExpandButton(wxWindowID id, bool show)
-{
-    wxWindowList& children = this->GetChildren();
-    for (wxWindowList::iterator it = children.begin(); it != children.end(); ++it)
-    {
-        wxWindow* child = *it;
-        if (!child) continue;
-        ExpandButton* expandBtn = dynamic_cast<ExpandButton*>(child);
-        if (expandBtn != nullptr)
-        {
-            if (expandBtn->GetId() == id) {
-                expandBtn->Show(show);
-            }
-        }
-    }
-
-     int length = GetAvailable();
-
-     for (wxWindowList::iterator it = children.begin(); it != children.end(); ++it)
-     {
-         wxWindow* child = *it;
-         if (!child) continue;
-         ExpandButton* expandBtn = dynamic_cast<ExpandButton*>(child);
-         if (expandBtn != nullptr)
-         {
-             if (length <= 1) {
-                 expandBtn->SetBackgroundColour(wxColour("#3B4446"));
-             }
-             else {
-
-#ifdef __APPLE__
-                expandBtn->SetBackgroundColour(wxColour("#384547"));
-#else
-                expandBtn->SetBackgroundColour(wxColour("#242E30"));
-#endif
-
-                 
-             }
-         }
-     }
-
-    SetMinSize(wxSize(length * FromDIP(24) + FromDIP(24) + (length - 1) * FromDIP(6), FromDIP(24)));
-    SetMaxSize(wxSize(length * FromDIP(24) + FromDIP(24) + (length - 1) * FromDIP(6), FromDIP(24)));
-    Layout();
-    Fit();
-}
-
-void ExpandButtonHolder::updateExpandButtonBitmap(wxWindowID id, std::string bitmap)
-{
-    wxWindowList& children = this->GetChildren();
-    for (wxWindowList::iterator it = children.begin(); it != children.end(); ++it)
-    {
-        wxWindow* child = *it;
-        if (!child) continue;
-        ExpandButton* expandBtn = dynamic_cast<ExpandButton*>(child);
-        if (expandBtn != nullptr)
-        {
-            if (expandBtn->GetId() == id) {
-                expandBtn->update_bitmap(bitmap);
-            }   
-        }
+    QPainter p(this);
+    if (!m_bmp.isNull()) {
+        int x = (width()  - m_bmp.width())  / 2;
+        int y = (height() - m_bmp.height()) / 2;
+        p.drawPixmap(QPoint(x, y), m_bmp);
     }
 }
 
-void ExpandButtonHolder::EnableExpandButton(wxWindowID id, bool enb)
+void ExpandButton::enterEvent(QEnterEvent *event)
 {
-    wxWindowList& children = this->GetChildren();
-    for (wxWindowList::iterator it = children.begin(); it != children.end(); ++it)
-    {
-        wxWindow* child = *it;
-        if (!child) continue;
-        ExpandButton* expandBtn = dynamic_cast<ExpandButton*>(child);
-        if (expandBtn != nullptr)
-        {
-            if (expandBtn->GetId() == id) {
-                expandBtn->Enable(enb);
-            }
-        }
+    ShowRichTooltip();
+    QWidget::enterEvent(event);
+}
+
+void ExpandButton::leaveEvent(QEvent *event)
+{
+    HideRichTooltip();
+    QWidget::leaveEvent(event);
+}
+
+void ExpandButton::mousePressEvent(QMouseEvent *event)
+{
+    if (event->button() == Qt::LeftButton) {
+        HideRichTooltip();
+        emit expandClicked(property("_bbl_id").toInt());
+        event->accept();
+    } else {
+        QWidget::mousePressEvent(event);
     }
 }
 
-// Helper method to find an ExpandButton by ID
-ExpandButton* ExpandButtonHolder::FindExpandButton(wxWindowID id)
-{
-    wxWindowList& children = this->GetChildren();
-    for (wxWindowList::iterator it = children.begin(); it != children.end(); ++it)
-    {
-        wxWindow* child = *it;
-        if (!child) continue;
-        ExpandButton* expandBtn = dynamic_cast<ExpandButton*>(child);
-        if (expandBtn != nullptr && expandBtn->GetId() == id) {
-            return expandBtn;
-        }
-    }
-    return nullptr;
-}
+// ============================================================
+// ExpandButtonHolder
+// ============================================================
 
-void ExpandButtonHolder::SetExpandButtonTooltip(wxWindowID id, const wxString& tooltip)
+ExpandButtonHolder::ExpandButtonHolder(QWidget *parent, int /*id*/,
+                                       const QPoint & /*pos*/,
+                                       const QSize & /*size*/)
+    : QWidget(parent)
 {
-    ExpandButton* expandBtn = FindExpandButton(id);
-    if (expandBtn != nullptr) {
-        expandBtn->SetToolTip(tooltip);
-    }
-}
+    setAutoFillBackground(true);
+    QPalette p = palette();
+    p.setColor(QPalette::Window, QColor("#3B4446"));
+    setPalette(p);
 
-void ExpandButtonHolder::SetExpandButtonRichTooltip(wxWindowID id, const wxString& iconName, const wxString& text)
-{
-    ExpandButton* expandBtn = FindExpandButton(id);
-    if (expandBtn != nullptr) {
-        expandBtn->SetRichTooltip(iconName, text);
-    }
+    hsizer = new QHBoxLayout(this);
+    hsizer->setContentsMargins(12, 0, 12, 0);
+    hsizer->setSpacing(6);
+    hsizer->addStretch(1);
+    setLayout(hsizer);
 }
 
 int ExpandButtonHolder::GetAvailable()
 {
-    int count = 0;
-    wxWindowList& children = this->GetChildren();
-    for (wxWindowList::iterator it = children.begin(); it != children.end(); ++it)
-    {
-        wxWindow* child = *it;
-        if (!child) continue;
-        ExpandButton* expandBtn = dynamic_cast<ExpandButton*>(child);
-        if (expandBtn != nullptr)
-        {
-            if (expandBtn->IsShown()) {
-                count++;
-            }
-        }
-    }
-    return count;
+    int cnt = 0;
+    for (auto *c : findChildren<ExpandButton *>())
+        if (c->isVisible()) ++cnt;
+    return cnt;
+}
+
+void ExpandButtonHolder::addExpandButton(int id, const std::string &img)
+{
+    auto *btn = new ExpandButton(this, img);
+    btn->setProperty("_bbl_id", id);
+    connect(btn, &ExpandButton::expandClicked, this, &ExpandButtonHolder::expandClicked);
+    hsizer->insertWidget(hsizer->count() - 1, btn);
+}
+
+ExpandButton *ExpandButtonHolder::FindExpandButton(int id)
+{
+    for (auto *c : findChildren<ExpandButton *>())
+        if (c->property("_bbl_id").toInt() == id) return c;
+    return nullptr;
+}
+
+void ExpandButtonHolder::ShowExpandButton(int id, bool show)
+{
+    if (auto *b = FindExpandButton(id)) b->setVisible(show);
+}
+
+void ExpandButtonHolder::updateExpandButtonBitmap(int id, const std::string &bitmap)
+{
+    if (auto *b = FindExpandButton(id)) b->update_bitmap(bitmap);
+}
+
+void ExpandButtonHolder::EnableExpandButton(int id, bool enb)
+{
+    if (auto *b = FindExpandButton(id)) b->setEnabled(enb);
+}
+
+void ExpandButtonHolder::SetExpandButtonTooltip(int id, const QString &tooltip)
+{
+    if (auto *b = FindExpandButton(id)) b->setToolTip(tooltip);
+}
+
+void ExpandButtonHolder::SetExpandButtonRichTooltip(int id, const QString &iconName, const QString &text)
+{
+    if (auto *b = FindExpandButton(id)) b->SetRichTooltip(iconName, text);
 }
 
 void ExpandButtonHolder::msw_rescale()
 {
-    wxWindowList& children = this->GetChildren();
-    for (wxWindowList::iterator it = children.begin(); it != children.end(); ++it)
-    {
-        wxWindow* child = *it;
-        if (!child) continue;
-        ExpandButton* expandBtn = dynamic_cast<ExpandButton*>(child);
-        if (expandBtn != nullptr)
-        {
-            expandBtn->msw_rescale();
-        }
-    }
-    Refresh();
+    for (auto *b : findChildren<ExpandButton *>()) b->msw_rescale();
 }
 
-void ExpandButtonHolder::OnPaint(wxPaintEvent& event) {
-    wxPaintDC dc(this);
-    render(dc);
-}
+// ============================================================
+// MultiSwitchButton
+// ============================================================
 
-void ExpandButtonHolder::render(wxDC& dc)
+MultiSwitchButton::MultiSwitchButton(QWidget *parent)
+    : StaticBox(parent)
+    , m_bg_color(std::make_pair(QColor(0xE8, 0xE8, 0xE8), (int)StateColor::NotChecked),
+                 std::make_pair(QColor(0x00, 0xAE, 0x42), (int)StateColor::Normal))
+    , m_text_color(std::make_pair(QColor(0x6B, 0x6B, 0x6B), (int)StateColor::NotChecked),
+                   std::make_pair(QColor(0xFF, 0xFF, 0xFE), (int)StateColor::Normal))
 {
-#ifdef __WXMSW__
-    wxSize     size = GetSize();
-    wxMemoryDC memdc;
-    wxBitmap   bmp(size.x, size.y);
-    memdc.SelectObject(bmp);
-    memdc.Blit({ 0, 0 }, size, &dc, { 0, 0 });
-
-    {
-        wxGCDC dc2(memdc);
-        doRender(dc2);
-    }
-
-    memdc.SelectObject(wxNullBitmap);
-    dc.DrawBitmap(bmp, 0, 0);
-#else
-    doRender(dc);
-#endif
+    sizer = new QHBoxLayout(this);
+    sizer->setContentsMargins(2, 2, 2, 2);
+    sizer->setSpacing(0);
+    setLayout(sizer);
 }
 
-void ExpandButtonHolder::doRender(wxDC& dc)
+MultiSwitchButton::~MultiSwitchButton() = default;
+
+int MultiSwitchButton::AppendOption(const QString &option, void *clientData)
 {
-    wxSize size = GetSize();
-    
-    if (GetAvailable() > 1) {
-#ifdef __APPLE__
-        dc.SetBrush(wxBrush(wxColour("#384547")));
-        dc.SetPen(wxPen(wxColour("#384547")));
-#else
-        dc.SetBrush(wxBrush(wxColour("#242E30")));
-        dc.SetPen(wxPen(wxColour("#242E30")));
-#endif
-        dc.DrawRoundedRectangle(0, 0, size.x, size.y, FromDIP(10));
-    }
-}
-
-MultiSwitchButton::MultiSwitchButton(wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size, long style)
-    : StaticBox(parent, id, pos, size, style)
-    , sel(-1)
-    , m_bg_color(StateColor(
-        std::make_pair(0xE8E8E8, (int) StateColor::NotChecked),
-        std::make_pair(0x00AE42, (int) StateColor::Normal)))
-    , m_bg_color_grayed(StateColor(
-        std::make_pair(0xE8E8E8, (int) StateColor::NotChecked),
-        std::make_pair(0x6DC48D, (int) StateColor::Normal)))
-    , m_text_color(StateColor(
-        std::make_pair(0x6B6B6B, (int) StateColor::NotChecked),
-        std::make_pair(0xFFFFFE, (int) StateColor::Normal)))
-    , m_text_color_grayed(StateColor(
-        std::make_pair(0x999999, (int) StateColor::NotChecked),
-        std::make_pair(0x99DFB2, (int) StateColor::Normal)))
-    , m_button_radius(10.0)
-    , m_button_padding(10, 6)
-{
-    SetCornerRadius(m_button_radius);
-    SetBorderWidth(0);
-
-    sizer = new wxBoxSizer(wxHORIZONTAL);
-    sizer->AddSpacer(8);
-    auto hsizer = new wxBoxSizer(wxVERTICAL);
-    hsizer->Add(sizer, 1, wxEXPAND | wxTOP | wxBOTTOM, 0);
-    SetSizer(hsizer);
-    SetMinSize(wxSize(-1, 20));
-
-    Bind(wxEVT_COMMAND_BUTTON_CLICKED, &MultiSwitchButton::button_clicked, this);
-
-    SetFont(Label::Body_12);
-}
-
-MultiSwitchButton::~MultiSwitchButton()
-{
-    DeleteAllOptions();
-}
-
-int MultiSwitchButton::AppendOption(const wxString &option, void *clientData)
-{
-    Button *btn = new Button();
-    btn->Create(this, option, "", wxBORDER_NONE);
-    btn->SetFont(GetFont());
-
-    int states = state_handler.states();
-    wxColor color = m_bg_color.colorForStates(states);
-    btn->SetBackgroundColour(color);
-    btn->SetBackgroundColor(m_bg_color);
+    auto *btn = new Button(this, option);
     btn->SetTextColor(m_text_color);
-    btn->SetCornerRadius(m_button_radius);
-    btn->SetPaddingSize(m_button_padding);
-    btn->SetClientData(clientData);
-
     btns.push_back(btn);
-
-    if (btns.size() > 1) { sizer->AddSpacer(0); }
-    sizer->Add(btn, 1, wxEXPAND | wxALIGN_CENTER_VERTICAL);
-    wxSize textSize = btn->GetTextExtent(option);
-    wxSize minSize  = wxSize(textSize.x + m_button_padding.x * 2 + 6, -1);
-    btn->SetMinSize(minSize);
-
-    return btns.size() - 1;
+    m_option_data.push_back(clientData);
+    sizer->addWidget(btn);
+    connect(btn, &Button::clicked, this, &MultiSwitchButton::button_clicked);
+    update_button_styles();
+    return (int)btns.size() - 1;
 }
 
-void MultiSwitchButton::SetOptions(const std::vector<wxString>& options)
+void MultiSwitchButton::SetOptions(const std::vector<QString> &options)
 {
     DeleteAllOptions();
-    for (const auto& option : options) {
-        AppendOption(option);
-    }
-    sizer->AddSpacer(0);
-    if (btns.size() == 1) {
-        btns[0]->SetLeftCornerWhite();
-        btns[0]->SetRightCornerWhite();
-    } else if (btns.size() > 1) {
-        btns.front()->SetLeftCornerWhite();
-        btns.back()->SetRightCornerWhite();
-    }
-    Layout();
-    Refresh();
+    for (auto &o : options) AppendOption(o);
 }
 
 void MultiSwitchButton::DeleteAllOptions()
 {
-    sel = -1;
-    for (auto btn : btns) {
-        if (btn) {
-            btn->Destroy();
-        }
-    }
+    for (auto *b : btns) { sizer->removeWidget(b); delete b; }
     btns.clear();
-    sizer->Clear(true);
-    sizer->AddSpacer(0);
-}
-
-unsigned int MultiSwitchButton::GetCount() const
-{
-    return btns.size();
-}
-
-int MultiSwitchButton::GetSelection() const
-{
-    return sel;
+    m_option_data.clear();
+    sel = -1;
 }
 
 void MultiSwitchButton::SetSelection(int index)
 {
-    if (index < 0 || index >= (int) btns.size() || index == sel) {
-        return;
-    }
-
+    if (index < 0 || index >= (int)btns.size()) return;
     sel = index;
     update_button_styles();
-    send_selection_event();
-    Refresh();
+    emit selectionChanged(sel);
 }
 
-wxString MultiSwitchButton::GetSelectedText() const
+void MultiSwitchButton::button_clicked()
 {
-    if (sel >= 0 && sel < (int)btns.size()) {
-        return btns[sel]->GetLabel();
+    auto *btn = qobject_cast<Button *>(sender());
+    for (int i = 0; i < (int)btns.size(); ++i) {
+        if (btns[i] == btn) { SetSelection(i); return; }
     }
-    return wxString();
-}
-
-wxString MultiSwitchButton::GetOptionText(unsigned int index) const
-{
-    return index < btns.size() ? btns[index]->GetLabel() : wxString();
-}
-
-void MultiSwitchButton::SetOptionText(unsigned int index, const wxString &text)
-{
-    if (index >= btns.size()) return;
-    btns[index]->SetLabel(text);
-}
-
-void *MultiSwitchButton::GetOptionData(unsigned int index) const
-{
-    if (index >= btns.size()) return nullptr;
-    return btns[index]->GetClientData();
-}
-
-void MultiSwitchButton::SetOptionData(unsigned int index, void *client)
-{
-    if (index >= btns.size()) return;
-    btns[index]->SetClientData(client);
 }
 
 void MultiSwitchButton::update_button_styles()
 {
-    for (int i = 0; i < (int) btns.size(); ++i) {
-        btns[i]->SetValue(i == sel);
-
-        auto bg_color   = btns[i]->IsGrayed() ? m_bg_color_grayed : m_bg_color;
-        auto text_color = btns[i]->IsGrayed() ? m_text_color_grayed : m_text_color;
-        btns[i]->SetBackgroundColor(bg_color);
-        btns[i]->SetTextColor(text_color);
-        btns[i]->Refresh();
+    for (int i = 0; i < (int)btns.size(); ++i) {
+        const bool checked = (i == sel);
+        btns[i]->SetTextColor(
+            checked ? StateColor(m_text_color.colorForStates(StateColor::Normal))
+                    : StateColor(m_text_color.colorForStates(StateColor::NotChecked)));
+        btns[i]->update();
     }
+    update();
 }
 
-void MultiSwitchButton::SetBackgroundColor(const StateColor &color)
+QString MultiSwitchButton::GetSelectedText() const
 {
-    m_bg_color = color;
-    update_button_styles();
+    return (sel >= 0 && sel < (int)btns.size()) ? btns[sel]->text() : QString{};
 }
 
-void MultiSwitchButton::SetTextColor(const StateColor &color)
+QString MultiSwitchButton::GetOptionText(unsigned int i) const
 {
-    m_text_color = color;
-    update_button_styles();
+    return i < btns.size() ? btns[i]->text() : QString{};
+}
+void MultiSwitchButton::SetOptionText(unsigned int i, const QString &t)
+{
+    if (i < btns.size()) { btns[i]->setText(t); }
 }
 
-void MultiSwitchButton::SetButtonCornerRadius(double radius)
+void *MultiSwitchButton::GetOptionData(unsigned int i) const
 {
-    m_button_radius = radius;
-    SetCornerRadius(radius);
-    for (auto *btn : btns) {
-        btn->SetCornerRadius(radius);
-    }
-    Layout();
-    Refresh();
+    return i < m_option_data.size() ? m_option_data[i] : nullptr;
+}
+void MultiSwitchButton::SetOptionData(unsigned int i, void *d)
+{
+    if (i < m_option_data.size()) m_option_data[i] = d;
 }
 
-void MultiSwitchButton::SetButtonPadding(const wxSize &padding)
-{
-    m_button_padding = padding;
-    for (auto *btn : btns) {
-        btn->SetPaddingSize(padding);
-    }
-    Layout();
-    Refresh();
+void MultiSwitchButton::SetBackgroundColor(const StateColor &color) { m_bg_color = color; update(); }
+void MultiSwitchButton::SetTextColor(const StateColor &color)       { m_text_color = color; update_button_styles(); }
+void MultiSwitchButton::SetButtonTextColor(int i, const StateColor &color) {
+    if (i >= 0 && i < (int)btns.size()) btns[i]->SetTextColor(color);
 }
+void MultiSwitchButton::SetButtonCornerRadius(double r) { m_button_radius = r; }
+void MultiSwitchButton::SetButtonPadding(const QSize &p) { m_button_padding = p; }
 
-void MultiSwitchButton::Rescale()
-{
-    for (auto *btn : btns) {
-        btn->Rescale();
-    }
-}
-
-void MultiSwitchButton::button_clicked(wxCommandEvent &event)
-{
-    SetFocus();
-    auto btn  = event.GetEventObject();
-    auto iter = std::find(btns.begin(), btns.end(), btn);
-    SetSelection(iter == btns.end() ? -1 : iter - btns.begin());
-}
-
-bool MultiSwitchButton::send_selection_event()
-{
-    wxCommandEvent evt(wxCUSTOMEVT_MULTISWITCH_SELECTION, GetId());
-    evt.SetEventObject(this);
-    evt.SetInt(sel);
-    evt.SetString(GetSelectedText());
-    GetEventHandler()->ProcessEvent(evt);
-    return true;
-}
+void MultiSwitchButton::Rescale() { update(); }

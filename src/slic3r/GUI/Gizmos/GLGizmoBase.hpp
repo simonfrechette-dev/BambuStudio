@@ -10,15 +10,17 @@
 
 #include <cereal/archives/binary.hpp>
 
-#include <wx/event.h>
-#include <wx/timer.h>
+#include <QObject>
+#include <QTimer>
+#include <QMouseEvent>
+#include <QKeyEvent>
 
 #include <chrono>
 #include <string>
 
 #define ENABLE_FIXED_GRABBER 1
 
-class wxWindow;
+class QWidget;
 
 namespace Slic3r {
 
@@ -214,8 +216,8 @@ public:
     void set_common_data_pool(CommonGizmosDataPool* ptr) { m_c = ptr; }
 
     virtual bool apply_clipping_plane() { return true; }
-    virtual bool on_mouse(const wxMouseEvent &mouse_event) { return false; }
-    virtual bool on_key(const wxKeyEvent& key_event);
+    virtual bool on_mouse(const QMouseEvent &mouse_event) { return false; }
+    virtual bool on_key(const QKeyEvent& key_event);
     unsigned int get_sprite_id() const { return m_sprite_id; }
 
     int get_hover_id() const { return m_hover_id; }
@@ -297,7 +299,7 @@ protected:
     /// </summary>
     /// <param name="mouse_event">Keep information about mouse click</param>
     /// <returns>same as on_mouse</returns>
-    bool use_grabbers(const wxMouseEvent &mouse_event);
+    bool use_grabbers(const QMouseEvent &mouse_event);
     void do_stop_dragging(bool perform_mouse_cleanup);
     template<typename T> void limit_value(T &value, T _min, T _max)
     {

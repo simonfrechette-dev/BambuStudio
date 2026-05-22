@@ -9,18 +9,18 @@ namespace Slic3r { namespace GUI {
 class CalibrationCaliPage : public CalibrationWizardPage
 {
 public:
-    CalibrationCaliPage(wxWindow* parent,
+    CalibrationCaliPage(QWidget* parent,
         CalibMode cali_mode,
         CaliPageType cali_type = CaliPageType::CALI_PAGE_CALI,
-        wxWindowID id = wxID_ANY,
-        const wxPoint& pos = wxDefaultPosition,
-        const wxSize& size = wxDefaultSize,
-        long style = wxTAB_TRAVERSAL);
+        int id = -1,
+        const QPoint& pos = QPoint(),
+        const QSize& size = QSize(),
+        long style = 0);
     ~CalibrationCaliPage();
 
-    void create_page(wxWindow* parent);
-    void on_subtask_pause_resume(wxCommandEvent& event);
-    void on_subtask_abort(wxCommandEvent& event);
+    void create_page(QWidget* parent);
+    void on_subtask_pause_resume(QEvent& event);
+    void on_subtask_abort(QEvent& event);
     void set_cali_img();
     void update(MachineObject* obj) override;
     void update_subtask(MachineObject* obj);
@@ -32,7 +32,7 @@ public:
     void on_device_connected(MachineObject* obj) override;
 
     void set_cali_method(CalibrationMethod method) override;
-    virtual bool Show(bool show = true) override;
+    virtual void setVisible(bool show) override;
     void msw_rescale() override;
 
 protected:
@@ -40,7 +40,7 @@ protected:
 
     bool                m_print_finish {false};
     bool                m_is_between_start_and_running { false };
-    wxBoxSizer*         m_top_sizer;
+    QBoxLayout*         m_top_sizer;
     CaliPageStepGuide*  m_step_panel { nullptr };
     PrintingTaskPanel*  m_printing_panel { nullptr };
     CaliPagePicture*    m_picture_panel;

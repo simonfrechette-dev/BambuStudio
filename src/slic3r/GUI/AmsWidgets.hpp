@@ -2,38 +2,12 @@
 #define slic3r_AmsWidgets_hpp_
 
 
-#include <wx/notebook.h>
-#include <wx/scrolwin.h>
-#include <wx/sizer.h>
-#include <wx/bmpcbox.h>
-#include <wx/bmpbuttn.h>
-#include <wx/treectrl.h>
-#include <wx/imaglist.h>
-#include <wx/artprov.h>
-#include <wx/xrc/xmlres.h>
-#include <wx/string.h>
-#include <wx/stattext.h>
-#include <wx/gdicmn.h>
-#include <wx/font.h>
-#include <wx/colour.h>
-#include <wx/settings.h>
-#include <wx/sizer.h>
-#include <wx/grid.h>
-#include <wx/dataview.h>
-#include <wx/panel.h>
-#include <wx/bitmap.h>
-#include <wx/image.h>
-#include <wx/icon.h>
-#include <wx/bmpbuttn.h>
-#include <wx/button.h>
-#include <wx/statbox.h>
-#include <wx/tglbtn.h>
-#include <wx/popupwin.h>
-#include <wx/spinctrl.h>
-#include <wx/artprov.h>
 
 
 #include <map>
+#include <QAbstractTableModel>
+#include <QVariant>
+#include <QString>
 #include <vector>
 #include <memory>
 #include "Event.hpp"
@@ -44,7 +18,7 @@
 namespace Slic3r {
 namespace GUI {
 
-class TrayListModel : public wxDataViewVirtualListModel
+class TrayListModel : public QAbstractTableModel
 {
 public:
 	enum
@@ -65,38 +39,31 @@ public:
 
 	TrayListModel();
 
-	virtual unsigned int GetColumnCount() const wxOVERRIDE
-	{
+	virtual unsigned int GetColumnCount() const { // override
 		return Col_Max;
 	}
 
-	virtual wxString GetColumnType(unsigned int col) const wxOVERRIDE
-	{
+	virtual QString GetColumnType(unsigned int col) const { // override
 		return "string";
 	}
-
-	virtual void GetValueByRow(wxVariant& variant,
-		unsigned int row, unsigned int col) const wxOVERRIDE;
-	virtual bool GetAttrByRow(unsigned int row, unsigned int col,
-		wxDataViewItemAttr& attr) const wxOVERRIDE;
-	virtual bool SetValueByRow(const wxVariant& variant,
-		unsigned int row, unsigned int col) wxOVERRIDE;
-
-	void update(MachineObject* obj);
+        QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;        bool setData(const QModelIndex& index, const QVariant& value, int role = Qt::EditRole) override;
+        int rowCount(const QModelIndex& = {}) const override;
+        int columnCount(const QModelIndex& = {}) const override;
+void update(MachineObject* obj);
 	void clear_data();
 
 private:
-	wxArrayString m_titleColValues;
-	wxArrayString m_colorColValues;
-	wxArrayString m_meterialColValues;
-	wxArrayString m_weightColValues;
-	wxArrayString m_diameterColValues;
-	wxArrayString m_timeColValues;
-	wxArrayString m_snColValues;
-	wxArrayString m_manufacturerColValues;
-	wxArrayString m_saturabilityColValues;
-	wxArrayString m_transmittanceColValues;
-	wxArrayString m_smoothColValues;
+	QStringList m_titleColValues;
+	QStringList m_colorColValues;
+	QStringList m_meterialColValues;
+	QStringList m_weightColValues;
+	QStringList m_diameterColValues;
+	QStringList m_timeColValues;
+	QStringList m_snColValues;
+	QStringList m_manufacturerColValues;
+	QStringList m_saturabilityColValues;
+	QStringList m_transmittanceColValues;
+	QStringList m_smoothColValues;
 
 };
 

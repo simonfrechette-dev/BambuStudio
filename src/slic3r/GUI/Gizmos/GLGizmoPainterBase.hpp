@@ -1,3 +1,4 @@
+#include <QString>
 #ifndef slic3r_GLGizmoPainterBase_hpp_
 #define slic3r_GLGizmoPainterBase_hpp_
 
@@ -417,7 +418,7 @@ protected:
     CommonGizmosDataID on_get_requirements() const override;
     bool wants_enter_leave_snapshots() const override { return true; }
 
-    virtual wxString handle_snapshot_action_name(bool shift_down, Button button_down) const = 0;
+    virtual QString handle_snapshot_action_name(bool shift_down, Button button_down) const = 0;
     bool             is_mouse_hit_in_imgui()const;
     mutable Vec2i m_imgui_start_pos{0, 0};
     mutable Vec2i m_imgui_end_pos{0, 0};

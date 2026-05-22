@@ -1,36 +1,46 @@
 #ifndef slic3r_GUI_AnimaController_hpp_
 #define slic3r_GUI_AnimaController_hpp_
 
-#include "../wxExtensions.hpp"
+#include "../QtExtensions.hpp"
 #include "Label.hpp"
 
+#include <QWidget>
+#include <QLabel>
+#include <QTimer>
+#include <QPixmap>
+#include <vector>
+#include <string>
 
-class AnimaIcon : public wxPanel
+class AnimaIcon : public QWidget
 {
+    Q_OBJECT
 public:
-    AnimaIcon(wxWindow *parent, wxWindowID id, std::vector<std::string> img_list, std::string img_enable, int ivt = 1000, int size = 25);
-    ~AnimaIcon();
+    AnimaIcon(QWidget *parent, int id, std::vector<std::string> img_list,
+              std::string img_enable, int ivt = 1000, int size = 25);
+    ~AnimaIcon() override;
 
     void Play();
     void Stop();
     void Enable();
-    bool IsPlaying();
+    bool IsPlaying() const;
     bool IsRunning() const;
-
     void Rescale();
 
-private:
-    std::string m_img_enable;
-    std::vector<std::string> m_img_list;
+private slots:
+    void onTimer();
 
-    bool                  m_enable = false;
-    wxBitmap              m_image_enable;
-    wxStaticBitmap *      m_bitmap{nullptr};
-    std::vector<wxBitmap> m_images;
-    wxTimer *             m_timer;
-    int                   m_current_frame = 0;
-    int                   m_ivt;
-    int                   m_size;
+private:
+    std::string              m_img_enable;
+    std::vector<std::string> m_img_list;
+    bool                     m_enable        = false;
+    bool                     m_playing       = false;
+    QLabel                  *m_bitmap_label  = nullptr;
+    QPixmap                  m_image_enable;
+    std::vector<QPixmap>     m_images;
+    QTimer                  *m_timer;
+    int                      m_current_frame = 0;
+    int                      m_ivt;
+    int                      m_size;
 };
 
 #endif // !slic3r_GUI_AnimaController_hpp_

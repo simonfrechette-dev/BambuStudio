@@ -201,7 +201,7 @@ private:
                           ImU32 title_color);
 
     // UI helpers
-    void render_checkbox(const wxString& label, bool& value, bool enabled);
+    void render_checkbox(const QString& label, bool& value, bool enabled);
     void set_centered_cursor_x(float width) const;
     bool compute_ok_enabled();
 

@@ -1,69 +1,57 @@
 #include "SingleChoiceDialog.hpp"
-
-#include "GUI_App.hpp"
-#include "MainFrame.hpp"
+#include "I18N.hpp"
+#include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QLabel>
 
 namespace Slic3r { namespace GUI {
 
-SingleChoiceDialog::SingleChoiceDialog(const wxString &message, const wxString &caption, const wxArrayString &choices, int initialSelection, wxWindow *parent)
-    : DPIDialog(parent ? parent : static_cast<wxWindow *>(wxGetApp().mainframe), wxID_ANY, caption, wxDefaultPosition, wxDefaultSize, wxCAPTION | wxCLOSE_BOX)
+SingleChoiceDialog::SingleChoiceDialog(const QString &message, const QString &caption,
+                                       const QStringList &choices, int initialSelection,
+                                       QWidget *parent)
+    : DPIDialog(parent)
 {
-    SetBackgroundColour(*wxWHITE);
+    setWindowTitle(caption);
+    setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
 
-    const int   dlg_width = 200;
-    wxBoxSizer *bSizer    = new wxBoxSizer(wxVERTICAL);
-    bSizer->SetMinSize(wxSize(FromDIP(dlg_width), -1));
+    auto *vbox = new QVBoxLayout(this);
+    vbox->setContentsMargins(20, 20, 20, 20);
+    vbox->setSpacing(15);
 
-    wxStaticText *message_text = new wxStaticText(this, wxID_ANY, message, wxDefaultPosition, wxDefaultSize, 0);
-    message_text->Wrap(-1);
-    bSizer->Add(message_text, 0, wxALL, 5);
+    auto *lbl = new QLabel(message, this);
+    lbl->setWordWrap(true);
+    vbox->addWidget(lbl);
 
-    type_comboBox = new ComboBox(this, wxID_ANY, choices[0], wxDefaultPosition, wxSize(FromDIP(dlg_width - 10), -1), 0, NULL, wxCB_READONLY);
-    for (const wxString &type_name : choices) { type_comboBox->Append(type_name); }
-    bSizer->Add(type_comboBox, 0, wxALL | wxALIGN_CENTER, 5);
-    bSizer->Add(0, 0, 1, wxEXPAND, FromDIP(type_comboBox->GetClientSize().GetHeight()));
-    type_comboBox->SetSelection(initialSelection);
+    type_comboBox = new ComboBox(this);
+    for (const auto &choice : choices)
+        type_comboBox->Append(choice);
+    if (initialSelection >= 0 && initialSelection < choices.size())
+        type_comboBox->SetSelection(initialSelection);
+    vbox->addWidget(type_comboBox);
 
-    wxBoxSizer *bSizer_button = new wxBoxSizer(wxHORIZONTAL);
-
-    StateColor btn_bg_green(std::pair<wxColour, int>(wxColour(27, 136, 68), StateColor::Pressed), std::pair<wxColour, int>(wxColour(61, 203, 115), StateColor::Hovered),
-                            std::pair<wxColour, int>(AMS_CONTROL_BRAND_COLOUR, StateColor::Normal));
-
-    m_button_ok = new Button(this, _L("OK"));
-    m_button_ok->SetBackgroundColor(btn_bg_green);
-    m_button_ok->SetBorderColor(*wxWHITE);
-    m_button_ok->SetTextColor(wxColour(0xFFFFFE));
-    m_button_ok->SetFont(Label::Body_12);
-    m_button_ok->SetSize(wxSize(FromDIP(58), FromDIP(24)));
-    m_button_ok->SetMinSize(wxSize(FromDIP(58), FromDIP(24)));
-    m_button_ok->SetCornerRadius(FromDIP(12));
-    bSizer_button->Add(m_button_ok, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(int(dlg_width - 58 * 2) / 6));
-
-    m_button_ok->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent &e) { EndModal(wxID_OK); });
-
-    StateColor btn_bg_white(std::pair<wxColour, int>(wxColour(206, 206, 206), StateColor::Pressed), std::pair<wxColour, int>(wxColour(238, 238, 238), StateColor::Hovered),
-                            std::pair<wxColour, int>(*wxWHITE, StateColor::Normal));
+    auto *btn_row = new QHBoxLayout;
+    btn_row->addStretch(1);
 
     m_button_cancel = new Button(this, _L("Cancel"));
-    m_button_cancel->SetBackgroundColor(btn_bg_white);
-    m_button_cancel->SetBorderColor(wxColour(38, 46, 48));
-    m_button_cancel->SetFont(Label::Body_12);
-    m_button_cancel->SetSize(wxSize(FromDIP(58), FromDIP(24)));
-    m_button_cancel->SetMinSize(wxSize(FromDIP(58), FromDIP(24)));
-    m_button_cancel->SetCornerRadius(FromDIP(12));
-    bSizer_button->Add(m_button_cancel, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, FromDIP(int(dlg_width - 58 * 2) / 6));
+    connect(m_button_cancel, &Button::clicked, this, &QDialog::reject);
+    btn_row->addWidget(m_button_cancel);
 
-    m_button_cancel->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent &e) { EndModal(wxID_CANCEL); });
+    m_button_ok = new Button(this, _L("OK"));
+    m_button_ok->SetValue(true);
+    connect(m_button_ok, &Button::clicked, this, &QDialog::accept);
+    btn_row->addWidget(m_button_ok);
 
-    bSizer->Add(bSizer_button, 1, wxALIGN_CENTER_HORIZONTAL | wxBOTTOM, FromDIP(5));
-
-    this->SetSizer(bSizer);
-    this->Layout();
-    bSizer->Fit(this);
-    wxGetApp().UpdateDlgDarkUI(this);
+    vbox->addLayout(btn_row);
+    adjustSize();
 }
-SingleChoiceDialog::~SingleChoiceDialog() {}
-int SingleChoiceDialog::GetSingleChoiceIndex() { return this->ShowModal() == wxID_OK ? GetTypeComboBox()->GetSelection() : -1; }
 
-void SingleChoiceDialog::on_dpi_changed(const wxRect &suggested_rect) {}
+SingleChoiceDialog::~SingleChoiceDialog() = default;
+
+int SingleChoiceDialog::GetSingleChoiceIndex()
+{
+    return type_comboBox ? type_comboBox->GetSelection() : 0;
+}
+
+void SingleChoiceDialog::on_dpi_changed(const QRect &) {}
+
 }} // namespace Slic3r::GUI

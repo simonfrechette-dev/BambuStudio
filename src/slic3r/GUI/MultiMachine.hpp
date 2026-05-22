@@ -13,14 +13,14 @@ namespace GUI {
 #define  SEND_ITEM_MAX_HEIGHT 30
 #define  DEVICE_ITEM_MAX_HEIGHT 50
 
-#define TABLE_HEAR_NORMAL_COLOUR    wxColour(238, 238, 238)
-#define TABLE_HEAD_PRESSED_COLOUR   wxColour(150, 150, 150)
-#define CTRL_BUTTON_NORMAL_COLOUR   wxColour(255, 255, 255)
-#define CTRL_BUTTON_PRESSEN_COLOUR  wxColour(150, 150, 150)
+#define TABLE_HEAR_NORMAL_COLOUR    QColor(238, 238, 238)
+#define TABLE_HEAD_PRESSED_COLOUR   QColor(150, 150, 150)
+#define CTRL_BUTTON_NORMAL_COLOUR   QColor(255, 255, 255)
+#define CTRL_BUTTON_PRESSEN_COLOUR  QColor(150, 150, 150)
 #define TABLE_HEAD_FONT             Label::Body_13
 
 
-class DeviceItem : public wxWindow
+class DeviceItem : public QWidget
 {
 public:
     MachineObject* obj_{nullptr};
@@ -37,15 +37,15 @@ public:
 
 public:
     
-    DeviceItem(wxWindow* parent, MachineObject* obj);
+    DeviceItem(QWidget* parent, MachineObject* obj);
     ~DeviceItem() {};
 
-    void on_refresh(wxCommandEvent& evt);
+    void on_refresh(QEvent& evt);
     void sync_state();
-    wxString get_state_printable();
-    wxString get_state_device();
-    wxString get_local_state_task();
-    wxString get_cloud_state_task();
+    QString get_state_printable();
+    QString get_state_device();
+    QString get_local_state_task();
+    QString get_cloud_state_task();
     MachineObject* get_obj() const { return obj_; }
 
     int get_state_online() const { return state_online; }
@@ -108,12 +108,6 @@ struct SortItem
 };
 
 
-wxDECLARE_EVENT(EVT_MULTI_DEVICE_SELECTED, wxCommandEvent);
-wxDECLARE_EVENT(EVT_MULTI_DEVICE_SELECTED_FINHSH, wxCommandEvent);
-wxDECLARE_EVENT(EVT_MULTI_DEVICE_VIEW, wxCommandEvent);
-wxDECLARE_EVENT(EVT_MULTI_CLOUD_TASK_SELECTED, wxCommandEvent);
-wxDECLARE_EVENT(EVT_MULTI_LOCAL_TASK_SELECTED, wxCommandEvent);
-wxDECLARE_EVENT(EVT_MULTI_REFRESH, wxCommandEvent);
 
 } // namespace GUI
 } // namespace Slic3r

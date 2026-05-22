@@ -1,487 +1,357 @@
 #ifndef slic3r_MsgDialog_hpp_
 #define slic3r_MsgDialog_hpp_
 
+// Qt port of MsgDialog.hpp
+
 #include <string>
 #include <unordered_map>
+#include <functional>
 #include "GUI_Utils.hpp"
-#include <wx/dialog.h>
-#include <wx/font.h>
-#include <wx/bitmap.h>
-#include <wx/msgdlg.h>
-#include <wx/richmsgdlg.h>
-#include <wx/textctrl.h>
-#include <wx/statline.h>
+#include <QFont>
+#include <QPixmap>
+#include <QBoxLayout>
+#include <QLabel>
+#include <QCheckBox>
+#include <QLineEdit>
+#include <QFrame>
+#include <QHash>
 #include "Widgets/Button.hpp"
 #include "Widgets/CheckBox.hpp"
 #include "Widgets/TextInput.hpp"
 #include "BBLStatusBar.hpp"
-#include "BBLStatusBarSend.hpp"
+// BBLStatusBarSend.hpp excluded (wx dependency removed)
 #include "libslic3r/Semver.hpp"
 
-class wxBoxSizer;
-class wxCheckBox;
-class wxStaticBitmap;
-
-enum ButtonSizeType{
-	ButtonSizeNormal = 0,
-	ButtonSizeMiddle = 1,
-	ButtonSizeLong	 = 2,
+// Qt dialog button ID constants (mirrors wx button IDs for portability)
+enum {
+    MsgID_OK        = 5100,
+    MsgID_CANCEL    = 5101,
+    MsgID_YES       = 5103,
+    MsgID_NO        = 5104,
+    MsgID_APPLY     = 5105,
+    MsgID_CLOSE     = 5106,
+    MsgID_HELP      = 5107,
+    MsgOK           = 0x0004,
+    MsgCANCEL       = 0x0010,
+    MsgYES_NO       = 0x0020,
+    MsgICON_INFO = 0x0040,
+    MsgICON_WARN     = 0x0080,
+    MsgICON_ERROR       = 0x0100,
+    MsgICON_QUESTION    = 0x0200,
+    wxCLOSE        = 0x0800,
 };
 
-#define MSG_DIALOG_BUTTON_SIZE wxSize(FromDIP(58), FromDIP(24))
-#define MSG_DIALOG_MIDDLE_BUTTON_SIZE wxSize(FromDIP(76), FromDIP(24))
-#define MSG_DIALOG_LONG_BUTTON_SIZE wxSize(FromDIP(90), FromDIP(24))
-
+enum ButtonSizeType{
+    ButtonSizeNormal = 0,
+    ButtonSizeMiddle = 1,
+    ButtonSizeLong   = 2,
+};
 
 namespace Slic3r {
 namespace GUI {
 
 struct ButtonData
 {
-    ButtonSizeType type;
-	Button * button;
+    ButtonSizeType  type;
+    Button*         button;
 };
 
 class MsgButton
 {
 public:
-    wxString id;
-    ButtonData *buttondata;
+    QString     id;
+    ButtonData* buttondata;
 };
 
-WX_DECLARE_HASH_MAP(wxString, MsgButton *, wxStringHash, wxStringEqual, MsgButtonsHash);
+using MsgButtonsHash = QHash<QString, MsgButton*>;
 
 // A message / query dialog with a bitmap on the left and any content on the right
 // with buttons underneath.
 struct MsgDialog : DPIDialog
 {
-	MsgDialog(MsgDialog &&) = delete;
-	MsgDialog(const MsgDialog &) = delete;
-	MsgDialog &operator=(MsgDialog &&) = delete;
-	MsgDialog &operator=(const MsgDialog &) = delete;
-	virtual ~MsgDialog();
+    MsgDialog(MsgDialog &&) = delete;
+    MsgDialog(const MsgDialog &) = delete;
+    MsgDialog &operator=(MsgDialog &&) = delete;
+    MsgDialog &operator=(const MsgDialog &) = delete;
+    virtual ~MsgDialog();
 
-	void show_dsa_button(wxString const & title = {});
-	bool get_checkbox_state();
-	virtual void on_dpi_changed(const wxRect& suggested_rect);
+    void show_dsa_button(const QString& title = {});
+    bool get_checkbox_state();
+    virtual void on_dpi_changed(const QRect& suggested_rect);
 
-	void AddButton(wxWindowID btn_id, const wxString& label, bool set_focus = false) { add_button(btn_id, set_focus, label); };
-	void SetButtonLabel(wxWindowID btn_id, const wxString& label, bool set_focus = false);
+    void AddButton(int btn_id, const QString& label, bool set_focus = false) { add_button(btn_id, set_focus, label); }
+    void SetButtonLabel(int btn_id, const QString& label, bool set_focus = false);
 
 protected:
-	enum {
-		BORDER = 20,
-		LOGO_SPACING = 35,
-		LOGO_GAP = 20,
-		CONTENT_WIDTH = 242,
-		CONTENT_MAX_HEIGHT = 60,//TO
-		BTN_SPACING = 20,
-		VERT_SPACING = 15,//TO
-	};
+    enum {
+        BORDER = 20,
+        LOGO_SPACING = 35,
+        LOGO_GAP = 20,
+        CONTENT_WIDTH = 242,
+        CONTENT_MAX_HEIGHT = 60,
+        BTN_SPACING = 20,
+        VERT_SPACING = 15,
+    };
 
-	MsgDialog(wxWindow *parent, const wxString &title, const wxString &headline, long style = wxOK, wxBitmap bitmap = wxNullBitmap, const wxString &forward_str = "");
-	// returns pointer to created button
-	Button* add_button(wxWindowID btn_id, bool set_focus = false, const wxString& label = wxString());
-	// returns pointer to found button or NULL
-	Button* get_button(wxWindowID btn_id);
-	void apply_style(long style);
-	void finalize();
+    MsgDialog(QWidget* parent, const QString& title, const QString& headline, long style = 0, const QPixmap& bitmap = QPixmap(), const QString& forward_str = "");
+    Button* add_button(int btn_id, bool set_focus = false, const QString& label = {});
+    Button* get_button(int btn_id);
+    void apply_style(long style);
+    void finalize();
 
-	wxFont boldfont;
-	wxBoxSizer *content_sizer;
-	wxBoxSizer *btn_sizer;
-	wxBoxSizer *m_dsa_sizer;
-	wxStaticBitmap *logo;
-    MsgButtonsHash  m_buttons;
-	CheckBox* m_checkbox_dsa{nullptr};
-    wxString  m_forward_str;
+    QFont        boldfont;
+    QBoxLayout*  content_sizer{ nullptr };
+    QBoxLayout*  btn_sizer{ nullptr };
+    QBoxLayout*  m_dsa_sizer{ nullptr };
+    QLabel*      logo{ nullptr };
+    MsgButtonsHash m_buttons;
+    CheckBox*    m_checkbox_dsa{ nullptr };
+    QString      m_forward_str;
 };
 
 
-// Generic error dialog, used for displaying exceptions
+// Generic error dialog
 class ErrorDialog : public MsgDialog
 {
 public:
-	// If monospaced_font is true, the error message is displayed using html <code><pre></pre></code> tags,
-	// so that the code formatting will be preserved. This is useful for reporting errors from the placeholder parser.
-	ErrorDialog(wxWindow *parent, const wxString &temp_msg, bool courier_font);
-	ErrorDialog(ErrorDialog &&) = delete;
-	ErrorDialog(const ErrorDialog &) = delete;
-	ErrorDialog &operator=(ErrorDialog &&) = delete;
-	ErrorDialog &operator=(const ErrorDialog &) = delete;
-	virtual ~ErrorDialog() = default;
+    ErrorDialog(QWidget* parent, const QString& temp_msg, bool courier_font);
+    ErrorDialog(ErrorDialog &&) = delete;
+    ErrorDialog(const ErrorDialog &) = delete;
+    ErrorDialog &operator=(ErrorDialog &&) = delete;
+    ErrorDialog &operator=(const ErrorDialog &) = delete;
+    virtual ~ErrorDialog() = default;
 
 private:
-	wxString msg;
+    QString msg;
 };
 
 
-// Generic warning dialog, used for displaying exceptions
+// Generic warning dialog
 class WarningDialog : public MsgDialog
 {
 public:
-	WarningDialog(	wxWindow *parent,
-		            const wxString& message,
-		            const wxString& caption = wxEmptyString,
-		            long style = wxOK);
-	WarningDialog(WarningDialog&&) = delete;
-	WarningDialog(const WarningDialog&) = delete;
-	WarningDialog &operator=(WarningDialog&&) = delete;
-	WarningDialog &operator=(const WarningDialog&) = delete;
-	virtual ~WarningDialog() = default;
+    WarningDialog(QWidget* parent,
+                  const QString& message,
+                  const QString& caption = {},
+                  long style = 0);
+    WarningDialog(WarningDialog&&) = delete;
+    WarningDialog(const WarningDialog&) = delete;
+    WarningDialog &operator=(WarningDialog&&) = delete;
+    WarningDialog &operator=(const WarningDialog&) = delete;
+    virtual ~WarningDialog() = default;
 };
 
-// Post-processing script confirmation before slicing (3MF with post_process scripts)
+// Post-processing script confirmation
 class PostProcessScriptDialog : public MsgDialog
 {
-	::wxTextCtrl* m_script_text{ nullptr };
-	Button*     m_toggle_details{ nullptr };
-	bool        m_details_expanded{ false };
+    QLineEdit*  m_script_text{ nullptr };
+    Button*     m_toggle_details{ nullptr };
+    bool        m_details_expanded{ false };
 
 public:
-	PostProcessScriptDialog(wxWindow* parent, const wxString& message, const wxString& script_content);
-	PostProcessScriptDialog(PostProcessScriptDialog&&)                 = delete;
-	PostProcessScriptDialog(const PostProcessScriptDialog&)            = delete;
-	PostProcessScriptDialog& operator=(PostProcessScriptDialog&&)      = delete;
-	PostProcessScriptDialog& operator=(const PostProcessScriptDialog&) = delete;
-	~PostProcessScriptDialog() override = default;
+    PostProcessScriptDialog(QWidget* parent, const QString& message, const QString& script_content);
+    PostProcessScriptDialog(PostProcessScriptDialog&&) = delete;
+    PostProcessScriptDialog(const PostProcessScriptDialog&) = delete;
+    PostProcessScriptDialog& operator=(PostProcessScriptDialog&&) = delete;
+    PostProcessScriptDialog& operator=(const PostProcessScriptDialog&) = delete;
+    ~PostProcessScriptDialog() override = default;
 };
 
-#if 1
-// Generic static line, used intead of wxStaticLine
-//class StaticLine: public wxTextCtrl
-//{
-//public:
-//	StaticLine( wxWindow* parent,
-//				wxWindowID id = wxID_ANY,
-//				const wxPoint& pos = wxDefaultPosition,
-//				const wxSize& size = wxDefaultSize,
-//				long style = wxLI_HORIZONTAL,
-//				const wxString& name = wxString::FromAscii(wxTextCtrlNameStr))
-//	: wxTextCtrl(parent, id, wxEmptyString, pos, size!=wxDefaultSize ? size : (style == wxLI_HORIZONTAL ? wxSize(10, 1) : wxSize(1, 10)), wxSIMPLE_BORDER, wxDefaultValidator, name)
-//	{
-//		this->Enable(false);
-//	}
-//	~StaticLine() {}
-//};
-
-// Generic message dialog, used intead of wxMessageDialog
+// Generic message dialog
 class MessageDialog : public MsgDialog
 {
 public:
-	// NOTE! Don't change a signature of contsrucor. It have to  be tha same as for wxMessageDialog
-    MessageDialog(wxWindow       *parent,
-                  const wxString &message,
-                  const wxString &caption     = wxEmptyString,
-                  long            style       = wxOK,
-                  const wxString &forward_str = "",
-                  const wxString &link_text   = "",
-                  std::function<void(const wxString &)> link_callback = nullptr);
-    MessageDialog(wxWindow                             *parent,
-                  const wxString                       &message,
-                  const wxString                       &caption,
-                  long                                  style,
-                  const wxString                       &forward_str,
-                  const wxString                       &link_text,
-                  std::function<void(const wxString &)> link_callback,
-                  bool                                  is_marked_msg);
+    MessageDialog(QWidget* parent,
+                  const QString& message,
+                  const QString& caption     = {},
+                  long           style       = 0,
+                  const QString& forward_str = {},
+                  const QString& link_text   = {},
+                  std::function<void(const QString&)> link_callback = nullptr);
+    MessageDialog(QWidget* parent,
+                  const QString& message,
+                  const QString& caption,
+                  long           style,
+                  const QString& forward_str,
+                  const QString& link_text,
+                  std::function<void(const QString&)> link_callback,
+                  bool           is_marked_msg);
 
-	MessageDialog(MessageDialog&&) = delete;
-	MessageDialog(const MessageDialog&) = delete;
-	MessageDialog &operator=(MessageDialog&&) = delete;
-	MessageDialog &operator=(const MessageDialog&) = delete;
-	virtual ~MessageDialog() = default;
+    MessageDialog(MessageDialog&&) = delete;
+    MessageDialog(const MessageDialog&) = delete;
+    MessageDialog &operator=(MessageDialog&&) = delete;
+    MessageDialog &operator=(const MessageDialog&) = delete;
+    virtual ~MessageDialog() = default;
 };
 
-// Generic rich message dialog, used intead of wxRichMessageDialog
+// Generic rich message dialog
 class RichMessageDialog : public MsgDialog
 {
-	wxCheckBox* m_checkBox{ nullptr };
-	wxString	m_checkBoxText;
-	bool		m_checkBoxValue{ false };
+    QCheckBox* m_checkBox{ nullptr };
+    QString    m_checkBoxText;
+    bool       m_checkBoxValue{ false };
 
 public:
-	// NOTE! Don't change a signature of contsrucor. It have to  be tha same as for wxRichMessageDialog
-	RichMessageDialog(	wxWindow *parent,
-						const wxString& message,
-						const wxString& caption = wxEmptyString,
-						long style = wxOK);
-	RichMessageDialog(RichMessageDialog&&) = delete;
-	RichMessageDialog(const RichMessageDialog&) = delete;
-	RichMessageDialog &operator=(RichMessageDialog&&) = delete;
-	RichMessageDialog &operator=(const RichMessageDialog&) = delete;
-	virtual ~RichMessageDialog() = default;
+    RichMessageDialog(QWidget* parent,
+                      const QString& message,
+                      const QString& caption = {},
+                      long style = 0);
+    RichMessageDialog(RichMessageDialog&&) = delete;
+    RichMessageDialog(const RichMessageDialog&) = delete;
+    RichMessageDialog &operator=(RichMessageDialog&&) = delete;
+    RichMessageDialog &operator=(const RichMessageDialog&) = delete;
+    virtual ~RichMessageDialog() = default;
 
-	int  ShowModal() override;
+    int exec() override;
 
-	void ShowCheckBox(const wxString& checkBoxText, bool checked = false)
-	{
-		m_checkBoxText = checkBoxText;
-		m_checkBoxValue = checked;
-	}
+    void ShowCheckBox(const QString& checkBoxText, bool checked = false)
+    {
+        m_checkBoxText  = checkBoxText;
+        m_checkBoxValue = checked;
+    }
 
-	wxString	GetCheckBoxText()	const { return m_checkBoxText; }
-	bool		IsCheckBoxChecked() const;
+    QString GetCheckBoxText()  const { return m_checkBoxText; }
+    bool    IsCheckBoxChecked() const;
 
-// This part o fcode isported from the "wx\msgdlg.h"
-	using wxMD = wxMessageDialogBase;
-	// customization of the message box buttons
-	virtual bool SetYesNoLabels(const wxMD::ButtonLabel& yes, const wxMD::ButtonLabel& no)
-	{
-		DoSetCustomLabel(m_yes, yes);
-		DoSetCustomLabel(m_no, no);
-		return true;
-	}
+    virtual bool SetYesNoLabels(const QString& yes, const QString& no) {
+        m_yes = yes; m_no = no; return true;
+    }
+    virtual bool SetYesNoCancelLabels(const QString& yes, const QString& no, const QString& cancel) {
+        m_yes = yes; m_no = no; m_cancel = cancel; return true;
+    }
+    virtual bool SetOKLabel(const QString& ok) { m_ok = ok; return true; }
+    virtual bool SetOKCancelLabels(const QString& ok, const QString& cancel) {
+        m_ok = ok; m_cancel = cancel; return true;
+    }
+    virtual bool SetHelpLabel(const QString& help) { m_help = help; return true; }
 
-	virtual bool SetYesNoCancelLabels(const wxMD::ButtonLabel& yes,
-		const wxMD::ButtonLabel& no,
-		const wxMD::ButtonLabel& cancel)
-	{
-		DoSetCustomLabel(m_yes, yes);
-		DoSetCustomLabel(m_no, no);
-		DoSetCustomLabel(m_cancel, cancel);
-		return true;
-	}
+    bool HasCustomLabels() const {
+        return !(m_ok.isEmpty() && m_cancel.isEmpty() && m_help.isEmpty() &&
+                 m_yes.isEmpty() && m_no.isEmpty());
+    }
 
-	virtual bool SetOKLabel(const wxMD::ButtonLabel& ok)
-	{
-		DoSetCustomLabel(m_ok, ok);
-		return true;
-}
-
-	virtual bool SetOKCancelLabels(const wxMD::ButtonLabel& ok,
-		const wxMD::ButtonLabel& cancel)
-	{
-		DoSetCustomLabel(m_ok, ok);
-		DoSetCustomLabel(m_cancel, cancel);
-		return true;
-	}
-
-	virtual bool SetHelpLabel(const wxMD::ButtonLabel& help)
-	{
-		DoSetCustomLabel(m_help, help);
-		return true;
-	}
-	// test if any custom labels were set
-	bool HasCustomLabels() const
-	{
-		return !(m_ok.empty() && m_cancel.empty() && m_help.empty() &&
-			m_yes.empty() && m_no.empty());
-	}
-
-	// these functions return the label to be used for the button which is
-	// either a custom label explicitly set by the user or the default label,
-	// i.e. they always return a valid string
-	wxString GetYesLabel() const
-	{
-		return m_yes.empty() ? GetDefaultYesLabel() : m_yes;
-	}
-	wxString GetNoLabel() const
-	{
-		return m_no.empty() ? GetDefaultNoLabel() : m_no;
-	}
-	wxString GetOKLabel() const
-	{
-		return m_ok.empty() ? GetDefaultOKLabel() : m_ok;
-	}
-	wxString GetCancelLabel() const
-	{
-		return m_cancel.empty() ? GetDefaultCancelLabel() : m_cancel;
-	}
-	wxString GetHelpLabel() const
-	{
-		return m_help.empty() ? GetDefaultHelpLabel() : m_help;
-	}
+    QString GetYesLabel()    const { return m_yes.isEmpty()    ? tr("Yes")    : m_yes; }
+    QString GetNoLabel()     const { return m_no.isEmpty()     ? tr("No")     : m_no; }
+    QString GetOKLabel()     const { return m_ok.isEmpty()     ? tr("OK")     : m_ok; }
+    QString GetCancelLabel() const { return m_cancel.isEmpty() ? tr("Cancel") : m_cancel; }
+    QString GetHelpLabel()   const { return m_help.isEmpty()   ? tr("Help")   : m_help; }
 
 protected:
-	// this function is called by our public SetXXXLabels() and should assign
-	// the value to var with possibly some transformation (e.g. Cocoa version
-	// currently uses this to remove any accelerators from the button strings
-	// while GTK+ one handles stock items specifically here)
-	void DoSetCustomLabel(wxString& var, const wxMD::ButtonLabel& label)
-	{
-		var = label.GetAsString();
-	}
-
-	// these functions return the custom label or empty string and should be
-	// used only in specific circumstances such as creating the buttons with
-	// these labels (in which case it makes sense to only use a custom label if
-	// it was really given and fall back on stock label otherwise), use the
-	// Get{Yes,No,OK,Cancel}Label() methods above otherwise
-	const wxString& GetCustomYesLabel() const { return m_yes; }
-	const wxString& GetCustomNoLabel() const { return m_no; }
-	const wxString& GetCustomOKLabel() const { return m_ok; }
-	const wxString& GetCustomHelpLabel() const { return m_help; }
-	const wxString& GetCustomCancelLabel() const { return m_cancel; }
+    void DoSetCustomLabel(QString& var, const QString& label) { var = label; }
+    const QString& GetCustomYesLabel()    const { return m_yes; }
+    const QString& GetCustomNoLabel()     const { return m_no; }
+    const QString& GetCustomOKLabel()     const { return m_ok; }
+    const QString& GetCustomHelpLabel()   const { return m_help; }
+    const QString& GetCustomCancelLabel() const { return m_cancel; }
 
 private:
-	// these functions may be overridden to provide different defaults for the
-	// default button labels (this is used by wxGTK)
-	virtual wxString GetDefaultYesLabel() const { return wxGetTranslation("Yes"); }
-	virtual wxString GetDefaultNoLabel() const { return wxGetTranslation("No"); }
-	virtual wxString GetDefaultOKLabel() const { return wxGetTranslation("OK"); }
-	virtual wxString GetDefaultCancelLabel() const { return wxGetTranslation("Cancel"); }
-	virtual wxString GetDefaultHelpLabel() const { return wxGetTranslation("Help"); }
-
-	// labels for the buttons, initially empty meaning that the defaults should
-	// be used, use GetYes/No/OK/CancelLabel() to access them
-	wxString m_yes,
-		m_no,
-		m_ok,
-		m_cancel,
-		m_help;
-};
-#else
-// just a wrapper for wxStaticLine to use the same code on all platforms
-class StaticLine : public wxStaticLine
-{
-public:
-	StaticLine(wxWindow* parent,
-		wxWindowID id = wxID_ANY,
-		const wxPoint& pos = wxDefaultPosition,
-		const wxSize& size = wxDefaultSize,
-		long style = wxLI_HORIZONTAL,
-		const wxString& name = wxString::FromAscii(wxStaticLineNameStr))
-		: wxStaticLine(parent, id, pos, size, style, name) {}
-	~StaticLine() {}
-};
-// just a wrapper to wxMessageBox to use the same code on all platforms
-class MessageDialog : public wxMessageDialog
-{
-public:
-	MessageDialog(wxWindow* parent,
-		const wxString& message,
-		const wxString& caption = wxEmptyString,
-		long style = wxOK)
-    : wxMessageDialog(parent, message, caption, style) {}
-	~MessageDialog() {}
+    QString m_yes, m_no, m_ok, m_cancel, m_help;
 };
 
-// just a wrapper to wxRichMessageBox to use the same code on all platforms
-class RichMessageDialog : public wxRichMessageDialog
-{
-public:
-	RichMessageDialog(wxWindow* parent,
-		const wxString& message,
-		const wxString& caption = wxEmptyString,
-		long style = wxOK)
-    : wxRichMessageDialog(parent, message, caption, style) {
-		this->SetEscapeId(wxID_CANCEL);
-	}
-	~RichMessageDialog() {}
-};
-#endif
-
-// Generic info dialog, used for displaying exceptions
+// Generic info dialog
 class InfoDialog : public MsgDialog
 {
 public:
-	InfoDialog(wxWindow *parent, const wxString &title, const wxString &msg, bool is_marked = false, long style = wxOK| wxICON_INFORMATION);
-	InfoDialog(InfoDialog&&) = delete;
-	InfoDialog(const InfoDialog&) = delete;
-	InfoDialog&operator=(InfoDialog&&) = delete;
-	InfoDialog&operator=(const InfoDialog&) = delete;
-	virtual ~InfoDialog() = default;
+    InfoDialog(QWidget* parent, const QString& title, const QString& msg, bool is_marked = false, long style = 0 | 0);
+    InfoDialog(InfoDialog&&) = delete;
+    InfoDialog(const InfoDialog&) = delete;
+    InfoDialog &operator=(InfoDialog&&) = delete;
+    InfoDialog &operator=(const InfoDialog&) = delete;
+    virtual ~InfoDialog() = default;
 
 private:
-	wxString msg;
+    QString msg;
 };
 
 class DownloadDialog : public MsgDialog
 {
 public:
-    DownloadDialog(wxWindow *parent, const wxString &title, const wxString &msg, bool is_marked = false, long style = wxOK | wxCANCEL);
-    DownloadDialog(InfoDialog &&)      = delete;
-    DownloadDialog(const InfoDialog &) = delete;
-    DownloadDialog &operator=(InfoDialog &&) = delete;
-    DownloadDialog &operator=(const InfoDialog &) = delete;
-    virtual ~DownloadDialog()                     = default;
+    DownloadDialog(QWidget* parent, const QString& title, const QString& msg, bool is_marked = false, long style = 0 | 0);
+    DownloadDialog(DownloadDialog&&) = delete;
+    DownloadDialog(const DownloadDialog&) = delete;
+    DownloadDialog &operator=(DownloadDialog&&) = delete;
+    DownloadDialog &operator=(const DownloadDialog&) = delete;
+    virtual ~DownloadDialog() = default;
 
-	void SetExtendedMessage(const wxString &extendedMessage);
+    void SetExtendedMessage(const QString& extendedMessage);
 
 private:
-    wxString msg;
+    QString msg;
 };
 
 class DeleteConfirmDialog : public DPIDialog
 {
 public:
-    DeleteConfirmDialog(wxWindow *parent, const wxString &title, const wxString &msg);
+    DeleteConfirmDialog(QWidget* parent, const QString& title, const QString& msg);
     ~DeleteConfirmDialog();
-    virtual void on_dpi_changed(const wxRect &suggested_rect);
+    virtual void on_dpi_changed(const QRect& suggested_rect);
 
 private:
-    wxString      msg;
-    Button *      m_del_btn    = nullptr;
-    Button *      m_cancel_btn = nullptr;
-    wxStaticText *m_msg_text   = nullptr;
+    QString  msg;
+    Button*  m_del_btn{ nullptr };
+    Button*  m_cancel_btn{ nullptr };
+    QLabel*  m_msg_text{ nullptr };
 };
 
 class Newer3mfVersionDialog : public DPIDialog
 {
 public:
-    Newer3mfVersionDialog(wxWindow *parent, const Semver* file_version, const Semver* cloud_version, wxString new_keys);
-    ~Newer3mfVersionDialog(){};
-    virtual void on_dpi_changed(const wxRect &suggested_rect){};
+    Newer3mfVersionDialog(QWidget* parent, const Semver* file_version, const Semver* cloud_version, const QString& new_keys);
+    ~Newer3mfVersionDialog() {}
+    virtual void on_dpi_changed(const QRect& suggested_rect) {}
 
 private:
-    wxBoxSizer *get_msg_sizer();
-    wxBoxSizer *get_btn_sizer();
+    QBoxLayout* get_msg_sizer();
+    QBoxLayout* get_btn_sizer();
 
-
-private:
-    const Semver *m_file_version;
-    const Semver *m_cloud_version;
-    wxString      m_new_keys;
-    Button *      m_update_btn = nullptr;
-    Button *      m_later_btn  = nullptr;
-    wxStaticText *m_msg_text   = nullptr;
+    const Semver* m_file_version{ nullptr };
+    const Semver* m_cloud_version{ nullptr };
+    QString       m_new_keys;
+    Button*       m_update_btn{ nullptr };
+    Button*       m_later_btn{ nullptr };
+    QLabel*       m_msg_text{ nullptr };
 };
-
 
 class NetworkErrorDialog : public DPIDialog
 {
 public:
-    NetworkErrorDialog(wxWindow* parent);
-    ~NetworkErrorDialog() {};
-    virtual void on_dpi_changed(const wxRect& suggested_rect) {};
+    NetworkErrorDialog(QWidget* parent);
+    ~NetworkErrorDialog() {}
+    virtual void on_dpi_changed(const QRect& suggested_rect) {}
 
 private:
-    Label* m_text_basic;
-    wxHyperlinkCtrl* m_link_server_state;
-    Label* m_text_proposal;
-    wxHyperlinkCtrl* m_text_wiki;
-    Button *         m_button_confirm;
+    QLabel* m_text_basic{ nullptr };
+    QLabel* m_link_server_state{ nullptr };
+    QLabel* m_text_proposal{ nullptr };
+    QLabel* m_text_wiki{ nullptr };
+    Button* m_button_confirm{ nullptr };
 
 public:
-    bool m_show_again{false};
+    bool m_show_again{ false };
 };
 
 struct FilamentWarningInfo
 {
-   wxString info_msg;
-   wxString wiki_url;
-
+    QString info_msg;
+    QString wiki_url;
 };
 
 class FilamentWarningDialog : public MsgDialog
 {
 public:
-    FilamentWarningDialog(wxWindow *parent, const wxString &title, std::vector<FilamentWarningInfo> infos);
-    FilamentWarningDialog(FilamentWarningDialog &&)                 = delete;
-    FilamentWarningDialog(const FilamentWarningDialog &)            = delete;
-    FilamentWarningDialog &operator=(FilamentWarningDialog &&)      = delete;
-    FilamentWarningDialog &operator=(const FilamentWarningDialog &) = delete;
-    virtual ~FilamentWarningDialog()                                = default;
+    FilamentWarningDialog(QWidget* parent, const QString& title, std::vector<FilamentWarningInfo> infos);
+    FilamentWarningDialog(FilamentWarningDialog&&) = delete;
+    FilamentWarningDialog(const FilamentWarningDialog&) = delete;
+    FilamentWarningDialog &operator=(FilamentWarningDialog&&) = delete;
+    FilamentWarningDialog &operator=(const FilamentWarningDialog&) = delete;
+    virtual ~FilamentWarningDialog() = default;
 
 private:
     void BuildContent();
-
-private:
     std::vector<FilamentWarningInfo> m_messages;
 };
 
-}
-}
+} // namespace GUI
+} // namespace Slic3r
 
-#endif
+#endif // slic3r_MsgDialog_hpp_

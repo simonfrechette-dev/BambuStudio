@@ -1,351 +1,147 @@
 #include "SideButton.hpp"
 #include "Label.hpp"
 
-#include <wx/dcclient.h>
-#include <wx/dcgraph.h>
+#include <QPainter>
+#include <QPainterPath>
+#include <QFontMetrics>
+#include <QMouseEvent>
 
-BEGIN_EVENT_TABLE(SideButton, wxPanel)
-EVT_LEFT_DOWN(SideButton::mouseDown)
-EVT_LEFT_UP(SideButton::mouseReleased)
-EVT_PAINT(SideButton::paintEvent)
-END_EVENT_TABLE()
-
-SideButton::SideButton(wxWindow* parent, wxString text, wxString icon, long stlye, int iconSize)
-    : wxWindow(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, stlye)
+SideButton::SideButton(QWidget *parent, const QString &text,
+                        const QString &iconName, long /*style*/, int iconSize)
+    : QWidget(parent)
     , state_handler(this)
+    , m_text(text)
+    , text_orientation(HO_Center)
+    , text_margin(15)
 {
-    radius = 12;
-#ifdef __APPLE__
-    extra_size = wxSize(38 + FromDIP(20), 10);
-    text_margin = 15 + FromDIP(20);
-#else
-    extra_size = wxSize(38, 10);
-    text_margin = 15;
-#endif
-
-    icon_offset = 0;
-    text_orientation = HO_Left;
-
-    border_color.append(0x6B6B6B, StateColor::Disabled);
-    border_color.append(wxColour(23, 129, 63), StateColor::Pressed);
-    border_color.append(wxColour(48,221,112), StateColor::Hovered);
-    border_color.append(0x00AE42, StateColor::Normal);
-    border_color.setTakeFocusedAsHovered(false);
-
-    text_color.append(0xACACAC, StateColor::Disabled);
-    text_color.append(0xFEFEFE, StateColor::Pressed);
-    text_color.append(0xFEFEFE, StateColor::Hovered);
-    text_color.append(0xFEFEFE, StateColor::Normal);
-
-    background_color.append(0x6B6B6B, StateColor::Disabled);
-    background_color.append(wxColour(23, 129, 63), StateColor::Pressed);
-    background_color.append(wxColour(48, 221, 112), StateColor::Hovered);
-    background_color.append(0x00AE42, StateColor::Normal);
-    background_color.setTakeFocusedAsHovered(false);
-
-    SetBottomColour(wxColour("#3B4446"));
-
-    state_handler.attach({ &border_color, &text_color, &background_color });
-    state_handler.update_binds();
-
-    // icon only
-    if (!icon.IsEmpty()) {
-        this->icon = ScalableBitmap(this, icon.ToStdString(), iconSize > 0 ? iconSize : 14);
-    }
-
-    SetFont(Label::Body_14);
-    wxWindow::SetLabel(text);
-
-    messureSize();
+    if (!iconName.isEmpty())
+        icon = ScalableBitmap(this, iconName.toStdString(), iconSize > 0 ? iconSize : 20);
+    setFont(Label::Body_14);
+    setAutoFillBackground(false);
+    measureSize();
 }
 
-void SideButton::SetCornerRadius(double radius)
-{
-    this->radius = radius;
-    Refresh();
-}
-
-void SideButton::SetCornerEnable(const std::vector<bool>& enable)
-{
-    radius_enable.clear();
-    for (auto en : enable) {
-        radius_enable.push_back(en);
-    }
-}
-
+void SideButton::SetCornerRadius(double r) { radius = r; update(); }
+void SideButton::SetCornerEnable(const std::vector<bool> &e) { radius_enable = e; }
 void SideButton::SetTextLayout(EHorizontalOrientation orient, int margin)
 {
     text_orientation = orient;
-    text_margin = margin;
-    messureSize();
-    Refresh();
+    text_margin      = margin;
+    update();
+}
+void SideButton::SetLayoutStyle(int s) { layout_style = s; }
+void SideButton::setText(const QString &label) { m_text = label; measureSize(); update(); }
+void SideButton::setForegroundColour(QColor c) { text_color.append(c, StateColor::Normal); update(); }
+void SideButton::setBackgroundColour(QColor c) { background_color.append(c, StateColor::Normal); update(); }
+bool SideButton::SetBottomColour(QColor c) { bottom_color = c; update(); return true; }
+void SideButton::SetMinSize(const QSize &size) { minSize = size; setMinimumSize(size); }
+void SideButton::SetBorderColor(const StateColor &c) { border_color = c; update(); }
+void SideButton::SetForegroundColor(const StateColor &c) { text_color = c; update(); }
+void SideButton::SetBackgroundColor(const StateColor &c) { background_color = c; update(); }
+bool SideButton::Enable(bool e) { setEnabled(e); update(); return true; }
+void SideButton::Rescale() { measureSize(); update(); }
+void SideButton::SetExtraSize(const QSize &s) { extra_size = s; measureSize(); }
+void SideButton::SetIconOffset(int o) { icon_offset = o; update(); }
+
+QSize SideButton::sizeHint() const { return minimumSizeHint(); }
+
+void SideButton::measureSize()
+{
+    QFontMetrics fm(font());
+    textSize = fm.boundingRect(m_text).size();
+    QSize sz = textSize + QSize(text_margin * 2, 8) + extra_size;
+    if (icon.bmp().IsOk())
+        sz.setWidth(sz.width() + icon.GetBmpSize().width() + 4);
+    minSize = sz;
+    setMinimumSize(sz);
 }
 
-void SideButton::SetLayoutStyle(int style)
+void SideButton::paintEvent(QPaintEvent *)
 {
-    layout_style = style;
-    messureSize();
-    Refresh();
-}
+    QPainter p(this);
+    p.setRenderHint(QPainter::Antialiasing);
 
-void SideButton::SetLabel(const wxString& label)
-{
-    wxWindow::SetLabel(label);
-    messureSize();
-    Refresh();
-}
+    const int states = state_handler.states();
+    const QRect rc = rect();
 
-bool SideButton::SetForegroundColour(wxColour const &color)
-{
-    text_color = StateColor(color);
-    state_handler.update_binds();
-    return true;
-}
-
-bool SideButton::SetBackgroundColour(wxColour const& color)
-{
-    background_color = StateColor(color);
-    state_handler.update_binds();
-    return true;
-}
-
-bool SideButton::SetBottomColour(wxColour const& color)
-{
-    bottom_color = color;
-    return true;
-}
-
-void SideButton::SetMinSize(const wxSize& size)
-{
-    minSize = size;
-    messureSize();
-}
-
-void SideButton::SetBorderColor(StateColor const &color)
-{
-    border_color = color;
-    state_handler.update_binds();
-    Refresh();
-}
-
-void SideButton::SetForegroundColor(StateColor const &color)
-{
-    text_color = color;
-    state_handler.update_binds();
-    Refresh();
-}
-
-void SideButton::SetBackgroundColor(StateColor const &color)
-{
-    background_color = color;
-    state_handler.update_binds();
-    Refresh();
-}
-
-bool SideButton::Enable(bool enable)
-{
-    bool result = wxWindow::Enable(enable);
-    if (result) {
-        wxCommandEvent e(EVT_ENABLE_CHANGED);
-        e.SetEventObject(this);
-        GetEventHandler()->ProcessEvent(e);
+    // Background
+    if (background_color.count() > 0) {
+        const QColor bg = background_color.colorForStates(states);
+        p.setBrush(bg);
+        p.setPen(Qt::NoPen);
+        if (radius > 0)
+            p.drawRoundedRect(rc, radius, radius);
+        else
+            p.drawRect(rc);
     }
-    return result;
-}
 
-void SideButton::Rescale()
-{
-    if (this->icon.bmp().IsOk())
-        this->icon.msw_rescale();
-    messureSize();
-}
+    // Bottom colour accent
+    if (bottom_color.isValid()) {
+        p.setBrush(bottom_color);
+        p.setPen(Qt::NoPen);
+        p.drawRect(QRect(0, rc.height() - 3, rc.width(), 3));
+    }
 
-void SideButton::SetExtraSize(const wxSize& size)
-{
-    extra_size = size;
-    messureSize();
-}
+    // Border
+    if (border_color.count() > 0) {
+        p.setBrush(Qt::NoBrush);
+        p.setPen(QPen(border_color.colorForStates(states), 1));
+        if (radius > 0)
+            p.drawRoundedRect(rc, radius, radius);
+        else
+            p.drawRect(rc);
+    }
 
-void SideButton::SetIconOffset(const int offset)
-{
-    icon_offset = offset;
-    messureSize();
-}
-
-void SideButton::paintEvent(wxPaintEvent& evt)
-{
-    // depending on your system you may need to look at double-buffered dcs
-    wxPaintDC dc(this);
-#ifdef __WXMSW__
-    wxGCDC dc2(dc);
-#else
-    wxDC & dc2(dc);
-#endif
-
-    wxDC & dctext(dc);
-    dorender(dc2, dctext);
-}
-
-/*
- * Here we do the actual rendering. I put it in a separate
- * method so that it can work no matter what type of DC
- * (e.g. wxPaintDC or wxClientDC) is used.
- */
-void SideButton::dorender(wxDC& dc, wxDC& text_dc)
-{
-    wxSize size = GetSize();
-
-    // draw background
-    dc.SetPen(wxNullPen);
-    dc.SetBrush(StateColor::darkModeColorFor(bottom_color));
-    dc.DrawRectangle(0, 0, size.x, size.y);
-
-    int states = state_handler.states();
-    dc.SetBrush(wxBrush(background_color.colorForStates(states)));
-
-    dc.SetPen(wxPen(border_color.colorForStates(states)));
-    int pen_width = dc.GetPen().GetWidth();
-
-
-    // draw icon style
+    // Icon
+    int x = text_margin;
     if (icon.bmp().IsOk()) {
-        if (radius > 1e-5) {
-            dc.DrawRoundedRectangle(0, 0, size.x, size.y, radius);
-            dc.DrawRectangle(radius, 0, size.x - radius, size.y);
-            dc.SetPen(wxNullPen);
-            dc.DrawRectangle(radius - pen_width, pen_width, radius, size.y - 2 * pen_width);
-        }
-        else {
-            dc.DrawRectangle(0, 0, size.x, size.y);
-        }
-    }
-    // draw text style
-    else {
-        if (radius > 1e-5) {
-            if (layout_style == 1) {
-                dc.DrawRoundedRectangle(0, 0, size.x, size.y, radius);
-                dc.SetPen(wxNullPen);
-            } else {
-                dc.DrawRoundedRectangle(0, 0, size.x, size.y, radius);
-                dc.DrawRectangle(0, 0, radius, size.y);
-                dc.SetPen(wxNullPen);
-                dc.DrawRectangle(pen_width, pen_width, size.x - radius, size.y - 2 * pen_width);
-            }
-        } else {
-            dc.DrawRectangle(0, 0, size.x, size.y);
-        }
+        const QSize isz = icon.GetBmpSize();
+        int iy = (rc.height() - isz.height()) / 2;
+        p.drawPixmap(QPoint(x + icon_offset, iy), icon.bmp());
+        x += isz.width() + 4;
     }
 
-    dc.SetBrush(*wxTRANSPARENT_BRUSH);
-    // calc content size
-    wxSize szIcon;
-    wxSize szContent = textSize;
-    if (icon.bmp().IsOk()) {
-        if (szContent.y > 0) {
-            //BBS norrow size between text and icon
-            szContent.x += 5;
-        }
-        szIcon = icon.GetBmpSize();
-        szContent.x += szIcon.x;
-        if (szIcon.y > szContent.y)
-            szContent.y = szIcon.y;
-    }
-    // move to center
-    wxRect rcContent = { {0, 0}, size };
-    if (text_orientation == EHorizontalOrientation::HO_Center) {
-        wxSize offset = (size - szContent) / 2;
-        rcContent.Deflate(offset.x, offset.y);
-    } else if (text_orientation == EHorizontalOrientation::HO_Left) {
-        wxSize offset = (size - szContent) / 2;
-        rcContent.Deflate(text_margin, offset.y);
-    } else if (text_orientation == EHorizontalOrientation::HO_Right) {
-        wxSize offset = (size - szContent) / 2;
-        rcContent.Deflate(size.x - text_margin, offset.y);
-    }
+    // Text
+    QColor tc = text_color.count() > 0 ? text_color.colorForStates(states) : Qt::black;
+    p.setPen(tc);
+    p.setFont(font());
 
-    // start draw
-    wxPoint pt = rcContent.GetLeftTop();
-    if (icon.bmp().IsOk()) {
-        //BBS extra pixels for icon
-        pt.x += icon_offset;
-        pt.y += (rcContent.height - szIcon.y) / 2;
-        dc.DrawBitmap(icon.bmp(), pt);
-        //BBS norrow size between text and icon
-        pt.x += szIcon.x + 5;
-        pt.y = rcContent.y;
+    int tx;
+    switch (text_orientation) {
+    case HO_Left:   tx = x; break;
+    case HO_Right:  tx = rc.width() - textSize.width() - text_margin; break;
+    default:        tx = (rc.width() - textSize.width()) / 2; break;
     }
+    p.drawText(QPoint(tx, (rc.height() + textSize.height()) / 2 - QFontMetrics(font()).descent()), m_text);
+}
 
-    auto text = GetLabel();
-    if (!text.IsEmpty()) {
-        pt.y += (rcContent.height - textSize.y) / 2;
-#ifdef __APPLE__
-        pt.y -= FromDIP(2);
-#endif
-        text_dc.SetFont(GetFont());
-        text_dc.SetTextForeground(text_color.colorForStates(states));
-        text_dc.DrawText(text, pt);
+void SideButton::mousePressEvent(QMouseEvent *event)
+{
+    if (event->button() == Qt::LeftButton) {
+        pressedDown = true;
+        update();
+        event->accept();
+    } else {
+        QWidget::mousePressEvent(event);
     }
 }
 
-void SideButton::messureSize()
+void SideButton::mouseReleaseEvent(QMouseEvent *event)
 {
-    textSize = GetTextExtent(GetLabel());
-    if (minSize.GetWidth() > 0) {
-        wxWindow::SetMinSize(minSize);
-        return;
-    }
-
-    wxSize szContent = textSize;
-    if (this->icon.bmp().IsOk()) {
-        if (szContent.y > 0) {
-            szContent.x += 5;
-        }
-        wxSize szIcon = this->icon.GetBmpSize();
-        szContent.x += szIcon.x;
-        if (szIcon.y > szContent.y)
-            szContent.y = szIcon.y;
-        //BBS icon only
-        wxWindow::SetMinSize(szContent + wxSize(szContent.GetX() + extra_size.GetX(), minSize.GetHeight()));
-    }
-    else {
-        if (minSize.GetHeight() > 0) {
-            //BBS with text size
-            wxWindow::SetMinSize(wxSize(szContent.GetX() + extra_size.GetX(), minSize.GetHeight()));
-        } else {
-            //BBS with text size
-            wxWindow::SetMinSize(szContent + extra_size);
-        }
-    }
-}
-
-void SideButton::mouseDown(wxMouseEvent& event)
-{
-    event.Skip();
-    pressedDown = true;
-    SetFocus();
-    CaptureMouse();
-}
-
-void SideButton::mouseReleased(wxMouseEvent& event)
-{
-    event.Skip();
-
-    if (HasCapture())
-    {
-        // Release mouse capture regardless of pressedDown state, to avoid cases where capture may be stuck permanently
-        ReleaseMouse();
-    }
-
-    if (pressedDown) {
+    if (event->button() == Qt::LeftButton && pressedDown) {
         pressedDown = false;
-        if (wxRect({0, 0}, GetSize()).Contains(event.GetPosition()))
-            sendButtonEvent();
+        update();
+        if (rect().contains(event->pos()))
+            emit clicked();
+        event->accept();
+    } else {
+        pressedDown = false;
+        QWidget::mouseReleaseEvent(event);
     }
 }
 
-void SideButton::sendButtonEvent()
+void SideButton::changeEvent(QEvent *event)
 {
-    wxCommandEvent event(wxEVT_COMMAND_BUTTON_CLICKED, GetId());
-    event.SetEventObject(this);
-    GetEventHandler()->ProcessEvent(event);
+    if (event->type() == QEvent::EnabledChange) update();
+    QWidget::changeEvent(event);
 }

@@ -1,54 +1,70 @@
 #include "RadioBox.hpp"
-
-#include "../wxExtensions.hpp"
+#include <QPainter>
+#include <QMouseEvent>
 
 namespace Slic3r {
 namespace GUI {
-RadioBox::RadioBox(wxWindow *parent)
-    : wxBitmapToggleButton(parent, wxID_ANY, wxNullBitmap, wxDefaultPosition, wxDefaultSize, wxBORDER_NONE)
-    , m_on(this, "radio_on", 18)
+
+RadioBox::RadioBox(QWidget *parent)
+    : QAbstractButton(parent)
+    , m_on(this,  "radio_on",  18)
     , m_off(this, "radio_off", 18)
     , m_ban(this, "radio_ban", 18)
 {
-    // SetBackgroundStyle(wxBG_STYLE_TRANSPARENT);
-    if (parent) SetBackgroundColour(parent->GetBackgroundColour());
-    // Bind(wxEVT_TOGGLEBUTTON, [this](auto& e) { update(); e.Skip(); });
-    SetSize(m_on.GetBmpSize());
-    SetMinSize(m_on.GetBmpSize());
-    update();
+    setCheckable(true);
+    const QSize sz = m_on.GetBmpSize();
+    setFixedSize(sz);
 }
 
 void RadioBox::SetValue(bool value)
 {
-    wxBitmapToggleButton::SetValue(value);
-    update();
+    if (m_checked != value) {
+        m_checked = value;
+        update();
+        emit toggled(m_checked);
+    }
 }
-
-bool RadioBox::GetValue()
-{
-    return wxBitmapToggleButton::GetValue();
-}
-
 
 void RadioBox::Rescale()
 {
-    m_on.msw_rescale();
-    m_off.msw_rescale();
-    SetSize(m_on.GetBmpSize());
+    setFixedSize(m_on.GetBmpSize());
     update();
 }
 
-void RadioBox::update() {
-    if (IsEnabled())
-    {
-        SetBitmap((GetValue() ? m_on : m_off).bmp());
-    } else
-    {
-        SetBitmap(m_ban.bmp());
+QSize RadioBox::sizeHint() const { return m_on.GetBmpSize(); }
+
+const QPixmap &RadioBox::currentPixmap() const
+{
+    if (!isEnabled()) return m_ban.bmp();
+    return m_checked ? m_on.bmp() : m_off.bmp();
+}
+
+void RadioBox::paintEvent(QPaintEvent *)
+{
+    QPainter p(this);
+    p.drawPixmap(QPoint(0, 0), currentPixmap());
+}
+
+void RadioBox::mousePressEvent(QMouseEvent *event)
+{
+    if (event->button() == Qt::LeftButton) event->accept();
+    else QAbstractButton::mousePressEvent(event);
+}
+
+void RadioBox::mouseReleaseEvent(QMouseEvent *event)
+{
+    if (event->button() == Qt::LeftButton && rect().contains(event->pos())) {
+        SetValue(!m_checked);
+        event->accept();
+    } else {
+        QAbstractButton::mouseReleaseEvent(event);
     }
-
 }
 
-}
+void RadioBox::changeEvent(QEvent *event)
+{
+    if (event->type() == QEvent::EnabledChange) update();
+    QAbstractButton::changeEvent(event);
 }
 
+}} // namespace Slic3r::GUI

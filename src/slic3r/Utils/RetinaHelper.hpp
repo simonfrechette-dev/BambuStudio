@@ -1,7 +1,7 @@
 #ifndef slic3r_RetinaHelper_hpp_
 #define slic3r_RetinaHelper_hpp_
 
-class wxWindow;
+class QWidget;
 
 
 namespace Slic3r {
@@ -10,7 +10,7 @@ namespace GUI {
 class RetinaHelper
 {
 public:
-    RetinaHelper(wxWindow* window);
+    RetinaHelper(QWidget* window);
     ~RetinaHelper();
 
     void set_use_retina(bool value);
@@ -19,7 +19,7 @@ public:
 
 private:
 #ifdef __WXGTK3__
-    wxWindow* m_window;
+    QWidget* m_window;
 #endif // __WXGTK3__
     void* m_self;
 };

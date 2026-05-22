@@ -2,36 +2,34 @@
 #define slic3r_GUI_RecenterDialog_hpp_
 
 #include "GUI_Utils.hpp"
-#include <wx/statbmp.h>
 #include "Widgets/Button.hpp"
-#include <wx/stattext.h>
 
 namespace Slic3r { namespace GUI {
 class RecenterDialog : public DPIDialog
 {
 private:
-    wxStaticText* m_staticText_hint;
+    QLabel* m_staticText_hint;
     Button* m_button_confirm;
     Button* m_button_close;
-    wxStaticBitmap* m_bitmap_home;
+    QLabel* m_bitmap_home;
     ScalableBitmap  m_home_bmp;
-    wxString hint1;
-    wxString hint2;
+    QString hint1;
+    QString hint2;
 
     void init_bitmap();
-    void OnPaint(wxPaintEvent& event);
-    void render(wxDC& dc);
-    void on_button_confirm(wxCommandEvent& event);
-    void on_button_close(wxCommandEvent& event);
-    void on_dpi_changed(const wxRect& suggested_rect) override;
+    void OnPaint(QPaintEvent& event);
+    void render(QPainter& dc);
+    void on_button_confirm(QEvent& event);
+    void on_button_close(QEvent& event);
+    void on_dpi_changed(const QRect& suggested_rect) override;
 
 public:
-    RecenterDialog(wxWindow* parent,
-        wxWindowID      id = wxID_ANY,
-        const wxString& title = wxEmptyString,
-        const wxPoint& pos = wxDefaultPosition,
-        const wxSize& size = wxDefaultSize,
-        long            style = wxCLOSE_BOX | wxCAPTION);
+    RecenterDialog(QWidget* parent,
+        int      id = -1,
+        const QString& title = QString(),
+        const QPoint& pos = QPoint(),
+        const QSize& size = QSize(),
+        long            style = 0 | 0);
 
     ~RecenterDialog();
 };

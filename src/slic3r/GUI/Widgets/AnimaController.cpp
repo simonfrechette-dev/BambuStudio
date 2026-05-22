@@ -1,116 +1,80 @@
 #include "AnimaController.hpp"
+#include "../QtExtensions.hpp"
+#include <QVBoxLayout>
 
-#include <wx/dcclient.h>
-#include <wx/dcgraph.h>
-#ifdef __APPLE__
-#include "libslic3r/MacUtils.hpp"
-#endif
-
-AnimaIcon::AnimaIcon(wxWindow *parent, wxWindowID id, std::vector<std::string> img_list, std::string img_enable, int ivt, int size)
-    : wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize), m_ivt(ivt), m_img_enable(img_enable), m_img_list(img_list), m_size(size)
+AnimaIcon::AnimaIcon(QWidget *parent, int /*id*/,
+                     std::vector<std::string> img_list,
+                     std::string img_enable, int ivt, int size)
+    : QWidget(parent)
+    , m_img_list(std::move(img_list))
+    , m_img_enable(std::move(img_enable))
+    , m_ivt(ivt)
+    , m_size(size)
 {
-    auto sizer = new wxBoxSizer(wxHORIZONTAL);
-    SetBackgroundColour((wxColour(255, 255, 255)));
-    // m_size = 25;
+    auto *layout = new QVBoxLayout(this);
+    layout->setContentsMargins(0, 0, 0, 0);
+    m_bitmap_label = new QLabel(this);
+    m_bitmap_label->setFixedSize(size, size);
+    layout->addWidget(m_bitmap_label);
+    setLayout(layout);
 
-    //add ScalableBitmap
-    for (const auto &filename : m_img_list) m_images.emplace_back(create_scaled_bitmap(filename, this, m_size));
-    m_image_enable = create_scaled_bitmap(m_img_enable, this, m_size-8);
+    m_timer = new QTimer(this);
+    connect(m_timer, &QTimer::timeout, this, &AnimaIcon::onTimer);
 
-    // show first wxStaticBitmap
-    if (!m_images.empty()) m_bitmap = new wxStaticBitmap(this, wxID_ANY, m_images[0], wxDefaultPosition, wxSize(FromDIP(m_size), FromDIP(m_size)));
-
-
-    m_timer = new wxTimer();
-    m_timer->SetOwner(this);
-
-    Bind(wxEVT_TIMER, [this](wxTimerEvent &) {
-        if (m_timer->IsRunning() && !m_images.empty()) {
-            m_current_frame = (m_current_frame + 1) % 4;
-            m_bitmap->SetBitmap(m_images[m_current_frame]);
-        }
-    });
-
-   m_bitmap->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent &e) {
-        wxMouseEvent evt(wxEVT_LEFT_DOWN);
-        evt.SetEventObject(this);
-        wxPostEvent(this, evt);
-    });
-
-   m_bitmap->Bind(wxEVT_ENTER_WINDOW, [this](auto &e) {
-       if (!m_timer->IsRunning())
-          SetCursor(wxCursor(wxCURSOR_HAND));
-       else
-          SetCursor(wxCursor(wxCURSOR_ARROW));
-       e.Skip();
-   });
-   m_bitmap->Bind(wxEVT_LEAVE_WINDOW, [this](auto &e) {
-       SetCursor(wxCursor(wxCURSOR_ARROW));
-       e.Skip();
-   });
-    sizer->Add(m_bitmap, 0, wxALIGN_CENTER, 0);
-    SetSizer(sizer);
-	SetSize(wxSize(FromDIP(m_size), FromDIP(m_size)));
-    SetMaxSize(wxSize(FromDIP(m_size), FromDIP(m_size)));
-    SetMinSize(wxSize(FromDIP(m_size), FromDIP(m_size)));
-    Layout();
-    Fit();
-}
-
-AnimaIcon::~AnimaIcon()
-{
-    if (m_timer) {
-        m_timer->Stop();
-        delete m_timer;
-        m_timer = nullptr;
+    // Pre-load frames
+    for (const auto &name : m_img_list) {
+        QPixmap px;
+        ScalableBitmap bmp(this, name, m_size);
+        px = bmp.bmp();
+        m_images.push_back(px);
     }
+    if (!m_img_enable.empty()) {
+        ScalableBitmap bmp(this, m_img_enable, m_size);
+        m_image_enable = bmp.bmp();
+    }
+    if (!m_images.empty()) m_bitmap_label->setPixmap(m_images[0]);
 }
+
+AnimaIcon::~AnimaIcon() = default;
 
 void AnimaIcon::Play()
 {
-    if (m_timer)
-        m_timer->Start(m_ivt);
+    if (!m_playing && !m_images.empty()) {
+        m_playing = true;
+        m_current_frame = 0;
+        m_timer->start(m_ivt);
+    }
 }
 
 void AnimaIcon::Stop()
 {
-    m_timer->Stop();
-}
-
-bool AnimaIcon::IsPlaying()
-{
-    return m_timer->IsRunning();
+    m_playing = false;
+    m_timer->stop();
+    if (!m_images.empty()) m_bitmap_label->setPixmap(m_images[0]);
 }
 
 void AnimaIcon::Enable()
 {
     m_enable = true;
-    if (m_bitmap) { m_bitmap->SetBitmap(m_image_enable); }
+    if (!m_image_enable.isNull()) m_bitmap_label->setPixmap(m_image_enable);
 }
 
-
-bool AnimaIcon::IsRunning() const
-{
-    return m_timer ? m_timer->IsRunning() : false;
-}
+bool AnimaIcon::IsPlaying() const { return m_playing; }
+bool AnimaIcon::IsRunning() const { return m_playing; }
 
 void AnimaIcon::Rescale()
 {
     m_images.clear();
-    for (const auto& filename : m_img_list) m_images.emplace_back(create_scaled_bitmap(filename, this, m_size));
-    m_image_enable = create_scaled_bitmap(m_img_enable, this, m_size - 8);
-
-    if (m_img_list.empty()) {
-        return;
+    for (const auto &name : m_img_list) {
+        ScalableBitmap bmp(this, name, m_size);
+        m_images.push_back(bmp.bmp());
     }
+    if (!m_images.empty()) m_bitmap_label->setPixmap(m_images[0]);
+}
 
-    if (IsPlaying()) {
-        m_bitmap->SetBitmap(m_images[m_current_frame]);
-    } else {
-        if(m_enable) {
-            m_bitmap->SetBitmap(m_image_enable);
-        } else {
-            m_bitmap->SetBitmap(m_images[0]);
-        }
-    }
+void AnimaIcon::onTimer()
+{
+    if (!m_playing || m_images.empty()) return;
+    m_current_frame = (m_current_frame + 1) % (int)m_images.size();
+    m_bitmap_label->setPixmap(m_images[m_current_frame]);
 }

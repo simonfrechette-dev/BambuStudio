@@ -4,8 +4,6 @@
 #include <vector>
 #include <string>
 #include <GL/glew.h>
-#include <wx/string.h>
-#include <wx/fontenc.h>
 #include "JobNew.hpp"
 #include "libslic3r/Point.hpp" // Vec2i32
 #include "libslic3r/Emboss.hpp"
@@ -19,8 +17,8 @@ struct FontImageData
     // Text to rasterize
     std::string    text;
     // Define font face
-    wxString       font_name;
-    wxFontEncoding encoding;
+    std::string    font_name;
+    int            encoding;
     // texture for copy result to
     // texture MUST BE initialized
     GLuint         texture_id;
@@ -50,7 +48,7 @@ class BackupFonts
 {
 public:
     static void generate_backup_fonts();
-    static Slic3r::Emboss::FontFileWithCache              gener_font_with_cache(const wxString &font_name, const wxFontEncoding& encoding);
+    static Slic3r::Emboss::FontFileWithCache              gener_font_with_cache(const std::string &font_name, int encoding);
     static std::vector<Slic3r::Emboss::FontFileWithCache> backup_fonts;
 };
 

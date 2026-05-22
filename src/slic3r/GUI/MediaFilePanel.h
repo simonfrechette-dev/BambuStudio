@@ -9,11 +9,12 @@
 #define MediaFilePanel_h
 
 #include <set>
+#include <QWidget>
+#include <QMainWindow>
 
 #include "GUI_Utils.hpp"
 #include "wxExtensions.hpp"
 
-#include <wx/frame.h>
 
 class Button;
 class SwitchButton;
@@ -30,10 +31,10 @@ namespace GUI {
 
 class ImageGrid;
 
-class MediaFilePanel : public wxPanel
+class MediaFilePanel : public QWidget
 {
 public:
-    MediaFilePanel(wxWindow * parent);
+    MediaFilePanel(QWidget * parent);
 
     ~MediaFilePanel();
 
@@ -47,7 +48,7 @@ public:
     void SetSelecting(bool selecting, bool selectall);
 
 private:
-    void modeChanged(wxCommandEvent & e);
+    void modeChanged(QEvent & e);
     void updateStorageTabVisibility();
 
     void fetchUrl(boost::weak_ptr<PrinterFileSystem> fs);
@@ -108,11 +109,11 @@ private:
 class MediaFileFrame : public DPIFrame
 {
 public:
-    MediaFileFrame(wxWindow * parent);
+    MediaFileFrame(QWidget * parent);
 
     MediaFilePanel * filePanel() { return m_panel; }
 
-    virtual void on_dpi_changed(const wxRect& suggested_rect);
+    virtual void on_dpi_changed(const QRect& suggested_rect);
 
 private:
     MediaFilePanel* m_panel;

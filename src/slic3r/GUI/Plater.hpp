@@ -5,9 +5,10 @@
 #include <vector>
 #include <boost/filesystem/path.hpp>
 
-#include <wx/panel.h>
+#include <QWidget>
 // BBS
-#include <wx/notebook.h>
+#include <QTabWidget>
+#include <QTreeWidget>
 
 #include "Selection.hpp"
 
@@ -30,14 +31,17 @@
 
 #define FILAMENT_SYSTEM_COLORS_NUM      16
 
-class wxButton;
+class QPushButton;
 class ScalableButton;
-class wxScrolledWindow;
-class wxString;
+class QScrollArea;
+class QLabel;
 class ComboBox;
 class Button;
 
 namespace Slic3r {
+namespace GUI {
+class SimpleGLView;
+}
 class BackgroundSlicingProcess;
 class HelioBackgroundProcess;
 struct HelioMaterialInput;
@@ -96,43 +100,70 @@ enum class ActionButtonType : int;
 #define EVT_PUBLISHING_STOP         2
 
 //BBS: add EVT_SLICING_UPDATE declare here
-wxDECLARE_EVENT(EVT_SLICING_UPDATE, Slic3r::SlicingStatusEvent);
-wxDECLARE_EVENT(EVT_PUBLISH,        wxCommandEvent);
-wxDECLARE_EVENT(EVT_OPEN_PLATESETTINGSDIALOG,        wxCommandEvent);
+// Qt event type (replacing wxDECLARE_EVENT): see Event.hpp
+// EVT: EVT_SLICING_UPDATE
+// Qt event type (replacing wxDECLARE_EVENT): see Event.hpp
+// EVT: EVT_PUBLISH
+// Qt event type (replacing wxDECLARE_EVENT): see Event.hpp
+// EVT: EVT_OPEN_PLATESETTINGSDIALOG
 
 // Explanation of int param
 // Bit 0: 1 = automatic mode, 0 = manual mode.
 // Bit 1: 1 = need auto slicing(from preview page), 0 = not need auto slicing.
-wxDECLARE_EVENT(EVT_OPEN_FILAMENT_MAP_SETTINGS_DIALOG, wxCommandEvent);
-wxDECLARE_EVENT(EVT_REPAIR_MODEL,        wxCommandEvent);
-wxDECLARE_EVENT(EVT_FILAMENT_COLOR_CHANGED,        wxCommandEvent);
-wxDECLARE_EVENT(EVT_INSTALL_PLUGIN_NETWORKING,        wxCommandEvent);
-wxDECLARE_EVENT(EVT_INSTALL_PLUGIN_HINT,        wxCommandEvent);
-wxDECLARE_EVENT(EVT_UPDATE_PLUGINS_WHEN_LAUNCH,        wxCommandEvent);
-wxDECLARE_EVENT(EVT_PREVIEW_ONLY_MODE_HINT,        wxCommandEvent);
-wxDECLARE_EVENT(EVT_GLCANVAS_COLOR_MODE_CHANGED,   SimpleEvent);
-wxDECLARE_EVENT(EVT_ENABLE_GCODE_OPTION_ITEM_CHANGED, SimpleEvent);
-wxDECLARE_EVENT(EVT_PRINT_FROM_SDCARD_VIEW,   SimpleEvent);
-wxDECLARE_EVENT(EVT_CREATE_FILAMENT, SimpleEvent);
-wxDECLARE_EVENT(EVT_MODIFY_FILAMENT, SimpleEvent);
-wxDECLARE_EVENT(EVT_ADD_FILAMENT, SimpleEvent);
-wxDECLARE_EVENT(EVT_DEL_FILAMENT, SimpleEvent);
-wxDECLARE_EVENT(EVT_NOTICE_CHILDE_SIZE_CHANGED, SimpleEvent);
-wxDECLARE_EVENT(EVT_NOTICE_FULL_SCREEN_CHANGED, IntEvent);
-using ColorEvent = Event<wxColour>;
-wxDECLARE_EVENT(EVT_ADD_CUSTOM_FILAMENT, ColorEvent);
-wxDECLARE_EVENT(EVT_SWITCH_TO_PREPARE_TAB, wxCommandEvent);
+// Qt event type (replacing wxDECLARE_EVENT): see Event.hpp
+// EVT: EVT_OPEN_FILAMENT_MAP_SETTINGS_DIALOG
+// Qt event type (replacing wxDECLARE_EVENT): see Event.hpp
+// EVT: EVT_REPAIR_MODEL
+// Qt event type (replacing wxDECLARE_EVENT): see Event.hpp
+// EVT: EVT_FILAMENT_COLOR_CHANGED
+// Qt event type (replacing wxDECLARE_EVENT): see Event.hpp
+// EVT: EVT_INSTALL_PLUGIN_NETWORKING
+// Qt event type (replacing wxDECLARE_EVENT): see Event.hpp
+// EVT: EVT_INSTALL_PLUGIN_HINT
+// Qt event type (replacing wxDECLARE_EVENT): see Event.hpp
+// EVT: EVT_UPDATE_PLUGINS_WHEN_LAUNCH
+// Qt event type (replacing wxDECLARE_EVENT): see Event.hpp
+// EVT: EVT_PREVIEW_ONLY_MODE_HINT
+// Qt event type (replacing wxDECLARE_EVENT): see Event.hpp
+// EVT: EVT_GLCANVAS_COLOR_MODE_CHANGED
+// Qt event type (replacing wxDECLARE_EVENT): see Event.hpp
+// EVT: EVT_ENABLE_GCODE_OPTION_ITEM_CHANGED
+// Qt event type (replacing wxDECLARE_EVENT): see Event.hpp
+// EVT: EVT_PRINT_FROM_SDCARD_VIEW
+// Qt event type (replacing wxDECLARE_EVENT): see Event.hpp
+// EVT: EVT_CREATE_FILAMENT
+// Qt event type (replacing wxDECLARE_EVENT): see Event.hpp
+// EVT: EVT_MODIFY_FILAMENT
+// Qt event type (replacing wxDECLARE_EVENT): see Event.hpp
+// EVT: EVT_ADD_FILAMENT
+inline const QEvent::Type EVT_ADD_FILAMENT = static_cast<QEvent::Type>(QEvent::registerEventType());
+// Qt event type (replacing wxDECLARE_EVENT): see Event.hpp
+// EVT: EVT_DEL_FILAMENT
+inline const QEvent::Type EVT_DEL_FILAMENT = static_cast<QEvent::Type>(QEvent::registerEventType());
+// Qt event type (replacing wxDECLARE_EVENT): see Event.hpp
+// EVT: EVT_NOTICE_CHILDE_SIZE_CHANGED
+// Qt event type (replacing wxDECLARE_EVENT): see Event.hpp
+// EVT: EVT_NOTICE_FULL_SCREEN_CHANGED
+using ColorEvent = Event<QColor>;
+// Qt event type (replacing wxDECLARE_EVENT): see Event.hpp
+// EVT: EVT_ADD_CUSTOM_FILAMENT
+// Qt event type (replacing wxDECLARE_EVENT): see Event.hpp
+// EVT: EVT_SWITCH_TO_PREPARE_TAB
 
 // helio
-wxDECLARE_EVENT(EVT_HELIO_PROCESSING_COMPLETED, HelioCompletionEvent);
-wxDECLARE_EVENT(EVT_HELIO_PROCESSING_STARTED, SimpleEvent);
-wxDECLARE_EVENT(EVT_HELIO_INPUT_DLG, SimpleEvent);
+// Qt event type (replacing wxDECLARE_EVENT): see Event.hpp
+// EVT: EVT_HELIO_PROCESSING_COMPLETED
+// Qt event type (replacing wxDECLARE_EVENT): see Event.hpp
+// EVT: EVT_HELIO_PROCESSING_STARTED
+// Qt event type (replacing wxDECLARE_EVENT): see Event.hpp
+// EVT: EVT_HELIO_INPUT_DLG
 // end helio
-wxDECLARE_EVENT(EVT_GCODE_VIEWER_CHANGED, SimpleEvent);
+// Qt event type (replacing wxDECLARE_EVENT): see Event.hpp
+// EVT: EVT_GCODE_VIEWER_CHANGED
 
-const wxString DEFAULT_PROJECT_NAME = "Untitled";
+const QString DEFAULT_PROJECT_NAME = "Untitled";
 
-class Sidebar : public wxPanel
+class Sidebar : public QWidget
 {
     ConfigOptionMode    m_mode;
     Button *         btn_sync{nullptr};
@@ -147,7 +178,7 @@ class Sidebar : public wxPanel
     bool                                    m_begin_sync_printer_status{false};
     SyncAmsInfoDialog*                      m_sync_dlg{nullptr};
 
-    void update_sync_ams_btn_enable(wxUpdateUIEvent &e);
+    void update_sync_ams_btn_enable();
 
 public:
     enum DockingState { None, Left, Right };
@@ -158,8 +189,8 @@ public:
     Sidebar &operator=(const Sidebar &) = delete;
     ~Sidebar();
 
-    void on_enter_image_printer_bed(wxMouseEvent &evt);
-    void on_leave_image_printer_bed(wxMouseEvent &evt);
+    void on_enter_image_printer_bed(QMouseEvent *evt);
+    void on_leave_image_printer_bed(QMouseEvent *evt);
     void on_change_color_mode(bool is_dark);
     void create_printer_preset();
     void init_filament_combo(PlaterPresetComboBox **combo, const int filament_idx);
@@ -192,7 +223,7 @@ public:
     void delete_filament(size_t filament_id = size_t(-1), int replace_filament_id = -1);  // 0 base, -1 means default
     void change_filament(size_t from_id, size_t to_id);  // 0 base
     void edit_filament();
-    void add_custom_filament(wxColour new_col, const std::string& preset_name = std::string());
+    void add_custom_filament(QColor new_col, const std::string& preset_name = std::string());
     bool is_new_project_in_gcode3mf();
     // BBS
     void on_bed_type_change(BedType bed_type);
@@ -203,10 +234,10 @@ public:
     bool need_auto_sync_extruder_list_after_connect_priner(const MachineObject* obj);
     void update_sync_status(const MachineObject* obj);
     int get_sidebar_pos_right_x();
-    void on_size(SimpleEvent &e);
-    void on_full_screen(IntEvent &);
-    void get_big_btn_sync_pos_size(wxPoint &pt, wxSize &size);
-    void get_small_btn_sync_pos_size(wxPoint &pt, wxSize &size);
+    void on_size(QEvent &e);
+    void on_full_screen(QEvent &);
+    void get_big_btn_sync_pos_size(QPoint &pt, QSize &size);
+    void get_small_btn_sync_pos_size(QPoint &pt, QSize &size);
     void set_extruder_nozzle_count(int extruder_id, int nozzle_count);
     void reset_fila_switch();
     void enable_nozzle_count_edit(bool enable);
@@ -216,17 +247,17 @@ public:
     ObjectList*             obj_list();
     ObjectSettings*         obj_settings();
     ObjectLayers*           obj_layers();
-    wxPanel*                scrolled_panel();
-    wxPanel* print_panel();
-    wxPanel* filament_panel();
+    QWidget*                scrolled_panel();
+    QWidget* print_panel();
+    QWidget* filament_panel();
 
     ConfigOptionsGroup*     og_freq_chng_params(const bool is_fff);
-    wxButton*               get_wiping_dialog_button();
+    QPushButton*               get_wiping_dialog_button();
     void                    set_flushing_volume_warning(const bool flushing_volume_modify);
 
     // BBS
     void                    enable_buttons(bool enable);
-    void                    set_btn_label(const ActionButtonType btn_type, const wxString& label) const;
+    void                    set_btn_label(const ActionButtonType btn_type, const QString& label) const;
     bool                    show_reslice(bool show) const;
 	bool                    show_export(bool show) const;
 	bool                    show_send(bool show) const;
@@ -292,27 +323,28 @@ private:
     struct priv;
     std::unique_ptr<priv> p;
 
-    wxBoxSizer* m_scrolled_sizer = nullptr;
+    QBoxLayout* m_scrolled_sizer = nullptr;
     bool            m_soft_first_start {true };
     bool            m_is_gcode_file{ false };
     bool            m_update_3d_state{false};
     bool            m_need_auto_sync_after_connect_printer{false};
 };
 
-class Plater: public wxPanel
+class Plater: public QWidget
 {
+    Q_OBJECT
     bool m_force_ban_check_volume_bbox_state_with_extruder_area{false};
     bool m_last_is_system_preset{true};
 
 public:
     using fs_path = boost::filesystem::path;
 
-    Plater(wxWindow *parent, MainFrame *main_frame);
+    Plater(QWidget *parent, MainFrame *main_frame);
     Plater(Plater &&) = delete;
     Plater(const Plater &) = delete;
     Plater &operator=(Plater &&) = delete;
     Plater &operator=(const Plater &) = delete;
-    ~Plater() = default;
+    ~Plater();
 
     bool Show(bool show = true);
 
@@ -320,7 +352,7 @@ public:
     bool is_presets_dirty() const;
     void set_plater_dirty(bool is_dirty);
     void update_project_dirty_from_presets();
-    int  save_project_if_dirty(const wxString& reason);
+    int  save_project_if_dirty(const QString& reason);
     void reset_project_dirty_after_save();
     void reset_project_dirty_initial_presets();
 #if ENABLE_PROJECT_DIRTY_STATE_DEBUG_WINDOW
@@ -345,14 +377,14 @@ public:
     std::vector<size_t> physical_filament_config_indices() const;
 
     void reset_flags_when_new_or_close_project();
-    int new_project(bool skip_confirm = false, bool silent = false, const wxString &project_name = wxString());
+    int new_project(bool skip_confirm = false, bool silent = false, const QString &project_name = QString());
     // BBS: save & backup
-    int load_project(wxString const & filename = "", wxString const & originfile = "-");
+    int load_project(QString const & filename = "", QString const & originfile = "-");
     int save_project(bool saveAs = false);
     //BBS download project by project id
-    void import_model_id(wxString download_info);
-    void download_project(const wxString& project_id);
-    void request_model_download(wxString url);
+    void import_model_id(QString download_info);
+    void download_project(const QString& project_id);
+    void request_model_download(QString url);
     void request_download_project(std::string project_id);
     // BBS: check snapshot
     bool up_to_date(bool saved, bool backup);
@@ -364,7 +396,7 @@ public:
     void import_sl1_archive();
     void extract_config_from_project();
     void load_gcode();
-    void load_gcode(const wxString& filename);
+    void load_gcode(const QString& filename);
     void reload_gcode_from_disk();
     void refresh_print();
 
@@ -397,7 +429,22 @@ public:
     bool is_multi_extruder_ams_empty();
     // BBS
     bool is_new_project_and_check_state() { return m_new_project_and_check_state; }
-    wxString get_project_name();
+    QString get_project_name();
+    void update_status_label();
+
+    // Returns the 3D canvas (used by MainFrame to sync the Preview tab)
+    SimpleGLView* canvas() const { return m_gl_canvas; }
+
+Q_SIGNALS:
+    // Emitted whenever the object list changes (add/remove/arrange)
+    void objectsChanged();
+
+protected:
+    void dragEnterEvent(QDragEnterEvent* event) override;
+    void dragLeaveEvent(QDragLeaveEvent* event) override;
+    void dropEvent(QDropEvent* event) override;
+
+public:
     void update_all_plate_thumbnails(bool force_update = false);
     void update_obj_preview_origin_thumbnail(ModelObjectPtrs &model_objects, std::vector<std::array<float, 4>> colors, int camera_view_angle_type);
     void update_obj_preview_thumbnail(ModelObjectPtrs &model_objects, std::vector<std::array<float, 4>> colors, int camera_view_angle_type);
@@ -409,22 +456,22 @@ public:
     int                                get_right_icon_offset_bed(int i = 0);
     bool                               get_enable_wrapping_detection();
 
-    static wxColour get_next_color_for_filament();
-    static wxString get_slice_warning_string(GCodeProcessorResult::SliceWarning& warning);
+    static QColor get_next_color_for_filament();
+    static QString get_slice_warning_string(GCodeProcessorResult::SliceWarning& warning);
 
     // BBS: restore
     std::vector<size_t> load_files(const std::vector<boost::filesystem::path>& input_files, LoadStrategy strategy = LoadStrategy::LoadModel | LoadStrategy::LoadConfig,  bool ask_multi = false);
     // To be called when providing a list of files to the GUI slic3r on command line.
     std::vector<size_t> load_files(const std::vector<std::string>& input_files, LoadStrategy strategy = LoadStrategy::LoadModel | LoadStrategy::LoadConfig,  bool ask_multi = false);
     // to be called on drag and drop
-    bool emboss_svg(const wxString &svg_file, bool from_toolbar_or_file_menu = false);
-    bool load_svg(const wxArrayString &filenames, bool from_toolbar_or_file_menu = false);
-    bool load_same_type_files(const wxArrayString &filenames);
-    bool load_files(const wxArrayString& filenames);
+    bool emboss_svg(const QString &svg_file, bool from_toolbar_or_file_menu = false);
+    bool load_svg(const QStringList &filenames, bool from_toolbar_or_file_menu = false);
+    bool load_same_type_files(const QStringList &filenames);
+    bool load_files(const QStringList& filenames);
     void statistics_burial_data_once(std::string json_str);//Upload to the cloud immediately
     void statistics_burial_data(std::string file_path);
     void statistics_burial_data_form_mw();
-    const wxString& get_last_loaded_gcode() const { return m_last_loaded_gcode; }
+    const QString& get_last_loaded_gcode() const { return m_last_loaded_gcode; }
 
     void update(bool conside_update_flag = false, bool force_background_processing_update = false);
     //BBS
@@ -434,6 +481,8 @@ public:
     void stop_jobs();
     bool is_any_job_running() const;
     void select_view(const std::string& direction);
+    void zoom_to_bed();
+    void arrange_objects();  // Simple grid layout of all loaded objects
     //BBS: add no_slice logic
     void set_slice_from_slice_btn(bool flag);
     void select_view_3D(const std::string& name, bool no_slice = true);
@@ -498,7 +547,7 @@ public:
     void send_to_printer(bool isall = false);
     void export_gcode(bool prefer_removable);
     void export_gcode_3mf(bool export_all = false);
-    void send_gcode_finish(wxString name);
+    void send_gcode_finish(QString name);
     void export_core_3mf();
     static TriangleMesh combine_mesh_fff(const ModelObject& mo, int instance_id, std::function<void(const std::string&)> notify_func = {});
     void export_stl(bool extended = false, bool selection_only = false, bool multi_stls = false);
@@ -540,19 +589,19 @@ public:
     void send_gcode_legacy(int plate_idx = -1, Export3mfProgressFn proFn = nullptr);
     int export_config_3mf(int plate_idx = -1, Export3mfProgressFn proFn = nullptr);
     //BBS jump to nonitor after print job finished
-    void send_calibration_job_finished(wxCommandEvent &evt);
-    void print_job_finished(wxCommandEvent &evt);
-    void send_job_finished(wxCommandEvent& evt);
-    void publish_job_finished(wxCommandEvent& evt);
-    void open_platesettings_dialog(wxCommandEvent& evt);
-    void open_filament_map_setting_dialog(wxCommandEvent &evt);
-    void on_change_color_mode(SimpleEvent& evt);
+    void send_calibration_job_finished(QEvent *evt);
+    void print_job_finished(QEvent *evt);
+    void send_job_finished(QEvent& evt);
+    void publish_job_finished(QEvent& evt);
+    void open_platesettings_dialog(QEvent& evt);
+    void open_filament_map_setting_dialog(QEvent *evt);
+    void on_change_color_mode(QEvent& evt);
 	void eject_drive();
 
     void take_snapshot(const std::string &snapshot_name);
-    //void take_snapshot(const wxString &snapshot_name);
+    //void take_snapshot(const QString &snapshot_name);
     void take_snapshot(const std::string &snapshot_name, UndoRedo::SnapshotType snapshot_type);
-    //void take_snapshot(const wxString &snapshot_name, UndoRedo::SnapshotType snapshot_type);
+    //void take_snapshot(const QString &snapshot_name, UndoRedo::SnapshotType snapshot_type);
     size_t get_active_snapshot_time();
     void undo();
     void redo();
@@ -608,14 +657,14 @@ public:
     std::vector<int> get_global_filament_volume_map() const;
 
     void update_menus();
-    wxString get_selected_printer_name_in_combox();
+    QString get_selected_printer_name_in_combox();
     enum class PrinterWarningType {
         NOT_CONNECTED,
         INCONSISTENT,
         UNINSTALL_FILAMENT,
         EMPTY_FILAMENT
     };
-    void pop_warning_and_go_to_device_page(wxString printer_name, PrinterWarningType type, const wxString &title);
+    void pop_warning_and_go_to_device_page(QString printer_name, PrinterWarningType type, const QString &title);
     bool check_printer_initialized(MachineObject *obj, bool only_warning = false,bool popup_warning = true);
     bool is_same_printer_for_connected_and_selected(bool popup_warning = true);
     bool is_printer_configed_by_BBL();
@@ -623,9 +672,9 @@ public:
     // BBS
     //void show_action_buttons(const bool is_ready_to_slice) const;
 
-    wxString get_project_filename(const wxString& extension = wxEmptyString) const;
-    wxString get_export_gcode_filename(const wxString& extension = wxEmptyString, bool only_filename = false, bool export_all = false) const;
-    void set_project_filename(const wxString& filename);
+    QString get_project_filename(const QString& extension = QString()) const;
+    QString get_export_gcode_filename(const QString& extension = QString(), bool only_filename = false, bool export_all = false) const;
+    void set_project_filename(const QString& filename);
     void update_print_error_info(int code, std::string msg, std::string extra);
 
     bool is_export_gcode_scheduled() const;
@@ -641,7 +690,7 @@ public:
     GLCanvas3D* get_view3D_canvas3D();
     GLCanvas3D* get_preview_canvas3D();
     GLCanvas3D* get_assmeble_canvas3D();
-    wxWindow* get_select_machine_dialog();
+    QWidget* get_select_machine_dialog();
 
     void arrange();
     void orient();
@@ -689,7 +738,7 @@ public:
 
     // Show print sequence info notification
     void show_seqprintinfo_notification(bool has_error = false);
-    void search(bool plater_is_active, Preset::Type  type, wxWindow *tag, TextInput *etag, wxWindow *stag);
+    void search(bool plater_is_active, Preset::Type  type, QWidget *tag, TextInput *etag, QWidget *stag);
     void mirror(Axis axis);
     void split_object();
     void split_volume();
@@ -887,7 +936,7 @@ public:
 			m_plater->take_snapshot(snapshot_name);
 			m_plater->suppress_snapshots();
 		}
-		/*TakeSnapshot(Plater *plater, const wxString &snapshot_name) : m_plater(plater)
+		/*TakeSnapshot(Plater *plater, const QString &snapshot_name) : m_plater(plater)
 		{
 			m_plater->take_snapshot(snapshot_name);
 			m_plater->suppress_snapshots();
@@ -897,7 +946,7 @@ public:
             m_plater->take_snapshot(snapshot_name, snapshot_type);
             m_plater->suppress_snapshots();
         }
-        /*TakeSnapshot(Plater *plater, const wxString &snapshot_name, UndoRedo::SnapshotType snapshot_type) : m_plater(plater)
+        /*TakeSnapshot(Plater *plater, const QString &snapshot_name, UndoRedo::SnapshotType snapshot_type) : m_plater(plater)
         {
             m_plater->take_snapshot(snapshot_name, snapshot_type);
             m_plater->suppress_snapshots();
@@ -951,34 +1000,34 @@ public:
     void enable_wireframe(bool status);
     bool is_wireframe_enabled() const;
 
-	// Wrapper around wxWindow::PopupMenu to suppress error messages popping out while tracking the popup menu.
-	bool PopupMenu(wxMenu *menu, const wxPoint& pos = wxDefaultPosition);
-    bool PopupMenu(wxMenu *menu, int x, int y) { return this->PopupMenu(menu, wxPoint(x, y)); }
+	// Wrapper around QWidget::PopupMenu to suppress error messages popping out while tracking the popup menu.
+	bool PopupMenu(QMenu *menu, const QPoint& pos = QPoint());
+    bool PopupMenu(QMenu *menu, int x, int y) { return this->PopupMenu(menu, QPoint(x, y)); }
 
     //BBS: add popup logic for table object
-    bool PopupObjectTable(int object_id, int volume_id, const wxPoint& position);
+    bool PopupObjectTable(int object_id, int volume_id, const QPoint& position);
     //BBS: popup selection at default position
     bool PopupObjectTableBySelection();
 
     // get same Plater/ObjectList menus
-    wxMenu* plate_menu();
-    wxMenu* object_menu();
-    wxMenu* part_menu();
-    wxMenu* text_part_menu();
-    wxMenu* svg_part_menu();
-    wxMenu* cut_connector_menu();
-    wxMenu* sla_object_menu();
-    wxMenu* default_menu();
-    wxMenu* instance_menu();
-    wxMenu* layer_menu();
-    wxMenu* multi_selection_menu();
-    wxMenu* assemble_multi_selection_menu();
-    wxMenu* filament_action_menu(int active_filament_menu_id);
+    QMenu* plate_menu();
+    QMenu* object_menu();
+    QMenu* part_menu();
+    QMenu* text_part_menu();
+    QMenu* svg_part_menu();
+    QMenu* cut_connector_menu();
+    QMenu* sla_object_menu();
+    QMenu* default_menu();
+    QMenu* instance_menu();
+    QMenu* layer_menu();
+    QMenu* multi_selection_menu();
+    QMenu* assemble_multi_selection_menu();
+    QMenu* filament_action_menu(int active_filament_menu_id);
     int     GetPlateIndexByRightMenuInLeftUI();
     void    SetPlateIndexByRightMenuInLeftUI(int);
-    static bool has_illegal_filename_characters(const wxString& name);
+    static bool has_illegal_filename_characters(const QString& name);
     static bool has_illegal_filename_characters(const std::string& name);
-    static void show_illegal_characters_warning(wxWindow* parent);
+    static void show_illegal_characters_warning(QWidget* parent);
 
 
     std::string get_preview_only_filename() { return m_preview_only_filename; };
@@ -999,13 +1048,41 @@ private:
     struct priv;
     std::unique_ptr<priv> p;
     std::string           m_3mf_path;
+    // Placeholder object tree (until ObjectDataViewModel is ported)
+    QTreeWidget*          m_object_list{ nullptr };
+    // Status label at the bottom of the plater showing object count
+    QLabel*               m_status_label{ nullptr };
+    // 3D OpenGL viewport
+    class SimpleGLView*   m_gl_canvas{ nullptr };
+    // Last loaded project file path (for title bar)
+    QString               m_loaded_path;
+    // Undo/redo stack for object operations
+    QObject*              m_undo_stack{ nullptr }; // actually QUndoStack*, cast in Plater.cpp
+    // Live model (populated when loading STL/OBJ files)
+    Slic3r::Model         m_model;
+    // Object position/size transform panel (shows X/Y position of selected object)
+    QWidget*              m_transform_panel{ nullptr };
+    class QDoubleSpinBox* m_spin_pos_x{ nullptr };
+    class QDoubleSpinBox* m_spin_pos_y{ nullptr };
+    class QLabel*         m_lbl_size_whd{ nullptr };
+    void update_transform_panel(int canvas_idx);
+    // Preset quick-select combos (shown in left panel above object list)
+    class QComboBox*      m_combo_printer{ nullptr };
+    class QComboBox*      m_combo_process{ nullptr };
+    class QComboBox*      m_combo_filament{ nullptr };
+    class QLabel*         m_lbl_filament_color{ nullptr };
+public:
+    void populate_preset_combos();   // fills combos from preset bundle
+public:
+    // Accessor for object tree widget (used by menus)
+    QTreeWidget* object_list() const { return m_object_list; }
     // Set true during PopupMenu() tracking to suppress immediate error message boxes.
     // The error messages are collected to m_tracking_popup_menu_error_message instead and these error messages
     // are shown after the pop-up dialog closes.
     bool 	 m_tracking_popup_menu = false;
-    wxString m_tracking_popup_menu_error_message;
+    QString m_tracking_popup_menu_error_message;
 
-    wxString m_last_loaded_gcode;
+    QString m_last_loaded_gcode;
     //BBS: add only gcode mode
     bool m_only_gcode { false };//just for .gcode file not for .gcode.3mf
     bool m_exported_file { false };
@@ -1046,7 +1123,7 @@ std::vector<int> get_min_flush_volumes(const DynamicPrintConfig &full_config, si
 std::string      check_boolean_possible(const std::vector<const ModelVolume *> &volumes, csg::BooleanFailReason& fail_reason);
 
 Preset *get_printer_preset(const MachineObject *obj);
-wxArrayString get_all_camera_view_type();
+QStringList get_all_camera_view_type();
 
 
 } // namespace GUI

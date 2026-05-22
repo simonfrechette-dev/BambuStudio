@@ -33,10 +33,8 @@ inline bool operator> (const DriveData &lhs, const DriveData &rhs) { return lhs.
 inline bool operator==(const DriveData &lhs, const DriveData &rhs) { return lhs.path == rhs.path; }
 
 using RemovableDriveEjectEvent = Event<std::pair<DriveData, bool>>;
-wxDECLARE_EVENT(EVT_REMOVABLE_DRIVE_EJECTED, RemovableDriveEjectEvent);
 
-using RemovableDrivesChangedEvent = SimpleEvent;
-wxDECLARE_EVENT(EVT_REMOVABLE_DRIVES_CHANGED, RemovableDrivesChangedEvent);
+using RemovableDrivesChangedEvent = QEvent;
 
 #if __APPLE__
 	// Callbacks on device plug / unplug work reliably on OSX.
@@ -53,7 +51,7 @@ public:
 
 	// Start the background thread and register this window as a target for update events.
 	// Register for OSX notifications.
-	void 		init(wxEvtHandler *callback_evt_handler);
+	void 		init(QObject *callback_evt_handler);
 	// Stop the background thread of the removable drive manager, so that no new updates will be sent out.
 	// Deregister OSX notifications.
 	void 		shutdown();
@@ -91,7 +89,7 @@ public:
 
 private:
 	bool 			 		m_initialized { false };
-	wxEvtHandler*			m_callback_evt_handler { nullptr };
+	QObject*			m_callback_evt_handler { nullptr };
 
 #ifndef REMOVABLE_DRIVE_MANAGER_OS_CALLBACKS
 	// Worker thread, worker thread synchronization and callbacks to the UI thread.

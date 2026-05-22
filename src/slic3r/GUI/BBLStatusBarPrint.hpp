@@ -1,89 +1,88 @@
 #ifndef BBLStatusBarPrint_HPP
 #define BBLStatusBarPrint_HPP
+#include <QWidget>
+#include <QString>
 
-#include <wx/panel.h>
-#include <wx/stattext.h>
 
 #include <memory>
 #include <string>
 #include <functional>
 #include <string>
-#include <wx/hyperlink.h>
 
 #include "Jobs/ProgressIndicator.hpp"
 #include "Widgets/Label.hpp"
 #include "Widgets/Button.hpp"
 
-class wxTimer;
-class wxGauge;
-class wxButton;
-class wxTimerEvent;
-class wxStatusBar;
-class wxWindow;
-class wxFrame;
-class wxString;
-class wxFont;
+class QTimer;
+class QProgressBar;
+class QPushButton;
+class QTimerEvent;
+class QStatusBar;
+class QWidget;
+class QMainWindow;
+class QString;
+class QFont;
 
 namespace Slic3r {
 
 class BBLStatusBarPrint : public ProgressIndicator
 {
-    wxPanel *     m_self; // we cheat! It should be the base class but: perl!
-    wxGauge *     m_prog;
+    QWidget *     m_self; // we cheat! It should be the base class but: perl!
+    QProgressBar *     m_prog;
     Label *       m_link_show_error;
-    wxBoxSizer*   m_sizer_status_text;
-    wxStaticBitmap* m_static_bitmap_show_error;
-    wxBitmap      m_bitmap_show_error_close;
-    wxBitmap      m_bitmap_show_error_open;
+    QBoxLayout*   m_sizer_status_text;
+    QLabel* m_static_bitmap_show_error;
+    QPixmap      m_bitmap_show_error_close;
+    QPixmap      m_bitmap_show_error_open;
     Button *      m_cancelbutton;
-    wxStaticText *m_status_text;
-    wxPanel*      top_panel;
-    wxStaticText *m_stext_percent;
-    wxBoxSizer *  m_sizer;
-    wxBoxSizer *  m_sizer_eline;
-    wxWindow *    block_left;
-    wxWindow *    block_right;
+    QLabel *m_status_text;
+    QWidget*      top_panel;
+    QLabel *m_stext_percent;
+    QBoxLayout *  m_sizer;
+    QBoxLayout *  m_sizer_eline;
+    QWidget *    block_left;
+    QWidget *    block_right;
 
 public:
-    BBLStatusBarPrint(wxWindow *parent = nullptr, int id = -1);
+    BBLStatusBarPrint(QWidget *parent = nullptr, int id = -1);
     ~BBLStatusBarPrint() = default;
 
     int get_progress() const;
     // if the argument is less than 0 it shows the last state or
     // pulses if no state was set before.
     void        set_prog_block();
-    void        set_progress(int) override;
-    int         get_range() const override;
-    void        set_range(int = 100) override;
-    void        clear_percent() override;
-    void        show_error_info(wxString msg, int code, wxString description, wxString extra) override;
+    void        set_progress(int) ;
+    int         get_range() const ;
+    void        set_range(int = 100) ;
+    void        clear_percent() ;
+    void        show_error_info(QString msg, int code, QString description, QString extra) ;
     void        show_progress(bool);
     void        start_busy(int = 100);
     void        stop_busy();
     void        set_cancel_callback_fina(BBLStatusBarPrint::CancelFn ccb);
     inline bool is_busy() const { return m_busy; }
-    void        set_cancel_callback(CancelFn = CancelFn()) override;
+    void        set_cancel_callback(CancelFn = CancelFn()) ;
     inline void reset_cancel_callback() { set_cancel_callback(); }
-    wxPanel *   get_panel();
-    bool        is_english_text(wxString str);
-    bool        format_text(wxStaticText* dc, int width, const wxString& text, wxString& multiline_text);
-    void        set_status_text(const wxString& txt);
-    void        set_percent_text(const wxString &txt);
+    QWidget *   get_panel();
+    bool        is_english_text(QString str);
+    bool        format_text(QLabel* dc, int width, const QString& text, QString& multiline_text);
+    void        set_status_text(const QString& txt);
+    void        set_percent_text(const QString &txt);
     void        msw_rescale();
     void        set_status_text(const std::string &txt);
-    void        set_status_text(const char *txt) override;
-    wxString    get_status_text() const;
-    void        set_font(const wxFont &font);
-    void        set_object_info(const wxString &txt);
-    void        set_slice_info(const wxString &txt);
+    void        set_status_text(const char *txt) ;
+    QString    get_status_text() const;
+    void        set_font(const QFont &font);
+    void        set_object_info(const QString &txt);
+    void        set_slice_info(const QString &txt);
     void        show_slice_info(bool show);
     bool        is_slice_info_shown();
-    bool        update_status(wxString &msg, bool &was_cancel, int percent = -1, bool yield = true);
+    bool        update_status(QString &msg, bool &was_cancel, int percent = -1, bool yield = true);
     void        reset();
     // Temporary methods to satisfy Perl side
     void show_cancel_button();
     void hide_cancel_button();
-    void change_button_label(wxString name);
+    void change_button_label(QString name);
 
     void disable_cancel_button();
     void enable_cancel_button();
@@ -99,7 +98,6 @@ namespace GUI {
 using Slic3r::BBLStatusBarPrint;
 }
 
-wxDECLARE_EVENT(EVT_SHOW_ERROR_INFO, wxCommandEvent);
 
 } // namespace Slic3r
 

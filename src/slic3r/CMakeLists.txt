@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.5...3.31)
 project(libslic3r_gui)
 
 include(PrecompiledHeader)
@@ -208,6 +208,8 @@ set(SLIC3R_GUI_SOURCES
     GUI/GUI_Init.hpp
     GUI/GUI_Preview.cpp
     GUI/GUI_Preview.hpp
+    GUI/SimpleGLView.cpp
+    GUI/SimpleGLView.hpp
     GUI/GUI_App.cpp
     GUI/GUI_App.hpp
     GUI/GUI_Utils.cpp
@@ -216,10 +218,14 @@ set(SLIC3R_GUI_SOURCES
     GUI/I18N.hpp
     GUI/IconManager.cpp
     GUI/IconManager.hpp
+    GUI/QtExtensions.cpp
+    GUI/QtExtensions.hpp
     GUI/MainFrame.cpp
     GUI/MainFrame.hpp
     GUI/BBLTopbar.cpp
     GUI/BBLTopbar.hpp
+    GUI/BBLSplashScreen.cpp
+    GUI/BBLSplashScreen.hpp
     GUI/BedShapeDialog.cpp
     GUI/BedShapeDialog.hpp
     GUI/Plater.cpp
@@ -687,6 +693,7 @@ if (UNIX AND NOT APPLE)
 endif ()
 
 add_library(libslic3r_gui STATIC ${SLIC3R_GUI_SOURCES})
+set_target_properties(libslic3r_gui PROPERTIES OUTPUT_NAME slic3r_gui)
 
 #if (MSVC)
 #    target_compile_options(libslic3r_gui PRIVATE /Od /Zi)
@@ -704,8 +711,15 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SLIC3R_GUI_SOURCES})
 
 encoding_check(libslic3r_gui)
 
-target_link_libraries(libslic3r_gui libslic3r cereal imgui imguizmo minilzo GLEW::GLEW OpenGL::GL hidapi ${wxWidgets_LIBRARIES} glfw libcurl OpenSSL::SSL OpenSSL::Crypto)
-#target_link_libraries(libslic3r_gui libslic3r cereal imgui imguizmo minilzo GLEW::GLEW OpenGL::GL hidapi libcurl OpenSSL::SSL OpenSSL::Crypto ${wxWidgets_LIBRARIES} glfw)
+target_link_libraries(libslic3r_gui libslic3r cereal::cereal imgui imguizmo minilzo GLEW::GLEW OpenGL::GL hidapi
+    Qt6::Core Qt6::Gui Qt6::Widgets Qt6::OpenGL Qt6::OpenGLWidgets Qt6::Svg
+    glfw libcurl OpenSSL::SSL OpenSSL::Crypto)
+if (Qt6WebEngineWidgets_FOUND)
+    target_link_libraries(libslic3r_gui Qt6::WebEngineWidgets)
+endif()
+if (Qt6Multimedia_FOUND)
+    target_link_libraries(libslic3r_gui Qt6::Multimedia Qt6::MultimediaWidgets)
+endif()
 
 if (MSVC)
     target_link_libraries(libslic3r_gui Setupapi.lib dwmapi.lib)
@@ -714,7 +728,7 @@ elseif (CMAKE_SYSTEM_NAME STREQUAL "Linux")
     FIND_LIBRARY(WAYLAND_EGL_LIBRARIES    NAMES wayland-egl)
     FIND_LIBRARY(WAYLAND_CLIENT_LIBRARIES NAMES wayland-client)
     find_package(CURL REQUIRED)
-    target_link_libraries(libslic3r_gui ${DBUS_LIBRARIES} OSMesa)
+    target_link_libraries(libslic3r_gui ${DBUS_LIBRARIES})
     target_link_libraries(libslic3r_gui
         OpenGL::EGL
         ${WAYLAND_SERVER_LIBRARIES}
@@ -727,9 +741,8 @@ elseif (APPLE)
 endif()
 
 if (SLIC3R_STATIC)
-    # FIXME: This was previously exported by wx-config but the wxWidgets
-    # cmake build forgets this and the build fails in debug mode (or on raspberry release)
-    target_compile_definitions(libslic3r_gui PUBLIC -DwxDEBUG_LEVEL=0)
+    # Qt6 static build: ensure position-independent code
+    set_target_properties(libslic3r_gui PROPERTIES POSITION_INDEPENDENT_CODE ON)
 endif()
 
 if (SLIC3R_STATIC AND NOT SLIC3R_STATIC_EXCLUDE_CURL AND UNIX AND NOT APPLE)
@@ -749,27 +762,9 @@ if (NOT APPLE)
     target_link_libraries(libslic3r_gui PkgConfig::LIBAV)
 endif()
 
-# We need to implement some hacks for wxWidgets and touch the underlying GTK
-# layer and sub-libraries. This forces us to use the include locations and
-# link these libraries.
-if (UNIX AND NOT APPLE)
-    find_package(GTK${SLIC3R_GTK} REQUIRED)
-    target_include_directories(libslic3r_gui PRIVATE ${GTK${SLIC3R_GTK}_INCLUDE_DIRS})
-    target_link_libraries(libslic3r_gui ${GTK${SLIC3R_GTK}_LIBRARIES})
-
-    pkg_check_modules(WEBKIT2GTK_4_1 QUIET webkit2gtk-4.1)
-    if (WEBKIT2GTK_4_1_FOUND)
-        target_compile_definitions(libslic3r_gui PRIVATE BBL_WEBKITGTK_4_1)
-    else ()
-        pkg_check_modules(WEBKIT2GTK_4_0 QUIET webkit2gtk-4.0)
-        if (WEBKIT2GTK_4_0_FOUND)
-            target_compile_definitions(libslic3r_gui PRIVATE BBL_WEBKITGTK_4_0)
-        else ()
-            message(FATAL_ERROR "Neither webkit2gtk-4.1 nor webkit2gtk-4.0 was found.")
-        endif ()
-    endif ()
-
-    # We add GStreamer for bambu:/// support.
+# Qt6 WebEngine provides its own WebKit; no need for system webkit2gtk.
+    # GStreamer is still needed for bambu:/// media support.
+    if (UNIX AND NOT APPLE)
     pkg_check_modules(GSTREAMER REQUIRED gstreamer-1.0)
     pkg_check_modules(GST_BASE REQUIRED gstreamer-base-1.0)
     target_link_libraries(libslic3r_gui ${GSTREAMER_LIBRARIES} ${GST_BASE_LIBRARIES})

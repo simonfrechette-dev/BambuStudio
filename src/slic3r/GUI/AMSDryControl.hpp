@@ -1,5 +1,7 @@
 #pragma once
 #include "GUI_ObjectLayers.hpp"
+#include "GUI_Utils.hpp"
+#include "libslic3r/PresetBundle.hpp"
 #include "slic3r/GUI/Widgets/AMSItem.hpp"
 #include "slic3r/GUI/Widgets/Label.hpp"
 #include "slic3r/GUI/Widgets/PopupWindow.hpp"
@@ -9,10 +11,18 @@
 
 #include <chrono>
 #include <optional>
-
+#include <QStackedWidget>
+#include <QLineEdit>
+#include <QCheckBox>
+#include <QProgressBar>
+#include <QTableWidget>
+#include <QComboBox>
+#include <QCloseEvent>
+#include <QShowEvent>
 
 //Previous defintions
-class wxGrid;
+// class QTableWidget forward-declared — replaced by QTableWidget
+class QTableWidget;
 
 namespace Slic3r {
     
@@ -38,52 +48,52 @@ struct DryingPreset {
     int dry_time;
 };
 
-class FilamentItemPanel : public wxPanel
+class FilamentItemPanel : public QWidget
 {
 public:
-    FilamentItemPanel(wxWindow* parent, const wxString& text, const std::string& icon_name = "", 
-                      wxWindowID id = wxID_ANY);
+    FilamentItemPanel(QWidget * parent, const QString& text, const std::string& icon_name = "", 
+                      int id = -1);
     
-    void SetText(const wxString& text);
+    void SetText(const QString& text);
     void SetIcon(const std::string& icon_name);
     void msw_rescale();
     
 private:
-    void OnPaint(wxPaintEvent& event);
-    void OnSize(wxSizeEvent& event);
+    void OnPaint(QPaintEvent * event);
+    void OnSize(QResizeEvent * event);
     
     Label* m_text_label;
-    wxStaticBitmap* m_icon_bitmap;
+    QLabel * m_icon_bitmap;
     int m_target_size;
     std::string m_icon_name;
     ScalableBitmap m_icon;
 };
 
-class AMSFilamentPanel : public wxPanel
+class AMSFilamentPanel : public QWidget
 {
-    wxBoxSizer* m_filament_sizer;
+    QLayout * m_filament_sizer;
     Label* m_ams_name_label;
     int m_border_radius;
-    wxPanel* m_filament_container{nullptr};
+    QWidget* m_filament_container{nullptr};
     std::vector<FilamentItemPanel*> m_filament_items;
     
 public:
-    AMSFilamentPanel(wxWindow* parent, const wxString& ams_name, wxWindowID id = wxID_ANY);
+    AMSFilamentPanel(QWidget * parent, const QString& ams_name, int id = -1);
     
-    void AddFilamentItem(const wxString& text, const std::string& icon_name);
+    void AddFilamentItem(const QString& text, const std::string& icon_name);
     void AddFilamentItem(FilamentItemPanel* panel);
-    void SetAmsName(const wxString& ams_name);
+    void SetAmsName(const QString& ams_name);
     void Clear();
     void msw_rescale();
 private:
-    void OnPaint(wxPaintEvent& event);
+    void OnPaint(QPaintEvent * event);
 };
 
 
 class AMSDryCtrWin : public DPIDialog
 {
 public:
-    AMSDryCtrWin(wxWindow *parent);
+    AMSDryCtrWin(QWidget *parent);
     ~AMSDryCtrWin();
 
     void msw_rescale();
@@ -91,42 +101,42 @@ public:
     void set_ams_id(const std::string& ams_id);
 
 protected:
-    void on_dpi_changed(const wxRect &suggested_rect) override;
+    void on_dpi_changed(const QRect &suggested_rect) override;
 
 private:
-    wxSimplebook* m_main_simplebook{nullptr};
-    wxPanel* m_original_page{nullptr};
+    QStackedWidget* m_main_simplebook{nullptr};
+    QWidget* m_original_page{nullptr};
 
-    wxWindow* m_amswin{nullptr};
-    wxBoxSizer* m_sizer_ams_items{nullptr};
-    wxScrolledWindow* m_panel_prv_left {nullptr};
-    wxScrolledWindow* m_panel_prv_right{nullptr};
-    wxBoxSizer* m_sizer_prv_left{nullptr};
-    wxBoxSizer* m_sizer_prv_right{nullptr};
+    QWidget * m_amswin{nullptr};
+    QLayout * m_sizer_ams_items{nullptr};
+    QScrollArea* m_panel_prv_left {nullptr};
+    QScrollArea* m_panel_prv_right{nullptr};
+    QLayout * m_sizer_prv_left{nullptr};
+    QLayout * m_sizer_prv_right{nullptr};
 
     // left panel related members
     ScalableBitmap m_humidity_image;
-    wxStaticBitmap* m_humidity_img{nullptr};
+    QLabel * m_humidity_img{nullptr};
     Label* m_image_description{nullptr};
-    wxStaticBitmap* m_image_description_icon{nullptr};
+    QLabel * m_image_description_icon{nullptr};
     ScalableBitmap m_description_icon_bitmap;
 
     Label* m_humidity_data_label = nullptr;
     Label* m_temperature_data_label = nullptr;
     Label* m_time_data_label = nullptr;
-    wxBoxSizer* m_time_descrition_container = nullptr;
+    QLayout * m_time_descrition_container = nullptr;
 
     // right panel related members
-    wxBoxSizer* m_normal_state_sizer{nullptr};
-    wxBoxSizer* m_cannot_dry_sizer{nullptr};
-    wxBoxSizer* m_dry_error_sizer{nullptr};
+    QLayout * m_normal_state_sizer{nullptr};
+    QLayout * m_cannot_dry_sizer{nullptr};
+    QLayout * m_dry_error_sizer{nullptr};
     Label* m_cannot_dry_description_label = nullptr;
 
     // right panel normal state
-    ComboBox* m_trays_combo;
+    QComboBox* m_trays_combo{nullptr};
     std::vector<FilamentBaseInfo> m_tray_ids;
-    wxTextCtrl* m_temperature_input;
-    wxTextCtrl* m_time_input;
+    QLineEdit* m_temperature_input{nullptr};
+    QLineEdit* m_time_input{nullptr};
     Label* m_normal_description;
     Button* m_start_button{nullptr};
     Button* m_next_button{nullptr};
@@ -138,11 +148,11 @@ private:
     Label* m_guide_title_label{nullptr};
     Label* m_guide_description_label{nullptr};
 
-    wxCheckBox* m_rotate_spool_toggle{nullptr};
+    QCheckBox* m_rotate_spool_toggle{nullptr};
 
-    wxPanel* m_progress_page;
-    ProgressBar* m_progress_gauge;
-    wxTimer* m_progress_timer;
+    QWidget* m_progress_page;
+    QProgressBar* m_progress_gauge{nullptr};
+    QTimer * m_progress_timer;
 
     std::optional<std::chrono::steady_clock::time_point> m_stop_button_restore_deadline;
     std::optional<std::chrono::steady_clock::time_point> m_unload_button_restore_deadline;
@@ -150,20 +160,13 @@ private:
     Label* m_progress_title;
     int m_progress_value;
     int m_progress_message_index;
-    std::vector<wxString> m_progress_text = {
-        _L("Starting: Checking adapter connection"),
-        _L("Starting: Checking filament status"),
-        _L("Starting: Checking drying presets"),
-        _L("Starting: Checking filament location"),
-        _L("Starting: Checking air intake"),
-        _L("Starting: Checking air vent")
-    };
+    std::vector<QString> m_progress_text; // initialized in constructor
 
     // Guide page
-    wxPanel* m_guide_page{nullptr};
+    QWidget* m_guide_page{nullptr};
     AMSFilamentPanel* m_ams_filament_panel{nullptr};
     std::map<std::string, FilamentItemPanel*> m_filament_items;
-    wxStaticBitmap* m_image_placeholder{nullptr};
+    QLabel * m_image_placeholder{nullptr};
     ScalableBitmap m_guide_image;
 
 
@@ -193,33 +196,33 @@ private:
 
 private:
     void create();
-    wxBoxSizer* create_guide_page_sizer(wxPanel* parent);
-    wxBoxSizer* create_main_content_section(wxPanel* parent);
-    wxBoxSizer* create_guide_info_filament(wxPanel* parent);
-    wxBoxSizer* create_guide_info_section(wxPanel* parent);
-    wxBoxSizer* create_guide_right_section(wxPanel* parent);
-    wxBoxSizer* create_main_page_sizer(wxPanel* parent);
-    wxBoxSizer* create_left_panel(wxPanel* parent);
-    wxBoxSizer* create_humidity_status_section(wxPanel* parent);
-    wxBoxSizer* create_description_item(wxPanel* parent, const wxString& title, Label*& dataLabel);
-    wxBoxSizer* create_status_descriptions_section(wxPanel* parent);
+    QLayout * create_guide_page_sizer(QWidget* parent);
+    QLayout * create_main_content_section(QWidget* parent);
+    QLayout * create_guide_info_filament(QWidget* parent);
+    QLayout * create_guide_info_section(QWidget* parent);
+    QLayout * create_guide_right_section(QWidget* parent);
+    QLayout * create_main_page_sizer(QWidget* parent);
+    QLayout * create_left_panel(QWidget* parent);
+    QLayout * create_humidity_status_section(QWidget* parent);
+    QLayout * create_description_item(QWidget* parent, const QString& title, Label*& dataLabel);
+    QLayout * create_status_descriptions_section(QWidget* parent);
     
-    wxBoxSizer* create_right_panel(wxPanel* parent);
-    wxBoxSizer* create_normal_state_panel(wxPanel* parent);
-    wxBoxSizer* create_cannot_dry_panel(wxPanel* parent);
-    wxBoxSizer* create_drying_error_panel(wxPanel* parent);
-    Button* create_button(wxPanel* parent, const wxString& title,
-        const wxColour& background_color, const wxColour& border_color, const wxColour& text_color);
+    QLayout * create_right_panel(QWidget* parent);
+    QLayout * create_normal_state_panel(QWidget* parent);
+    QLayout * create_cannot_dry_panel(QWidget* parent);
+    QLayout * create_drying_error_panel(QWidget* parent);
+    Button* create_button(QWidget* parent, const QString& title,
+        const QColor& background_color, const QColor& border_color, const QColor& text_color);
 
-    wxBoxSizer* create_progress_page_sizer(wxPanel* parent);
-    void OnProgressTimer(wxTimerEvent& event);
-    void OnClose(wxCloseEvent& event);
-    void OnShow(wxShowEvent& event);
+    QLayout * create_progress_page_sizer(QWidget* parent);
+    void OnProgressTimer();
+    void OnClose(QCloseEvent* event);
+    void OnShow(QShowEvent* event);
 
-    void OnFilamentSelectionChanged(wxCommandEvent& event);
+    void OnFilamentSelectionChanged(int index);
 
 
-    wxScrolledWindow* create_preview_scrolled_window(wxWindow* parent);
+    QScrollArea* create_preview_scrolled_window(QWidget * parent);
 
     bool check_values_changed(DevAms* dev_ams);
     int update_image(DevAmsType type, DevAms::DryStatus status, DevAms::DrySubStatus sub_status, int humidity_percent);

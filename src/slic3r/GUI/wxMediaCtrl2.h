@@ -1,48 +1,48 @@
 //
-//  wxMediaCtrl2.h
+//  QWidget2.h
 //  libslic3r_gui
 //
 //  Created by cmguo on 2021/12/7.
 //
 
-#ifndef wxMediaCtrl2_h
-#define wxMediaCtrl2_h
+#ifndef QWidget2_h
+#define QWidget2_h
+#include <QWidget>
+#include <QUrl>
+#include <QString>
 
-#include "wx/uri.h"
-#include "wx/mediactrl.h"
 
-wxDECLARE_EVENT(EVT_MEDIA_CTRL_STAT, wxCommandEvent);
 
-void wxMediaCtrl_OnSize(wxWindow * ctrl, wxSize const & videoSize, int width, int height);
+void QWidget_OnSize(QWidget * ctrl, QSize const & videoSize, int width, int height);
 
 #ifdef __WXMAC__
 
-class wxMediaCtrl2 : public wxWindow
+class QWidget2 : public QWidget
 {
 public:
-    wxMediaCtrl2(wxWindow * parent);
+    QWidget2(QWidget * parent);
 
-    ~wxMediaCtrl2();
+    ~QWidget2();
 
-    void Load(wxURI url);
+    void Load(QUrl url);
 
     void Play();
 
     void Stop();
 
-    void SetIdleImage(wxString const & image, wxString const & watermark_text = {});
-    void SetIdleImage(const wxImage &image, wxString const & watermark_text = {});
+    void SetIdleImage(QString const & image, QString const & watermark_text = {});
+    void SetIdleImage(const QImage &image, QString const & watermark_text = {});
 
-    wxMediaState GetState() const;
+    int GetState() const;
 
-    wxSize GetVideoSize() const;
+    QSize GetVideoSize() const;
 
     int GetLastError() const { return m_error; }
 
-    static constexpr wxMediaState MEDIASTATE_BUFFERING = (wxMediaState) 6;
+    static constexpr int 6 = (int) 6;
 
 protected:
-    void DoSetSize(int x, int y, int width, int height, int sizeFlags) override;
+    void DoSetSize(int x, int y, int width, int height, int sizeFlags);
 
     static void bambu_log(void const *ctx, int level, char const *msg);
 
@@ -55,54 +55,52 @@ private:
     void removeIdleLayer();
 
     void * m_player = nullptr;
-    wxMediaState m_state = wxMEDIASTATE_STOPPED;
+    int m_state = 0;
     int          m_error  = 0;
-    wxSize       m_video_size{16, 9};
+    QSize       m_video_size{16, 9};
 
-    wxString m_idle_image;
-    wxString m_watermark_text;
+    QString m_idle_image;
+    QString m_watermark_text;
     void *   m_idle_layer = nullptr;      // CALayer* for idle image
     void *   m_watermark_layer = nullptr;  // CATextLayer* for watermark
 };
 
 #else
 
-class wxMediaCtrl2 : public wxMediaCtrl
+class QWidget2 : public QWidget
 {
 public:
-    wxMediaCtrl2(wxWindow *parent);
+    QWidget2(QWidget *parent);
 
-    void Load(wxURI url);
+    void Load(QUrl url);
 
     void Play();
 
     void Stop();
 
-    void SetIdleImage(wxString const & image, wxString const & watermark_text = {});
-    void SetIdleImage(const wxImage &image, wxString const & watermark_text = {});
+    void SetIdleImage(QString const & image, QString const & watermark_text = {});
+    void SetIdleImage(const QImage &image, QString const & watermark_text = {});
 
     int GetLastError() const;
 
-    wxSize GetVideoSize() const;
+    QSize GetVideoSize() const;
 
 protected:
-    wxSize DoGetBestSize() const override;
+    QSize DoGetBestSize() const;
 
-    void DoSetSize(int x, int y, int width, int height, int sizeFlags) override;
+    void DoSetSize(int x, int y, int width, int height, int sizeFlags);
 
 #ifdef __WIN32__
-    WXLRESULT MSWWindowProc(WXUINT   nMsg,
-                            WXWPARAM wParam,
-                            WXLPARAM lParam) override;
+    
 #endif
 
 private:
-    wxString m_idle_image;
+    QString m_idle_image;
     int      m_error = 0;
     bool     m_loaded = false;
-    wxSize   m_video_size{16, 9};
+    QSize   m_video_size{16, 9};
 };
 
 #endif
 
-#endif /* wxMediaCtrl2_h */
+#endif /* QWidget2_h */

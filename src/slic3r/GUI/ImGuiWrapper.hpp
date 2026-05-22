@@ -6,7 +6,9 @@
 
 #include <imgui/imgui.h>
 
-#include <wx/string.h>
+#include <QString>
+#include <QMouseEvent>
+#include <QKeyEvent>
 
 #include "libslic3r/Point.hpp"
 #include "libslic3r/Color.hpp"
@@ -17,9 +19,7 @@ namespace Slic3r {namespace Search {
 struct OptionViewParameters;
 }}
 
-class wxString;
-class wxMouseEvent;
-class wxKeyEvent;
+
 struct ImRect;
 
 
@@ -85,8 +85,8 @@ public:
     void set_language(const std::string &language);
     void set_display_size(float w, float h);
     void set_scaling(float font_size, float scale_style, float scale_both);
-    bool update_mouse_data(wxMouseEvent &evt);
-    bool update_key_data(wxKeyEvent &evt);
+    bool update_mouse_data(QMouseEvent &evt);
+    bool update_key_data(QKeyEvent &evt);
 
     float get_font_size() const { return m_font_size; }
     float get_style_scaling() const { return m_style_scaling; }
@@ -102,10 +102,10 @@ public:
     /// </summary>
     static ImVec2 calc_text_size_new(std::string_view text, bool hide_text_after_double_hash = false, float wrap_width = -1.0f);
     static ImVec2 calc_text_size_new(const std::string &text, bool hide_text_after_double_hash = false, float wrap_width = -1.0f);
-    static ImVec2 calc_text_size_new(const wxString &text, bool hide_text_after_double_hash = false, float wrap_width = -1.0f);
-    static ImVec2 calc_text_size(const wxString &text, float wrap_width = -1.0f);
-    ImVec2 calc_button_size(const wxString &text, const ImVec2 &button_size = ImVec2(0, 0)) const;
-    float find_widest_text(std::vector<wxString> &text_list);
+    static ImVec2 calc_text_size_new(const QString &text, bool hide_text_after_double_hash = false, float wrap_width = -1.0f);
+    static ImVec2 calc_text_size(const QString &text, float wrap_width = -1.0f);
+    ImVec2 calc_button_size(const QString &text, const ImVec2 &button_size = ImVec2(0, 0)) const;
+    float find_widest_text(std::vector<QString> &text_list);
     ImVec2 get_item_spacing() const;
     float  get_slider_float_height() const;
     LastSliderStatus& get_last_slider_status()  { return m_last_slider_status; }
@@ -116,21 +116,21 @@ public:
 
     /* BBL style widgets */
     bool bbl_combo_with_filter(const char* label, const std::string& preview_value, const std::vector<std::string>& all_items, std::vector<int>* filtered_items_idx, bool* is_filtered, float item_height = 0.0f);
-    bool bbl_input_double(const wxString &label, const double &value, const std::string &format = "%0.2f");
-    bool bbl_slider_float(const std::string &label, float* v, float v_min, float v_max, const char* format = "%.3f", float power = 1.0f, bool clamp = true, const wxString& tooltip = {});
-    bool bbl_slider_float_style(const std::string &label, float* v, float v_min, float v_max, const char* format = "%.3f", float power = 1.0f, bool clamp = true, const wxString& tooltip = {});
+    bool bbl_input_double(const QString &label, const double &value, const std::string &format = "%0.2f");
+    bool bbl_slider_float(const std::string &label, float* v, float v_min, float v_max, const char* format = "%.3f", float power = 1.0f, bool clamp = true, const QString& tooltip = {});
+    bool bbl_slider_float_style(const std::string &label, float* v, float v_min, float v_max, const char* format = "%.3f", float power = 1.0f, bool clamp = true, const QString& tooltip = {});
 
     bool begin(const std::string &name, int flags = 0);
-    bool begin(const wxString &name, int flags = 0);
+    bool begin(const QString &name, int flags = 0);
     bool begin(const std::string& name, bool* close, int flags = 0);
-    bool begin(const wxString& name, bool* close, int flags = 0);
+    bool begin(const QString& name, bool* close, int flags = 0);
     void end();
 
-    bool button(const wxString &label);
-    bool bbl_button(const wxString &label);
-	bool button(const wxString& label, float width, float height);
-    bool button(const wxString &label, const ImVec2 &size, bool enable); // default size = ImVec2(0.f, 0.f)
-    bool radio_button(const wxString &label, bool active);
+    bool button(const QString &label);
+    bool bbl_button(const QString &label);
+	bool button(const QString& label, float width, float height);
+    bool button(const QString &label, const ImVec2 &size, bool enable); // default size = ImVec2(0.f, 0.f)
+    bool radio_button(const QString &label, bool active);
 
     static ImU32           to_ImU32(const ColorRGBA &color);
     static ImVec4          to_ImVec4(const ColorRGB &color);
@@ -146,32 +146,32 @@ public:
                       const ImVec4 &   bg_col        = ImVec4(0.0, 0.0, 0.0, 0.0),
                       const ImVec4 &   tint_col      = ImVec4(1.0, 1.0, 1.0, 1.0),
                       ImGuiButtonFlags flags         = 0);
-    bool image_button(const wchar_t icon, const wxString &tooltip = L"");
+    bool image_button(const wchar_t icon, const QString &tooltip = {});
     bool input_double(const std::string &label, const double &value, const std::string &format = "%.3f");
-    bool input_double(const wxString &label, const double &value, const std::string &format = "%.3f");
+    bool input_double(const QString &label, const double &value, const std::string &format = "%.3f");
     bool input_vec3(const std::string &label, const Vec3d &value, float width, const std::string &format = "%.3f");
-    bool checkbox(const wxString &label, bool &value);
-    bool bbl_checkbox(const wxString &label, bool &value, bool enabled = true, bool b_dark_mode = false);
+    bool checkbox(const QString &label, bool &value);
+    bool bbl_checkbox(const QString &label, bool &value, bool enabled = true, bool b_dark_mode = false);
     bool bbl_radio_button(const char *label, bool active);
     bool bbl_sliderin(const char *label, int *v, int v_min, int v_max, const char *format = "%d", ImGuiSliderFlags flags = 0);
     static void text(const char *label);
     static void text(const std::string &label);
-    static void text(const wxString &label);
+    static void text(const QString &label);
     void warning_text(const char *all_text);
-    void warning_text(const wxString &all_text);
+    void warning_text(const QString &all_text);
     static void  text_colored(const ImVec4 &color, const char *label);
     static void  text_colored(const ImVec4 &color, const std::string &label);
-    static void  text_colored(const ImVec4 &color, const wxString &label);
+    static void  text_colored(const ImVec4 &color, const QString &label);
     void warning_text_wrapped(const char *all_text, float wrap_width);
-    void warning_text_wrapped(const wxString &all_text, float wrap_width);
+    void warning_text_wrapped(const QString &all_text, float wrap_width);
     void error_text_wrapped(const char *text, float wrap_width);
-    void error_text_wrapped(const wxString &text, float wrap_width);
+    void error_text_wrapped(const QString &text, float wrap_width);
     void text_wrapped(const char *label, float wrap_width);
     void text_wrapped(const std::string &label, float wrap_width);
-    void text_wrapped(const wxString &label, float wrap_width);
+    void text_wrapped(const QString &label, float wrap_width);
     void tooltip(const char *label, float wrap_width);
     void tooltip(const std::string &label, float wrap_width);
-    void tooltip(const wxString &label, float wrap_width);
+    void tooltip(const QString &label, float wrap_width);
     void filament_group(const std::string &filament_type, const char *hex_color, unsigned char filament_id, float align_width);
 
     // text size and is_multi_line
@@ -182,16 +182,16 @@ public:
     // Float sliders: Manually inserted values aren't clamped by ImGui.Using this wrapper function does (when clamp==true).
 #if ENABLE_ENHANCED_IMGUI_SLIDER_FLOAT
     ImVec2 get_slider_icon_size() const;
-    bool slider_float(const char* label, float* v, float v_min, float v_max, const char* format = "%.3f", float power = 1.0f, bool clamp = true, const wxString& tooltip = {}, bool show_edit_btn = true);
-    bool slider_float(const std::string& label, float* v, float v_min, float v_max, const char* format = "%.3f", float power = 1.0f, bool clamp = true, const wxString& tooltip = {}, bool show_edit_btn = true);
-    bool slider_float(const wxString& label, float* v, float v_min, float v_max, const char* format = "%.3f", float power = 1.0f, bool clamp = true, const wxString& tooltip = {}, bool show_edit_btn = true);
+    bool slider_float(const char* label, float* v, float v_min, float v_max, const char* format = "%.3f", float power = 1.0f, bool clamp = true, const QString& tooltip = {}, bool show_edit_btn = true);
+    bool slider_float(const std::string& label, float* v, float v_min, float v_max, const char* format = "%.3f", float power = 1.0f, bool clamp = true, const QString& tooltip = {}, bool show_edit_btn = true);
+    bool slider_float(const QString& label, float* v, float v_min, float v_max, const char* format = "%.3f", float power = 1.0f, bool clamp = true, const QString& tooltip = {}, bool show_edit_btn = true);
 #else
     bool slider_float(const char* label, float* v, float v_min, float v_max, const char* format = "%.3f", float power = 1.0f, bool clamp = true);
     bool slider_float(const std::string& label, float* v, float v_min, float v_max, const char* format = "%.3f", float power = 1.0f, bool clamp = true);
-    bool slider_float(const wxString& label, float* v, float v_min, float v_max, const char* format = "%.3f", float power = 1.0f,  bool clamp = true);
+    bool slider_float(const QString& label, float* v, float v_min, float v_max, const char* format = "%.3f", float power = 1.0f,  bool clamp = true);
 #endif // ENABLE_ENHANCED_IMGUI_SLIDER_FLOAT
 
-    bool combo(const wxString& label, const std::vector<std::string>& options, int& selection);   // Use -1 to not mark any option as selected
+    bool combo(const QString& label, const std::vector<std::string>& options, int& selection);   // Use -1 to not mark any option as selected
     bool undo_redo_list(const ImVec2& size, const bool is_undo, bool (*items_getter)(const bool, int, const char**), int& hovered, int& selected, int& mouse_wheel);
     void search_list(const ImVec2& size, bool (*items_getter)(int, const char** label, const char** tooltip), char* search_str,
                      Search::OptionViewParameters &view_params,
@@ -236,7 +236,7 @@ public:
                                const char *          format        = "%.3f",
                                float                 power         = 1.0f,
                                bool                  clamp         = true,
-                               const wxString &      tooltip       = {},
+                               const QString &      tooltip       = {},
                                bool                  show_edit_btn = true,
                                float                 def_val       = .0f);
     // Extended function ImGuiWrapper::slider_float to work with std::optional<int>, when value == def_val than optional release its value
@@ -247,7 +247,7 @@ public:
                              const char *        format        = "%.3f",
                              float               power         = 1.0f,
                              bool                clamp         = true,
-                             const wxString &    tooltip       = {},
+                             const QString &    tooltip       = {},
                              bool                show_edit_btn = true,
                              int                 def_val       = 0);
 

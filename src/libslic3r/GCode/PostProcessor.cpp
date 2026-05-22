@@ -147,11 +147,9 @@ static int run_script(const std::string &script, const std::string &gcode, std::
 #else
     // POSIX
 
-#include <cstdlib>   // getenv()
+#include <cstdlib>   // getenv(), popen(), pclose()
+#include <cstdio>    // popen, pclose, FILE
 #include <sstream>
-#include <boost/process.hpp>
-
-namespace process = boost::process;
 
 static int run_script(const std::string &script, const std::string &gcode, std::string &std_err)
 {
@@ -167,22 +165,20 @@ static int run_script(const std::string &script, const std::string &gcode, std::
         else { command.push_back(c); }
     }
     command.push_back('\'');
+    // Redirect stderr to stdout so we can capture it
+    command.append(" 2>&1");
 
     BOOST_LOG_TRIVIAL(debug) << boost::format("Executing script, shell: %1%, command: %2%") % shell % command;
 
-    process::ipstream istd_err;
-    process::child child(shell, "-c", command, process::std_err > istd_err);
-
     std_err.clear();
-    std::string line;
-
-    while (child.running() && std::getline(istd_err, line)) {
-        std_err.append(line);
-        std_err.push_back('\n');
+    std::string shell_cmd = std::string(shell) + " -c " + command;
+    FILE *fp = ::popen(shell_cmd.c_str(), "r");
+    if (!fp) { return -1; }
+    char buf[256];
+    while (::fgets(buf, sizeof(buf), fp) != nullptr) {
+        std_err.append(buf);
     }
-
-    child.wait();
-    return child.exit_code();
+    return ::pclose(fp);
 }
 
 #endif

@@ -1,33 +1,28 @@
 #ifndef slic3r_GUI_StaticGroup_hpp_
 #define slic3r_GUI_StaticGroup_hpp_
 
-#include "../wxExtensions.hpp"
+#include "../QtExtensions.hpp"
+#include <QGroupBox>
+#include <QColor>
 
-#include <wx/statbox.h>
-
-class StaticGroup : public wxStaticBox
+class StaticGroup : public QGroupBox
 {
+    Q_OBJECT
 public:
-    StaticGroup(wxWindow *parent, wxWindowID id);
+    explicit StaticGroup(QWidget *parent, int id = -1);
 
-public:
     void ShowBadge(bool show);
-    void SetBorderColor(const wxColour &color);
-    bool Show(bool show=true) override;
-private:
-#ifdef __WXMSW__
-    void OnPaint(wxPaintEvent &evt);
-    void PaintForeground(wxDC &dc, const struct tagRECT &rc) override;
-#endif
+    void SetBorderColor(const QColor &color);
+    void setVisible(bool show) override;
+    void show(bool show = true) { setVisible(show); }
+
+protected:
+    void paintEvent(QPaintEvent *event) override;
 
 private:
-#ifdef __WXMSW__
     ScalableBitmap badge;
-#endif
-#ifdef __WXOSX__
-    ScalableButton * badge { nullptr };
-#endif
-    wxColour       borderColor_;
+    QColor         borderColor_;
+    bool           showBadge_ = false;
 };
 
 #endif // !slic3r_GUI_StaticGroup_hpp_

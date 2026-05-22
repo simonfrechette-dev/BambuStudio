@@ -8,9 +8,8 @@
 #include <unordered_map>
 #include <string>
 
-class wxWindow;
-class wxGLCanvas;
-class wxGLContext;
+class QOpenGLWidget;
+class QOpenGLContext;
 
 namespace Slic3r {
 namespace GUI {
@@ -213,7 +212,7 @@ private:
     };
 
     bool m_gl_initialized{ false };
-    wxGLContext* m_context{ nullptr };
+    QOpenGLContext* m_context{ nullptr };
     GLShadersManager m_shaders_manager;
     uint32_t m_viewport_width{ 0 };
     uint32_t m_viewport_height{ 0 };
@@ -231,7 +230,7 @@ private:
     uint8_t m_toolbar_rendering_style{ 0 };
     static GLInfo s_gl_info;
 #ifdef __APPLE__
-    // Part of hack to remove crash when closing the application on OSX 10.9.5 when building against newer wxWidgets
+    // Part of hack to remove crash when closing the application on OSX 10.9.5
     static OSInfo s_os_info;
 #endif //__APPLE__
     static bool s_b_initialized;
@@ -247,7 +246,7 @@ public:
     ~OpenGLManager();
 
     bool init_gl(bool popup_error = true);
-    wxGLContext* init_glcontext(wxGLCanvas& canvas);
+    QOpenGLContext* init_glcontext(QOpenGLWidget& canvas);
 
     const std::shared_ptr<GLShaderProgram>& get_shader(const std::string& shader_name) const { return m_shaders_manager.get_shader(shader_name); }
     std::shared_ptr<GLShaderProgram> get_current_shader() const { return m_shaders_manager.get_current_shader(); }
@@ -290,7 +289,7 @@ public:
     static bool are_framebuffers_supported() { return (s_framebuffers_type != EFramebufferType::Unknown); }
     static EFramebufferType get_framebuffers_type() { return s_framebuffers_type; }
     static std::string framebuffer_type_to_string(EFramebufferType type);
-    static wxGLCanvas* create_wxglcanvas(wxWindow& parent, EMSAAType msaa_type = EMSAAType::Disabled);
+    static QOpenGLWidget* create_glwidget(QWidget& parent, EMSAAType msaa_type = EMSAAType::Disabled);
     static const GLInfo& get_gl_info() { return s_gl_info; }
     static bool use_manually_generated_mipmaps() { return m_use_manually_generated_mipmaps; }
     static void       set_cut_plane_color(ColorRGBA);

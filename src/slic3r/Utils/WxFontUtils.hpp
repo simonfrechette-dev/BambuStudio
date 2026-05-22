@@ -5,75 +5,57 @@
 #include <optional>
 #include <string_view>
 #include <boost/bimap.hpp>
-#include <wx/dc.h>
-#include <wx/font.h>
+#include <QFont>
 #include "libslic3r/Emboss.hpp"
-#include "slic3r/GUI/Widgets/Label.hpp"// use the font definitions
 
 namespace Slic3r {
 namespace GUI {
 
-    // Help class to  work with wx widget font object( wxFont )
+/// Helper class for Qt font operations used by the Emboss/text gizmo system.
+/// Replaces the old wx-based WxFontUtils.
 class WxFontUtils
 {
 public:
-    // only static functions
     WxFontUtils() = delete;
 
-    // check if exist file for wxFont
-    // return pointer on data or nullptr when can't load
-    static bool can_load(const wxFont &font);
-    // os specific load of wxFont
-    static std::unique_ptr<::Slic3r::Emboss::FontFile> create_font_file(const wxFont &font);
+    /// Check if a loadable font file exists for this font.
+    static bool can_load(const QFont &font);
+    /// Load font file for the given QFont.
+    static std::unique_ptr<::Slic3r::Emboss::FontFile> create_font_file(const QFont &font);
 
     static EmbossStyle::Type get_current_type();
-    static EmbossStyle       create_emboss_style(const wxFont &font, const std::string &name = "");
+    static EmbossStyle       create_emboss_style(const QFont &font, const std::string &name = "");
 
-    static std::string get_human_readable_name(const wxFont &font);
+    static std::string get_human_readable_name(const QFont &font);
 
-    // serialize / deserialize font
-    static std::string store_wxFont(const wxFont &font);
-    static wxFont      load_wxFont(const std::string &font_descriptor);
+    /// Serialize a QFont to a string suitable for storage in 3mf.
+    static std::string store_wxFont(const QFont &font);
+    /// Deserialize a QFont from a stored string.
+    static QFont load_wxFont(const std::string &font_descriptor);
 
-    // Try to create similar font, loaded from 3mf from different Computer
-    static wxFont create_wxFont(const EmbossStyle &style);
-    // update font property by wxFont - without emboss depth and font size
-    static void update_property(FontProp &font_prop, const wxFont &font);
+    /// Try to create a QFont from the stored EmbossStyle.
+    static QFont create_wxFont(const EmbossStyle &style);
+    /// Update FontProp from a QFont (excluding emboss depth and font size).
+    static void update_property(FontProp &font_prop, const QFont &font);
 
-    static bool is_italic(const wxFont &font);
-    static bool is_bold(const wxFont &font);
+    static bool is_italic(const QFont &font);
+    static bool is_bold(const QFont &font);
 
-    static void get_suitable_font_size(int max_height, wxDC &dc);
-    static void get_suitable_font_size(int height, int width, const wxString& content, wxDC& dc,
-                                       int minSize = ::Label::Body_8.GetPointSize(),
-                                       int maxSize = ::Label::Body_16.GetPointSize());
+    /// Try to find an italic variant; returns new FontFile if a different file
+    /// is found, or nullptr when no italic variant exists.
+    static std::unique_ptr<::Slic3r::Emboss::FontFile> set_italic(QFont &font, const ::Slic3r::Emboss::FontFile &prev_font_file);
 
-    /// <summary>
-    /// Set italic into wx font
-    /// When italic font is same as original return nullptr.
-    /// To not load font file twice on success is font_file returned.
-    /// </summary>
-    /// <param name="font">wx descriptor of font</param>
-    /// <param name="font_file">file described in wx font</param>
-    /// <returns>New created font fileon success otherwise nullptr</returns>
-    static std::unique_ptr<::Slic3r::Emboss::FontFile> set_italic(wxFont &font, const ::Slic3r::Emboss::FontFile &prev_font_file);
+    /// Try to find a bold variant; returns new FontFile or nullptr.
+    static std::unique_ptr<::Slic3r::Emboss::FontFile> set_bold(QFont &font, const ::Slic3r::Emboss::FontFile &font_file);
 
-    /// <summary>
-    /// Set boldness into wx font
-    /// When bolded font is same as original return nullptr.
-    /// To not load font file twice on success is font_file returned.
-    /// </summary>
-    /// <param name="font">wx descriptor of font</param>
-    /// <param name="font_file">file described in wx font</param>
-    /// <returns>New created font fileon success otherwise nullptr</returns>
-    static std::unique_ptr<::Slic3r::Emboss::FontFile> set_bold(wxFont &font, const ::Slic3r::Emboss::FontFile &font_file);
-
-    // convert wxFont types to string and vice versa
-    static const boost::bimap<wxFontFamily, std::string_view> type_to_family;
-    static const boost::bimap<wxFontStyle, std::string_view>  type_to_style;
-    static const boost::bimap<wxFontWeight, std::string_view> type_to_weight;
+    // Style-hint bimap: QFont::StyleHint ↔ string_view
+    static const boost::bimap<QFont::StyleHint, std::string_view> type_to_family;
+    // Style bimap: QFont::Style ↔ string_view
+    static const boost::bimap<QFont::Style, std::string_view> type_to_style;
+    // Weight bimap: int (Qt weight 100-900) ↔ string_view
+    static const boost::bimap<int, std::string_view> type_to_weight;
 };
 
 }
-}     // namespace Slic3r::GUI
+} // namespace Slic3r::GUI
 #endif // slic3r_WxFontUtils_hpp_

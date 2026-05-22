@@ -1,21 +1,11 @@
 #ifndef slic3r_PublishDialog_hpp_
 #define slic3r_PublishDialog_hpp_
+#include <QWidget>
+#include <QString>
 
 
 #include "I18N.hpp"
 
-#include <wx/font.h>
-#include <wx/colour.h>
-#include <wx/settings.h>
-#include <wx/string.h>
-#include <wx/sizer.h>
-#include <wx/stattext.h>
-#include <wx/gauge.h>
-#include <wx/button.h>
-#include <wx/bitmap.h>
-#include <wx/image.h>
-#include <wx/icon.h>
-#include <wx/dialog.h>
 #include "wxExtensions.hpp"
 #include "Plater.hpp"
 #include "Widgets/StepCtrl.hpp"
@@ -40,8 +30,8 @@ class PublishDialog : public DPIDialog
 public:
     PublishDialog(Plater* plater = nullptr);
 
-    bool UpdateStatus(wxString &msg, int percent = -1, bool yeild = true);
-    void Pulse(wxString &msg, bool &skip);
+    bool UpdateStatus(QString &msg, int percent = -1, bool yeild = true);
+    void Pulse(QString &msg, bool &skip);
     void SetPublishStep(PublishStep step, bool yeild = false, int percent = -1);
     void start_slicing();
     void reset();
@@ -49,19 +39,19 @@ public:
     void cancel();
 
 protected:
-    wxPanel*     m_step_panel;
+    QWidget*     m_step_panel;
     ::StepIndicator *m_publish_steps;
-    wxStaticText *m_text_note;
-    wxStaticText *m_text_progress;
+    QLabel *m_text_note;
+    QLabel *m_text_progress;
     ProgressBar  *m_progress;
     Button*       m_btn_cancel;
-    wxStaticText *m_text_errors;
+    QLabel *m_text_errors;
     Plater *      m_plater{nullptr};
     bool          m_was_cancelled { false };
 
-    wxBoxSizer* create_publish_step_sizer();
-    void on_close(wxCloseEvent &event);
-    void on_dpi_changed(const wxRect &suggested_rect) override;
+    QBoxLayout* create_publish_step_sizer();
+    void on_close(QCloseEvent &event);
+    void on_dpi_changed(const QRect &suggested_rect) override;
 };
 
 } // GUI

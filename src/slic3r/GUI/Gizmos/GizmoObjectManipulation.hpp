@@ -2,6 +2,7 @@
 #define slic3r_GizmoObjectManipulation_hpp_
 
 #include <memory>
+#include <QString>
 
 #include "libslic3r/Point.hpp"
 #include <float.h>
@@ -9,6 +10,7 @@
 #include "GLGizmoAlignment.hpp"
 
 namespace Slic3r {
+class ImGuiWrapper;
 namespace GUI {
 
 class GLCanvas3D;
@@ -35,9 +37,9 @@ public:
         Vec3d size;
         Vec3d size_rounded;
 
-        wxString move_label_string;
-        wxString rotate_label_string;
-        wxString scale_label_string;
+        QString move_label_string;
+        QString rotate_label_string;
+        QString scale_label_string;
 
         Cache() { reset(); }
         void reset()
@@ -46,9 +48,9 @@ public:
             rotation = rotation_rounded = Vec3d(DBL_MAX, DBL_MAX, DBL_MAX);
             scale = scale_rounded = Vec3d(DBL_MAX, DBL_MAX, DBL_MAX);
             size = size_rounded = Vec3d(DBL_MAX, DBL_MAX, DBL_MAX);
-            move_label_string = wxString();
-            rotate_label_string = wxString();
-            scale_label_string = wxString();
+            move_label_string = QString();
+            rotate_label_string = QString();
+            scale_label_string = QString();
         }
         bool is_valid() const { return position != Vec3d(DBL_MAX, DBL_MAX, DBL_MAX); }
     };
@@ -148,7 +150,7 @@ public:
     float max_unit_size(int number, Vec3d &vec1, Vec3d &vec2,std::string str);
     bool reset_button(ImGuiWrapper *imgui_wrapper, float caption_max, float unit_size, float space_size, float end_text_size);
     bool reset_zero_button(ImGuiWrapper *imgui_wrapper, float caption_max, float unit_size, float space_size, float end_text_size);
-    bool bbl_checkbox(const wxString &label, bool &value);
+    bool bbl_checkbox(const QString &label, bool &value);
 
     void show_move_tooltip_information(ImGuiWrapper *imgui_wrapper, float caption_max, float x, float y);
     void show_rotate_tooltip_information(ImGuiWrapper *imgui_wrapper, float caption_max, float x, float y);
@@ -160,8 +162,8 @@ public:
                          GLGizmoAlignment::AlignType,
                          int                icon,
                          float              icon_size,
-                         const wxString &function_tip,
-                         const wxString &enable_tip,
+                         const QString &function_tip,
+                         const QString &enable_tip,
                          bool show_enable_tip = false);
 
 private:
@@ -188,9 +190,9 @@ private:
     GLCanvas3D& m_glcanvas;
     GLGizmoAlignment * m_alignment_helper{nullptr};
     unsigned int m_last_active_item { 0 };
-    std::map<std::string, wxString> m_desc_move;
-    std::map<std::string, wxString> m_desc_rotate;
-    std::map<std::string, wxString> m_desc_scale;
+    std::map<std::string, QString> m_desc_move;
+    std::map<std::string, QString> m_desc_rotate;
+    std::map<std::string, QString> m_desc_scale;
     Vec3d                           m_init_rotation;
     Transform3d                     m_init_rotation_scale_tran;
 

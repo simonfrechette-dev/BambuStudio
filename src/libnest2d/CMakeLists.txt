@@ -22,6 +22,7 @@ set(LIBNEST2D_SRCFILES
     )
 
 add_library(libnest2d STATIC ${LIBNEST2D_SRCFILES})
+set_target_properties(libnest2d PROPERTIES OUTPUT_NAME nest2d)
 message(STATUS "Boost_INCLUDE_DIRS = ${Boost_INCLUDE_DIRS}")
 target_include_directories(libnest2d PUBLIC ${CMAKE_CURRENT_LIST_DIR}/include)
 target_link_libraries(libnest2d PUBLIC NLopt::nlopt TBB::tbb Boost::boost libslic3r)

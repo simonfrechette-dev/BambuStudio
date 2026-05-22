@@ -13,90 +13,91 @@
 #include "slic3r/GUI/DeviceCore/DevFilaSystem.h"
 #include "slic3r/GUI/DeviceCore/DevFilaSwitch.h"
 #include <algorithm>
+#include "libslic3r/ProjectTask.hpp"
 
 #include <tuple>
 
 namespace Slic3r { namespace GUI {
 
 
-class UiStyledAMSPanel : public wxPanel
+class UiStyledAMSPanel : public QWidget
 {
 public:
-    UiStyledAMSPanel(wxWindow* parent,
-                wxWindowID id = wxID_ANY,
-                const wxPoint& pos = wxDefaultPosition,
-                const wxSize& size = wxDefaultSize,
-                const wxColour& borderColor = wxColour(200, 200, 200),
-                const wxColour& bgColor = wxColour(255, 255, 255),
+    UiStyledAMSPanel(QWidget* parent,
+                int id = -1,
+                const QPoint& pos = QPoint(),
+                const QSize& size = QSize(),
+                const QColor& borderColor = QColor(200, 200, 200),
+                const QColor& bgColor = QColor(255, 255, 255),
                 bool borderDashed = true,
-                wxString name = "",
+                QString name = "",
                 bool isTop = false);
 
 protected:
-    void OnPaint(wxPaintEvent& event);
+    void OnPaint(QPaintEvent& event);
 
 private:
 
     bool m_borderDashed;
     int m_borderWidth;
     int m_radius;
-    wxColour m_borderColor;
-    wxColour m_bgColor;
-    wxString m_name;
+    QColor m_borderColor;
+    QColor m_bgColor;
+    QString m_name;
     bool m_isTop;
 };
 
-class UiStyledSwitchPanel : public wxPanel
+class UiStyledSwitchPanel : public QWidget
 {
 public:
-    UiStyledSwitchPanel(wxWindow* parent,
-                        wxWindowID id,
-                        const wxPoint& pos,
-                        const wxSize& size,
-                        const wxColour& borderColor,
-                        const wxColour& bgColor,
+    UiStyledSwitchPanel(QWidget* parent,
+                        int id,
+                        const QPoint& pos,
+                        const QSize& size,
+                        const QColor& borderColor,
+                        const QColor& bgColor,
                         bool borderDashed,
                         int borderWidth,
                         int radius,
                         bool isTop);
 
 
-    void AddToLeft(wxWindow* window, int proportion = 0, int flag = wxEXPAND, int border = 0);
-    void AddToRight(wxWindow* window, int proportion = 0, int flag = wxEXPAND, int border = 0);
+    void AddToLeft(QWidget* window, int proportion = 0, int flag = 0, int border = 0);
+    void AddToRight(QWidget* window, int proportion = 0, int flag = 0, int border = 0);
     void Clear(bool deleteWindows);
 
-    wxSizer* GetLeftSizer() { return m_leftSizer; }
-    wxSizer* GetRightSizer() { return m_rightSizer; }
+    QLayout* GetLeftSizer() { return m_leftSizer; }
+    QLayout* GetRightSizer() { return m_rightSizer; }
     void LayoutAndFit()
     {
-        m_leftSizer->Layout();
+        m_leftSizer->activate();
         // m_leftSizer->Fit();
-        m_rightSizer->Layout();
+        m_rightSizer->activate();
         // m_rightSizer->Fit();
-        m_splitSizer->Layout();
+        m_splitSizer->activate();
         // m_splitSizer->Fit();
-        m_contentSizer->Layout();
+        m_contentSizer->activate();
         // m_contentSizer->Fit();
-        m_mainSizer->Layout();
+        m_mainSizer->activate();
         // m_mainSizer->Fit();
-        Fit();
+        adjustSize();
     }
 protected:
-    void OnPaint(wxPaintEvent& event);
+    void OnPaint(QPaintEvent& event);
 private:
 
     bool m_borderDashed;
     int m_borderWidth;
     int m_radius;
-    wxColour m_borderColor;
-    wxColour m_bgColor;
+    QColor m_borderColor;
+    QColor m_bgColor;
     bool m_isTop;
  
-    wxBoxSizer* m_mainSizer{nullptr};
-    wxBoxSizer* m_contentSizer{nullptr};
-    wxBoxSizer* m_splitSizer{nullptr};
-    wxSizer* m_leftSizer{nullptr};
-    wxSizer* m_rightSizer{nullptr};
+    QBoxLayout* m_mainSizer{nullptr};
+    QBoxLayout* m_contentSizer{nullptr};
+    QBoxLayout* m_splitSizer{nullptr};
+    QLayout* m_leftSizer{nullptr};
+    QLayout* m_rightSizer{nullptr};
     
     static constexpr int labelHeight = 30;
 
@@ -109,35 +110,35 @@ enum DataStatusType {
     UNMATCHED
 };
 
-class UiAMSSlot : public wxPanel
+class UiAMSSlot : public QWidget
 {
 public:
-    UiAMSSlot(wxWindow* parent,
-            const std::vector<wxColour>& bgColours,
-            const wxString&  text,
+    UiAMSSlot(QWidget* parent,
+            const std::vector<QColor>& bgColours,
+            const QString&  text,
             DataStatusType status,
-            wxWindowID id = wxID_ANY,
-            const wxPoint& pos = wxDefaultPosition,
-            const wxSize& size = wxDefaultSize,
+            int id = -1,
+            const QPoint& pos = QPoint(),
+            const QSize& size = QSize(),
             double colourFactor = 1.0,
             double scaleFactor = 1.0);
 
 
 private:
-    void OnPaint(wxPaintEvent&);
-    void DrawRectangle(wxPaintDC& dc, const wxSize& cli);
-    void DrawLine(wxPaintDC& dc, const wxSize& cli);
-    wxColour LightenColour(const wxColour& original);
-    bool IsDark(const wxColour& c)
+    void OnPaint(QPaintEvent&);
+    void DrawRectangle(QPainter& dc, const QSize& cli);
+    void DrawLine(QPainter& dc, const QSize& cli);
+    QColor LightenColour(const QColor& original);
+    bool IsDark(const QColor& c)
     {
-        int brightness = (c.Red() * 299 + c.Green() * 587 + c.Blue() * 114) / 1000;
+        int brightness = (c.red() * 299 + c.green() * 587 + c.blue() * 114) / 1000;
         return brightness < 128;  // 0-255 range，128 mid
     }
 private:
-    const std::vector<wxColour>& m_bgColours;
-    wxString m_text;
+    const std::vector<QColor>& m_bgColours;
+    QString m_text;
     DataStatusType m_status;
-    wxSize m_size;
+    QSize m_size;
     ScalableBitmap *m_ams_slot_readonly{nullptr};
     int m_rectangleW = 44;
     int m_rectangleH = 62;
@@ -145,14 +146,13 @@ private:
     int rectangleH = 62;
     double m_colourFactor = 1.0f;
     double m_scaleFactor = 1.0f;
-    // wxDECLARE_EVENT_TABLE();
 };
 
 struct DataAmsSlotInfo
 {
-    wxString amsName;
-    wxString name;
-    std::vector<wxColour> colours;
+    QString amsName;
+    QString name;
+    std::vector<QColor> colours;
     double colourFactor;
     double scaleFactor;
     DataStatusType status;
@@ -161,16 +161,16 @@ struct DataAmsSlotInfo
 class UiAMS : public UiStyledAMSPanel
 {
 public:
-    UiAMS(wxWindow* parent,
+    UiAMS(QWidget* parent,
         const std::vector<DataAmsSlotInfo>& amsInfo,
-        wxWindowID id,
-        const wxPoint& pos,
-        const wxSize& minSize);            
+        int id,
+        const QPoint& pos,
+        const QSize& minSize);            
 private:
     void init();
     std::vector<DataAmsSlotInfo> m_amsInfo;
-    wxString m_amsTitle;
-    wxSize m_minSize;
+    QString m_amsTitle;
+    QSize m_minSize;
 };
 
 
@@ -178,47 +178,46 @@ struct DataStatusParam {
     // int count = 0;
     int width = 0;
     int height = 0;
-    std::vector<DataAmsSlotInfo> slots;
+    std::vector<DataAmsSlotInfo> ams_slots;
 };
 
-class ReselectMachineDialog : public wxDialog
+class ReselectMachineDialog : public QDialog
 {
 public:
-    ReselectMachineDialog(wxWindow* parent);
+    ReselectMachineDialog(QWidget* parent);
     ~ReselectMachineDialog();
     void Update(MachineObject* obj,
                 const std::map<int, int>&  best_pos_map,
                 const std::vector<FilamentInfo>& ams_mapping,
-                wxString save_time);
+                QString save_time);
 
 private:
     int CaculateSwitcherDistribution(MachineObject* obj, const std::map<int, int>&  best_pos_map, const std::vector<FilamentInfo>& ams_mapping);
-    wxString getTrayID(MachineObject* obj, const std::string& amsID, const std::string& slotID);
-    void OnRefreshButton(wxCommandEvent& event);
+    QString getTrayID(MachineObject* obj, const std::string& amsID, const std::string& slotID);
+    void OnRefreshButton(QEvent& event);
 
 private:
     int saveTimes{0};
-    wxBoxSizer* mainSizer{nullptr};
-    wxPanel* textPanel{nullptr};
-    wxBoxSizer* textSizer{nullptr};
+    QBoxLayout* mainSizer{nullptr};
+    QWidget* textPanel{nullptr};
+    QBoxLayout* textSizer{nullptr};
     Label* suggestText{nullptr};
-    // wxHyperlinkCtrl* linkwiki{nullptr};
+    // QLabel* linkwiki{nullptr};
     Label* linkwiki{nullptr};
     Label* summaryText{nullptr};
     UiStyledSwitchPanel* filamentSwitch{nullptr};
-    wxStaticText* filamentTips{nullptr};
+    QLabel* filamentTips{nullptr};
     std::vector<std::vector<DataAmsSlotInfo>> inAAMS{};
     std::vector<std::vector<DataAmsSlotInfo>> inBAMS{};
-    wxPanel* statusBar{nullptr};
-    wxBoxSizer* btnSizer{nullptr};
+    QWidget* statusBar{nullptr};
+    QBoxLayout* btnSizer{nullptr};
     Button* m_buttonClose{nullptr };
     Button* m_buttonRefresh{ nullptr };
-    std::vector<wxColour>colourAdjust{wxColour("#675AFF")};
-    std::vector<wxColour>colourOK{wxColour("#FF8181")};
-    std::vector<wxColour>colourUnused{wxColour("#FF818140")};
-    // wxStaticBitmap* m_bitmapSelectMachine{nullptr};
+    std::vector<QColor>colourAdjust{QColor("#675AFF")};
+    std::vector<QColor>colourOK{QColor("#FF8181")};
+    std::vector<QColor>colourUnused{QColor("#FF818140")};
+    // QLabel* m_bitmapSelectMachine{nullptr};
 };
 
-wxDECLARE_EVENT(wxEVT_REFRESH_DATA, wxCommandEvent);
 
 }} // namespace Slic3r::GUI

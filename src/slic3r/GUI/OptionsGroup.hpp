@@ -1,8 +1,18 @@
 #ifndef slic3r_OptionsGroup_hpp_
 #define slic3r_OptionsGroup_hpp_
+#include <QString>
+#include <QWidget>
+#include <QLabel>
+#include <QLayout>
+#include <QGridLayout>
+#include <QLineEdit>
+#include <QCheckBox>
+#include <QSpinBox>
+#include <QComboBox>
+#include <QSlider>
+#include <QColor>
+#include <functional>
 
-#include <wx/stattext.h>
-#include <wx/settings.h>
 
 #include <map>
 #include <functional>
@@ -15,12 +25,12 @@
 
 // Translate the ifdef
 #ifdef __WXOSX__
-    #define wxOSX true
+    #define false true
 #else
-    #define wxOSX false
+    #define false false
 #endif
 
-#define BORDER(a, b) ((wxOSX ? a : b))
+#define BORDER(a, b) (b)
 
 namespace Slic3r { namespace GUI {
 
@@ -29,8 +39,8 @@ class UIBuildCanceled : public std::exception {};
 class OG_CustomCtrl;
 class MultiVariantTextCtrl;
 
-/// Widget type describes a function object that returns a wxWindow (our widget) and accepts a wxWidget (parent window).
-using widget_t = std::function<wxSizer*(wxWindow*)>;//!std::function<wxWindow*(wxWindow*)>;
+/// Widget type describes a function object that returns a QWidget (our widget) and accepts a wxWidget (parent window).
+using widget_t = std::function<QLayout *(QWidget *)>;//!std::function<QWidget *(QWidget *)>;
 
 /// Wraps a ConfigOptionDef and adds function object for creating a side_widget.
 struct Option {
@@ -52,23 +62,23 @@ using t_option = std::unique_ptr<Option>;	//!
 class Line {
 	bool		m_is_separator{ false };
 public:
-    wxString	label;
-    wxString	label_tooltip;
+    QString	label;
+    QString	label_tooltip;
 	std::string	label_path;
     bool        undo_to_sys{false}; // BBS: object config
     bool        toggle_visible{true}; // BBS: hide some line
 
     size_t		full_width {0};
-	wxColour*	full_Label_color {nullptr};
+	QColor*	full_Label_color {nullptr};
 	bool		blink	{false};
     bool        subline {false};
     widget_t	widget {nullptr};
-    std::function<wxWindow*(wxWindow*)>	near_label_widget{ nullptr };
-	wxWindow*	near_label_widget_win {nullptr};
-    wxSizer*	widget_sizer {nullptr};
-    wxSizer*	extra_widget_sizer {nullptr};
+    std::function<QWidget *(QWidget *)>	near_label_widget{ nullptr };
+	QWidget *	near_label_widget_win {nullptr};
+    QLayout *	widget_sizer {nullptr};
+    QLayout *	extra_widget_sizer {nullptr};
     //BBS: export the extra colume widget
-    wxWindow*	extra_widget_win {nullptr};
+    QWidget *	extra_widget_win {nullptr};
     //BBS: add api to get the first option's key
     std::string& get_first_option_key() {
         return m_options[0].opt_id;
@@ -80,7 +90,7 @@ public:
 	void append_widget(const widget_t widget) {
 		m_extra_widgets.push_back(widget);
     }
-	Line(wxString label, wxString tooltip) :
+	Line(QString label, QString tooltip) :
 		label(_(label)), label_tooltip(_(tooltip)) {}
 	Line() : m_is_separator(true) {}
 
@@ -95,7 +105,7 @@ private:
     std::vector<widget_t>	m_extra_widgets;//! {std::vector<widget_t>()};
 };
 
-using column_t = std::function<wxWindow*(wxWindow* parent, const Line&)>;
+using column_t = std::function<QWidget *(QWidget * parent, const Line&)>;
 
 using t_optionfield_map = std::map<t_config_option_key, t_field>;
 using t_opt_map = std::map< std::string, std::pair<std::string, int> >;
@@ -106,13 +116,13 @@ public:
     bool split_multi_line{false};
     bool option_label_at_right{false};
     // BBS: new layout
-    wxWindow *     stb;
-    const wxString  icon;
-    const wxString  title;
-    size_t			label_width = 20 ;// {200};
-    wxSizer*		sizer {nullptr};
+    QWidget *     stb;
+    const QString  icon;
+    const QString  title;
+    size_t			label_width = 200 ;// pixels (was 20 — wrong from wx migration)
+    QLayout *		sizer {nullptr};
 	OG_CustomCtrl*  custom_ctrl{ nullptr };
-	int				ctrl_horiz_alignment{ wxALIGN_LEFT};
+	int				ctrl_horiz_alignment{ Qt::AlignLeft};
     column_t		extra_column {nullptr};
     t_change		m_on_change { nullptr };
 	// To be called when the field loses focus, to assign a new initial value to the field.
@@ -122,21 +132,21 @@ public:
 	std::function<DynamicPrintConfig()>	m_get_sys_config{ nullptr };
 	std::function<bool()>	have_sys_config{ nullptr };
 
-    std::function<void(wxWindow* win)> rescale_extra_column_item { nullptr };
-    std::function<void(wxWindow* win)> rescale_near_label_widget { nullptr };
+    std::function<void(QWidget * win)> rescale_extra_column_item { nullptr };
+    std::function<void(QWidget * win)> rescale_near_label_widget { nullptr };
 
-    wxFont			sidetext_font {wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT) };
-    wxFont			label_font {wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT) };
+    
+    
 	int				sidetext_width{ -1 };
 	int				sublabel_width{ -1 };
 	bool			draw_multi_extruder { false };
 
-    /// Returns a copy of the pointer of the parent wxWindow.
+    /// Returns a copy of the pointer of the parent QWidget.
     /// Accessor function is because users are not allowed to change the parent
     /// but defining it as const means a lot of const_casts to deal with wx functions.
-    inline wxWindow* parent() const { return m_parent; }
+    inline QWidget * parent() const { return m_parent; }
 
-    wxWindow*   ctrl_parent() const;
+    QWidget *   ctrl_parent() const;
 
 	void		append_line(const Line& line);
 	// create controls for the option group
@@ -145,7 +155,7 @@ public:
 	Line* get_line(const std::string& opt_key);
 
 	// create all controls for the option group from the m_lines
-	bool		activate(std::function<void()> throw_if_canceled = [](){}, int horiz_alignment = wxALIGN_LEFT);
+	bool		activate(std::function<void()> throw_if_canceled = [](){}, int horiz_alignment = Qt::AlignLeft);
 	// delete all controls from the option group
 	void		clear(bool destroy_custom_ctrl = false);
 
@@ -221,21 +231,21 @@ public:
 	void			show_field(const t_config_option_key& opt_key, bool show = true);
 	void			hide_field(const t_config_option_key& opt_key) {  show_field(opt_key, false);  }
 
-	void			set_name(const wxString& new_name);
+	void			set_name(const QString& new_name);
 
 	inline void		enable() { for (auto& field : m_fields) field.second->enable(); }
     inline void		disable() { for (auto& field : m_fields) field.second->disable(); }
-	void			set_grid_vgap(int gap) { m_grid_sizer->SetVGap(gap); }
+	void			set_grid_vgap(int gap) { m_grid_sizer->setVerticalSpacing(gap); }
 
     void            clear_fields_except_of(const std::vector<std::string> left_fields);
 
     void            hide_labels() { label_width = 0; }
 
-	OptionsGroup(wxWindow *_parent, const wxString &title, const wxString &icon, bool is_tab_opt = false,
+	OptionsGroup(QWidget *_parent, const QString &title, const QString &icon, bool is_tab_opt = false,
                     column_t extra_clmn = nullptr);
 	~OptionsGroup() { clear(true); }
 
-    wxGridSizer*        get_grid_sizer() { return m_grid_sizer; }
+    QGridLayout *        get_grid_sizer() { return m_grid_sizer; }
 	const std::vector<Line>& get_lines() { return m_lines; }
 	bool				is_legend_line();
 	// if we have to set the same control alignment for different option groups,
@@ -247,9 +257,9 @@ public:
 	void remove_option_if(std::function<bool(std::string const &)> const & comp);
 protected:
 	std::map<t_config_option_key, Option>	m_options;
-    wxWindow*				m_parent {nullptr};
+    QWidget *				m_parent {nullptr};
     std::vector<ConfigOptionMode>           m_options_mode;
-    std::vector<wxWindow*>                  m_extra_column_item_ptrs;
+    std::vector<QWidget *>                  m_extra_column_item_ptrs;
 
     std::vector<Line>                       m_lines;
 
@@ -258,7 +268,7 @@ protected:
     /// need to cast based on the related ConfigOptionDef.
     t_optionfield_map		m_fields;
     bool					m_disabled {false};
-    wxGridSizer*			m_grid_sizer {nullptr};
+    QGridLayout *			m_grid_sizer {nullptr};
 	// "true" if option is created in preset tabs
 	bool					m_use_custom_ctrl{ false };
 
@@ -266,13 +276,13 @@ protected:
 	bool					m_use_custom_ctrl_as_parent { false };
 
 	// This panel is needed for correct showing of the ToolTips for Button, StaticText and CheckBox
-	// Tooltips on GTK doesn't work inside wxStaticBoxSizer unless you insert a panel
+	// Tooltips on GTK doesn't work inside QVBoxLayout unless you insert a panel
 	// inside it before you insert the other controls.
 #if 0//#ifdef__WXGTK__
-	wxPanel*				m_panel {nullptr};
+	QWidget*				m_panel {nullptr};
 #endif /* __WXGTK__ */
 
-    /// Generate a wxSizer or wxWindow from a configuration option
+    /// Generate a QLayout or QWidget from a configuration option
     /// Precondition: opt resolves to a known ConfigOption
     /// Postcondition: fields contains a wx gui object.
 	const t_field&		build_field(const t_config_option_key& id, const ConfigOptionDef& opt);
@@ -285,29 +295,29 @@ protected:
 	virtual void		back_to_sys_value(const std::string& opt_key) {}
 
 public:
-	static wxString		get_url(const std::string& path_end);
+	static QString		get_url(const std::string& path_end);
 	static bool			launch_browser(const std::string& path_end);
 };
 
 class ConfigOptionsGroup: public OptionsGroup {
 public:
-	ConfigOptionsGroup(	wxWindow* parent, const wxString& title, const wxString& icon, DynamicPrintConfig* config = nullptr,
+	ConfigOptionsGroup(	QWidget * parent, const QString& title, const QString& icon, DynamicPrintConfig* config = nullptr,
 						bool is_tab_opt = false, column_t extra_clmn = nullptr) :
 		OptionsGroup(parent, title, icon, is_tab_opt, extra_clmn), m_config(config) {}
-	ConfigOptionsGroup(	wxWindow* parent, const wxString& title, DynamicPrintConfig* config = nullptr,
+	ConfigOptionsGroup(	QWidget * parent, const QString& title, DynamicPrintConfig* config = nullptr,
 						bool is_tab_opt = false, column_t extra_clmn = nullptr) :
-		ConfigOptionsGroup(parent, title, wxEmptyString, config, is_tab_opt, extra_clmn) {}
-	ConfigOptionsGroup(	wxWindow* parent, const wxString& title, ModelConfig* config,
+		ConfigOptionsGroup(parent, title, QString(), config, is_tab_opt, extra_clmn) {}
+	ConfigOptionsGroup(	QWidget * parent, const QString& title, ModelConfig* config,
 						bool is_tab_opt = false, column_t extra_clmn = nullptr) :
-		OptionsGroup(parent, title, wxEmptyString, is_tab_opt, extra_clmn), m_config(&config->get()), m_modelconfig(config) {}
-	ConfigOptionsGroup(	wxWindow* parent) :
-		OptionsGroup(parent, wxEmptyString, wxEmptyString, true, nullptr) {}
+		OptionsGroup(parent, title, QString(), is_tab_opt, extra_clmn), m_config(&config->get()), m_modelconfig(config) {}
+	ConfigOptionsGroup(	QWidget * parent) :
+		OptionsGroup(parent, QString(), QString(), true, nullptr) {}
 
-	const wxString& config_category() const throw() { return m_config_category; }
+	const QString& config_category() const throw() { return m_config_category; }
 	int config_type() const throw() { return m_config_type; }
 	const t_opt_map&   opt_map() const throw() { return m_opt_map; }
 
-	void 		set_config_category_and_type(const wxString &category, int type) { m_config_category = category; m_config_type = type; }
+	void 		set_config_category_and_type(const QString &category, int type) { m_config_category = category; m_config_type = type; }
     void        set_config(DynamicPrintConfig* config) {
 		m_config = config; m_modelconfig = nullptr; }
 	Option		get_option(const std::string& opt_key, int opt_index = -1);
@@ -359,7 +369,7 @@ protected:
     // If the config is modelconfig, then ModelConfig::touch() has to be called after value change.
     ModelConfig*				m_modelconfig { nullptr };
 	t_opt_map					m_opt_map;
-    wxString                    m_config_category;
+    QString                    m_config_category;
     int                         m_config_type;
 
     // Change an option on m_config, possibly call ModelConfig::touch().
@@ -370,21 +380,21 @@ protected:
 // It is designed for single extruder multiple material machine.
 class ExtruderOptionsGroup : public ConfigOptionsGroup {
 public:
-	ExtruderOptionsGroup(wxWindow* parent, const wxString& title, DynamicPrintConfig* config = nullptr,
+	ExtruderOptionsGroup(QWidget * parent, const QString& title, DynamicPrintConfig* config = nullptr,
 		bool is_tab_opt = false, column_t extra_clmn = nullptr) :
-		ConfigOptionsGroup(parent, title, wxEmptyString, config, is_tab_opt, extra_clmn) {}
+		ConfigOptionsGroup(parent, title, QString(), config, is_tab_opt, extra_clmn) {}
 
 	void on_change_OG(const t_config_option_key& opt_id, const boost::any& value) override;
 };
 
 //  Static text shown among the options.
-class ogStaticText :public wxStaticText{
+class ogStaticText :public QLabel{
 public:
 	ogStaticText() {}
-	ogStaticText(wxWindow* parent, const wxString& text);
+	ogStaticText(QWidget * parent, const QString& text);
 	~ogStaticText() {}
 
-	void		SetText(const wxString& value, bool wrap = true);
+	void		SetText(const QString& value, bool wrap = true);
 	// Set special path end. It will be used to generation of the hyperlink on info page
 	void		SetPathEnd(const std::string& link);
 	void		FocusText(bool focus);

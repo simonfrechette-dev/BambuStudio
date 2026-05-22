@@ -1,45 +1,45 @@
 #ifndef slic3r_GUI_CheckBox_hpp_
 #define slic3r_GUI_CheckBox_hpp_
 
-#include "../wxExtensions.hpp"
+#include "../QtExtensions.hpp"
 
-#include <wx/tglbtn.h>
+#include <QAbstractButton>
 
-class CheckBox : public wxBitmapToggleButton
+class CheckBox : public QAbstractButton
 {
+    Q_OBJECT
 public:
-	CheckBox(wxWindow * parent, int id = wxID_ANY);
+    explicit CheckBox(QWidget *parent = nullptr, int id = -1);
 
-public:
-	void SetValue(bool value) override;
+    void setChecked(bool value);
+    bool isChecked() const { return m_checked; }
 
-	void SetHalfChecked(bool value = true);
+    void SetHalfChecked(bool value = true);
+    bool isHalfChecked() const { return m_half_checked; }
 
-	void Rescale();
+    void Rescale();
 
-#ifdef __WXOSX__
-    virtual bool Enable(bool enable = true) wxOVERRIDE;
-#endif
+    QSize sizeHint() const override;
 
 protected:
-#ifdef __WXMSW__
-    virtual State GetNormalState() const wxOVERRIDE;
-#endif
-    
-#ifdef __WXOSX__
-    virtual wxBitmap DoGetBitmap(State which) const wxOVERRIDE;
-    
-    void updateBitmap(wxEvent & evt);
-    
-    bool m_disable = false;
-    bool m_hover = false;
-    bool m_focus = false;
-#endif
-    
-private:
-	void update();
+    void paintEvent(QPaintEvent *event) override;
+    void changeEvent(QEvent *event) override;
+    void enterEvent(QEnterEvent *event) override;
+    void leaveEvent(QEvent *event) override;
+    void focusInEvent(QFocusEvent *event) override;
+    void focusOutEvent(QFocusEvent *event) override;
+    void mousePressEvent(QMouseEvent *event) override;
+    void mouseReleaseEvent(QMouseEvent *event) override;
 
 private:
+    void update_bitmap();
+    const QPixmap &currentPixmap() const;
+
+    bool m_checked      = false;
+    bool m_half_checked = false;
+    bool m_hovered      = false;
+    bool m_focused      = false;
+
     ScalableBitmap m_on;
     ScalableBitmap m_half;
     ScalableBitmap m_off;
@@ -49,7 +49,6 @@ private:
     ScalableBitmap m_on_focused;
     ScalableBitmap m_half_focused;
     ScalableBitmap m_off_focused;
-    bool m_half_checked = false;
 };
 
 #endif // !slic3r_GUI_CheckBox_hpp_

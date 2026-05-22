@@ -1,36 +1,28 @@
 #ifndef slic3r_GUI_SideMenuPopup_hpp_
 #define slic3r_GUI_SideMenuPopup_hpp_
 
-#include <wx/stattext.h>
-#include <wx/vlbox.h>
-#include <wx/combo.h>
-#include <wx/htmllbox.h>
-#include <wx/frame.h>
-#include "../wxExtensions.hpp"
-#include "StateHandler.hpp"
-#include "SideButton.hpp"
 #include "PopupWindow.hpp"
+#include "SideButton.hpp"
+#include <vector>
 
 class SidePopup : public PopupWindow
 {
-private:
-	std::vector<SideButton*> btn_list;
+    Q_OBJECT
 public:
-    SidePopup(wxWindow* parent);
-    ~SidePopup();
+    explicit SidePopup(QWidget *parent);
+    ~SidePopup() override;
 
     void Create();
+    void Popup(QWidget *anchor = nullptr) override;
+    void Dismiss() override;
 
-    virtual void Popup(wxWindow *focus = NULL) wxOVERRIDE;
-    virtual void OnDismiss() wxOVERRIDE;
-    virtual bool ProcessLeftDown(wxMouseEvent& event) wxOVERRIDE;
-    virtual bool Show(bool show = true) wxOVERRIDE;
+    void append_button(SideButton *btn);
 
-    void append_button(SideButton* btn);
+protected:
+    void paintEvent(QPaintEvent *event) override;
 
-    void paintEvent(wxPaintEvent& evt);
-
-	DECLARE_EVENT_TABLE()
+private:
+    std::vector<SideButton *> btn_list;
 };
 
-#endif // !slic3r_GUI_Button_hpp_
+#endif // !slic3r_GUI_SideMenuPopup_hpp_

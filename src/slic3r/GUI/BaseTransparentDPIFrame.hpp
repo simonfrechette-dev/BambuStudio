@@ -19,26 +19,26 @@ public:
         TimedDisappearance // unit: second
     };
 
-    BaseTransparentDPIFrame(wxWindow *        parent,
+    BaseTransparentDPIFrame(QWidget *        parent,
                             int               win_width,
-                            wxPoint           dialog_pos,
+                            QPoint           dialog_pos,
                             int               ok_button_width,
-                            wxString          win_text,
-                            wxString          ok_text,
-                            wxString          cancel_text        = "",
+                            QString          win_text,
+                            QString          ok_text,
+                            QString          cancel_text        = "",
                             DisappearanceMode disappearance_mode = DisappearanceMode::None,
                             std::string       icon_name          = "completed");
     ~BaseTransparentDPIFrame() override;
-    void on_dpi_changed(const wxRect &suggested_rect) override;
+    void on_dpi_changed(const QRect &suggested_rect) override;
     void on_show();
     void on_hide();
     void clear_timer_count();
-    bool Show(bool show = true) override;
-    void         on_full_screen(IntEvent &);
+    void setVisible(bool show) override;
+    void         on_full_screen(QEvent &);
     virtual void deal_ok();
     virtual void deal_cancel();
-    virtual void on_timer(wxTimerEvent &event);
-    void         set_target_pos_and_gradual_disappearance(wxPoint pos);
+    virtual void on_timer(QTimerEvent &event);
+    void         set_target_pos_and_gradual_disappearance(QPoint pos);
     void         call_start_gradual_disappearance();
     void         restart();
 
@@ -48,17 +48,17 @@ protected:
     Label  *m_finish_text   = nullptr;
     DisappearanceMode m_timed_disappearance_mode;
     float             m_timer_count = 0;
-    wxTimer *         m_refresh_timer{nullptr};
+    QTimer *         m_refresh_timer{nullptr};
     int               m_disappearance_second  = 2500; //ANIMATION_REFRESH_INTERVAL 20  unit ms: m_disappearance_second * ANIMATION_REFRESH_INTERVAL
     bool              m_move_to_target_gradual_disappearance = false;
-    wxPoint           m_target_pos;
+    QPoint           m_target_pos;
 
 private:
-    wxBoxSizer *m_sizer_main{nullptr};
-    wxSize      m_max_size;
-    wxSize     m_step_size;
-    wxPoint    m_step_pos;
-    wxPoint    m_start_pos;
+    QBoxLayout *m_sizer_main{nullptr};
+    QSize      m_max_size;
+    QSize     m_step_size;
+    QPoint    m_step_pos;
+    QPoint    m_start_pos;
     float      m_time_move{6.0f};
     float      m_time_gradual_and_scale{100.0f};
     int        m_init_transparent{220};
@@ -71,7 +71,7 @@ private:
     void init_timer();
     void calc_step_transparent();
     void on_close();
-    void show_sizer(wxSizer *sizer, bool show);
+    void show_sizer(QLayout *sizer, bool show);
     void hide_all();
     void begin_gradual_disappearance();
     void begin_move_to_target_and_gradual_disappearance();

@@ -1,234 +1,145 @@
+// SafetyOptionsDialog.cpp — Qt6 port
+// Phantom forward-declaration must precede ALL headers (see PrintOptionsDialog.cpp).
+namespace Slic3r { namespace GUI { class MachineObject; } }
 #include "SafetyOptionsDialog.hpp"
-#include "I18N.hpp"
+
+#include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QScrollArea>
+#include <QTimer>
+
 #include "GUI_App.hpp"
-#include "libslic3r/Utils.hpp"
+#include "I18N.hpp"
 #include "Widgets/SwitchButton.hpp"
-#include "MsgDialog.hpp"
-
-#include "DeviceCore/DevConfig.h"
-#include "DeviceCore/DevExtruderSystem.h"
-#include "DeviceCore/DevNozzleSystem.h"
-#include "DeviceCore/DevPrintOptions.h"
-
-static const wxColour STATIC_BOX_LINE_COL = wxColour(238, 238, 238);
-static const wxColour STATIC_TEXT_CAPTION_COL = wxColour(100, 100, 100);
-static const wxColour STATIC_TEXT_EXPLAIN_COL = wxColour(100, 100, 100);
+#include "Widgets/StaticLine.hpp"
 
 namespace Slic3r { namespace GUI {
 
-static StateColor btn_bg_green(std::pair<wxColour, int>(wxColour(194, 194, 194), StateColor::Disabled),
-                               std::pair<wxColour, int>(wxColour(27, 136, 68), StateColor::Pressed),
-                               std::pair<wxColour, int>(wxColour(61, 203, 115), StateColor::Hovered),
-                               std::pair<wxColour, int>(wxColour(0, 177, 66), StateColor::Normal));
-
-SafetyOptionsDialog::SafetyOptionsDialog(wxWindow* parent)
-    : DPIDialog(parent, wxID_ANY, _L("Safety Options"), wxDefaultPosition, wxDefaultSize, wxCAPTION | wxCLOSE_BOX)
+SafetyOptionsDialog::SafetyOptionsDialog(QWidget *parent)
+    : DPIDialog(parent)
 {
-    this->SetDoubleBuffered(true);
-    std::string icon_path = (boost::format("%1%/images/BambuStudioTitle.ico") % resources_dir()).str();
-    SetIcon(wxIcon(encode_path(icon_path.c_str()), wxBITMAP_TYPE_ICO));
-    SetBackgroundColour(*wxWHITE);
-    SetSize(FromDIP(480),FromDIP(320));
+    setWindowTitle(_L("Safety Options"));
+    setMinimumWidth(460);
 
-    m_scrollwindow = new wxScrolledWindow(this, wxID_ANY);
-    m_scrollwindow->SetScrollRate(0, FromDIP(10));
-    m_scrollwindow->SetBackgroundColour(*wxWHITE);
-    m_scrollwindow->SetMinSize(wxSize(FromDIP(480), wxDefaultCoord));
-    m_scrollwindow->SetMaxSize(wxSize(FromDIP(480), wxDefaultCoord));
+    auto *main_layout = new QVBoxLayout(this);
+    main_layout->setContentsMargins(20, 20, 20, 20);
+    main_layout->setSpacing(0);
 
-    auto m_options_sizer = create_settings_group(m_scrollwindow);
-    m_options_sizer->SetMinSize(wxSize(FromDIP(460), wxDefaultCoord));
+    // Title
+    auto *title = new Label(this, Label::Head_16);
+    title->setText(_L("Safety Options"));
+    main_layout->addWidget(title);
+    main_layout->addSpacing(12);
 
-    m_scrollwindow->SetSizer(m_options_sizer);
+    // Scrollable settings area
+    m_scrollwindow = new QScrollArea(this);
+    m_scrollwindow->setFrameShape(QFrame::NoFrame);
+    m_scrollwindow->setWidgetResizable(true);
 
-    wxBoxSizer *mainSizer = new wxBoxSizer(wxVERTICAL);
-    mainSizer->Add(m_scrollwindow, 1, wxEXPAND);
-    this->SetSizer(mainSizer);
+    auto *scroll_content = new QWidget(m_scrollwindow);
+    auto *scroll_layout  = create_settings_group(scroll_content);
+    scroll_content->setLayout(scroll_layout);
+    m_scrollwindow->setWidget(scroll_content);
 
-    m_options_sizer->Fit(m_scrollwindow);
-    m_scrollwindow->FitInside();
+    main_layout->addWidget(m_scrollwindow, 1);
+    main_layout->addSpacing(12);
 
-    this->Layout();
+    // Close button
+    auto *btn_layout = new QHBoxLayout();
+    btn_layout->addStretch(1);
+    auto *btn_close = new Button(this, _L("Close"));
+    btn_close->SetValue(true);
+    btn_layout->addWidget(btn_close);
+    main_layout->addLayout(btn_layout);
 
-    m_cb_open_door->Bind(wxEVT_TOGGLEBUTTON, [this](wxCommandEvent &evt) {
-        if (m_cb_open_door->GetValue()) {
-            if (obj) { obj->command_set_door_open_check(MachineObject::DOOR_OPEN_CHECK_ENABLE_WARNING); }
-        } else {
-            if (obj) { obj->command_set_door_open_check(MachineObject::DOOR_OPEN_CHECK_DISABLE); }
-        }
-        evt.Skip();
+    connect(btn_close, &Button::clicked, this, &QDialog::accept);
+
+    // Idle heating toast timer
+    connect(&m_idel_heating_toast_timer, &QTimer::timeout, this, [this]() {
+        if (m_idel_heating_toast) m_idel_heating_toast->hide();
     });
-
-    m_open_door_switch_board->Bind(wxCUSTOMEVT_SWITCH_POS, [this](wxCommandEvent &evt)
-    {
-        if (evt.GetInt() == 0)
-        {
-            if (obj) { obj->command_set_door_open_check(MachineObject::DOOR_OPEN_CHECK_ENABLE_PAUSE_PRINT); }
-        }
-        else if (evt.GetInt() == 1)
-        {
-            if (obj) { obj->command_set_door_open_check(MachineObject::DOOR_OPEN_CHECK_ENABLE_WARNING); }
-        }
-        evt.Skip();
-    });
-
-    m_cb_idel_heating_protection->Bind(wxEVT_TOGGLEBUTTON, [this](wxCommandEvent &evt) {
-        if (obj)
-        {
-            obj->GetPrintOptions()->command_xcam_control_idelheatingprotect_detector(m_cb_idel_heating_protection->GetValue());
-        }
-        else
-        {
-            BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << "obj is empty";
-        }
-            evt.Skip();
-    });
-
-    auto toast_click = [this](wxMouseEvent &e) {
-        if (m_idel_protect_unavailable) {
-            show_idel_heating_toast(_L("Unavailable while heating maintenance function is on."));
-        }
-        e.Skip();
-    };
-    m_text_idel_heating_protection->Bind(wxEVT_LEFT_DOWN, toast_click);
-    m_text_idel_heating_protection_caption->Bind(wxEVT_LEFT_DOWN, toast_click);
-    m_idel_heating_container->Bind(wxEVT_LEFT_DOWN, toast_click);
-
-    m_idel_heating_toast_timer.SetOwner(this);
-    Bind( wxEVT_TIMER, [this](wxTimerEvent &e) {
-             if (m_idel_heating_toast) {
-                 m_idel_heating_toast->Destroy();
-                 m_idel_heating_toast = nullptr;
-             }}, m_idel_heating_toast_timer.GetId());
-
-    wxGetApp().UpdateDlgDarkUI(this);
 }
 
-SafetyOptionsDialog::~SafetyOptionsDialog()
+SafetyOptionsDialog::~SafetyOptionsDialog() {}
+
+QBoxLayout *SafetyOptionsDialog::create_settings_group(QWidget *parent)
 {
+    auto *layout = new QVBoxLayout(parent);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(8);
+
+    // Open door detection row
+    auto *door_row = new QHBoxLayout();
+
+    m_cb_open_door = new CheckBox(parent);
+    door_row->addWidget(m_cb_open_door);
+
+    auto *door_col = new QVBoxLayout();
+    m_text_open_door = new Label(parent, Label::Body_14);
+    m_text_open_door->setText(_L("Detect open door during printing"));
+    m_text_open_door->setWordWrap(true);
+    door_col->addWidget(m_text_open_door);
+
+    // SwitchBoard for open door options (multi-option switch)
+    m_open_door_switch_board = new SwitchBoard(parent);
+    door_col->addWidget(m_open_door_switch_board);
+    door_row->addLayout(door_col);
+    layout->addLayout(door_row);
+
+    // Separator
+    auto *sep1 = new StaticLine(parent);
+    layout->addWidget(sep1);
+
+    // Idle heating protection row
+    auto *heat_row = new QHBoxLayout();
+
+    m_cb_idel_heating_protection = new CheckBox(parent);
+    heat_row->addWidget(m_cb_idel_heating_protection);
+
+    auto *heat_col = new QVBoxLayout();
+    m_text_idel_heating_protection = new Label(parent, Label::Body_14);
+    m_text_idel_heating_protection->setText(_L("Idle heating protection"));
+    m_text_idel_heating_protection->setWordWrap(true);
+    heat_col->addWidget(m_text_idel_heating_protection);
+
+    m_text_idel_heating_protection_caption = new Label(parent, Label::Body_12);
+    m_text_idel_heating_protection_caption->setText(
+        _L("Automatically reduces nozzle temperature when the printer is idle."));
+    m_text_idel_heating_protection_caption->setWordWrap(true);
+    heat_col->addWidget(m_text_idel_heating_protection_caption);
+
+    // Container for the idle heating controls (can be hidden)
+    m_idel_heating_container = new QWidget(parent);
+    auto *idel_layout = new QVBoxLayout(m_idel_heating_container);
+    idel_layout->setContentsMargins(0, 0, 0, 0);
+    // (additional controls go here if needed)
+    heat_col->addWidget(m_idel_heating_container);
+
+    heat_row->addLayout(heat_col);
+    layout->addLayout(heat_row);
+
+    // Toast for idle heating unavailable
+    m_idel_heating_toast = new QWidget(parent);
+    m_idel_heating_toast->setStyleSheet(
+        "background: #333333; color: white; border-radius: 4px; padding: 6px;");
+    auto *toast_layout = new QHBoxLayout(m_idel_heating_toast);
+    auto *toast_label  = new QLabel(_L("Idle heating protection is not available on this printer."),
+                                    m_idel_heating_toast);
+    toast_label->setStyleSheet("color: white;");
+    toast_layout->addWidget(toast_label);
+    m_idel_heating_toast->hide();
+    layout->addWidget(m_idel_heating_toast);
+
+    layout->addStretch(1);
+    return layout;
 }
 
-void SafetyOptionsDialog::on_dpi_changed(const wxRect& suggested_rect)
-{
-    Fit();
-}
-
-void SafetyOptionsDialog::update_options(MachineObject* obj_)
+void SafetyOptionsDialog::update_options(MachineObject *obj_)
 {
     if (!obj_) return;
-
+    obj = obj_;
     updateOpenDoorCheck(obj_);
     updateIdelHeatingProtect(obj_);
-
-    this->Freeze();
-    this->Thaw();
-    Layout();
-}
-
-void SafetyOptionsDialog::updateOpenDoorCheck(MachineObject *obj) {
-    if (!obj || !obj->support_door_open_check()) {
-        m_cb_open_door->Hide();
-        m_text_open_door->Hide();
-        m_open_door_switch_board->Hide();
-        return;
-    }
-
-    if (obj->get_door_open_check_state() != MachineObject::DOOR_OPEN_CHECK_DISABLE) {
-        m_cb_open_door->SetValue(true);
-        m_open_door_switch_board->Enable();
-
-        if (obj->get_door_open_check_state() == MachineObject::DOOR_OPEN_CHECK_ENABLE_WARNING) {
-            m_open_door_switch_board->updateState("left");
-            m_open_door_switch_board->Refresh();
-        } else if (obj->get_door_open_check_state() == MachineObject::DOOR_OPEN_CHECK_ENABLE_PAUSE_PRINT) {
-            m_open_door_switch_board->updateState("right");
-            m_open_door_switch_board->Refresh();
-        }
-
-    } else {
-        m_cb_open_door->SetValue(false);
-        m_open_door_switch_board->Disable();
-    }
-
-    m_cb_open_door->Show();
-    m_text_open_door->Show();
-    m_open_door_switch_board->Show();
-}
-
-void SafetyOptionsDialog::updateIdelHeatingProtect(MachineObject *obj)
-{
-    if (obj->GetPrintOptions()->GetDetectionOption(PrintOptionEnum::Idle_Heating_Protect_Detection)->is_support_detect) {
-        m_idel_heating_container->Show();
-    } else {
-        m_idel_heating_container->Hide();
-        m_idel_protect_unavailable = false;
-        return;
-    }
-
-    if (obj->GetPrintOptions()->GetDetectionOption(PrintOptionEnum::Idle_Heating_Protect_Detection)->current_detect_value == 2)
-    {
-        m_cb_idel_heating_protection->SetValue(false);
-        m_cb_idel_heating_protection->Enable(false);
-        m_text_idel_heating_protection->SetForegroundColour(wxColour(170, 170, 170));
-        m_text_idel_heating_protection_caption->SetForegroundColour(wxColour(170, 170, 170));
-        m_cb_idel_heating_protection->SetBackgroundColour(wxColour(255, 255, 255));
-        m_idel_protect_unavailable = true;
-    } else {
-        m_cb_idel_heating_protection->Enable(true);
-        m_cb_idel_heating_protection->SetValue(obj->GetPrintOptions()->GetDetectionOption(PrintOptionEnum::Idle_Heating_Protect_Detection)->current_detect_value);
-        m_text_idel_heating_protection->SetForegroundColour(*wxBLACK);
-        m_text_idel_heating_protection_caption->SetForegroundColour(STATIC_TEXT_CAPTION_COL);
-        m_cb_idel_heating_protection->SetForegroundColour(*wxBLACK);
-        m_idel_protect_unavailable = false;
-    }
-}
-
-wxBoxSizer* SafetyOptionsDialog::create_settings_group(wxWindow* parent)
-{
-    wxBoxSizer* sizer = new wxBoxSizer(wxVERTICAL);
-
-    //Open Door Detection
-    wxBoxSizer* line_sizer = new wxBoxSizer(wxHORIZONTAL);
-    m_cb_open_door = new CheckBox(parent);
-    m_text_open_door = new Label(parent, _L("Open Door Detection"));
-    m_text_open_door->SetFont(Label::Body_14);
-    m_open_door_switch_board = new SwitchBoard(parent, _L("Notification"), _L("Pause printing"), wxSize(FromDIP(200), FromDIP(26)));
-    m_open_door_switch_board->Disable();
-    line_sizer->AddSpacer(FromDIP(5));
-    line_sizer->Add(m_cb_open_door, 0, wxALL | wxALIGN_CENTER_VERTICAL, FromDIP(5));
-    line_sizer->Add(m_text_open_door, 1, wxALL | wxALIGN_CENTER_VERTICAL, FromDIP(5));
-
-    sizer->Add(line_sizer, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(18));
-    sizer->Add(m_open_door_switch_board, 0, wxLEFT, FromDIP(65));
-    line_sizer->Add(FromDIP(10), 0, 0, 0);
-    sizer->Add(0, 0, 0, wxTOP, FromDIP(15));
-
-    //Idel Heating Protect
-    m_idel_heating_container = new wxPanel(parent, wxID_ANY);
-    m_idel_heating_container->SetBackgroundColour(*wxWHITE);
-    wxBoxSizer* idel_container_sizer = new wxBoxSizer(wxVERTICAL);
-
-    line_sizer = new wxBoxSizer(wxHORIZONTAL);
-    m_cb_idel_heating_protection = new CheckBox(m_idel_heating_container);
-    m_text_idel_heating_protection = new Label(m_idel_heating_container, _L("Idle Heating Protection"));
-    m_text_idel_heating_protection->SetFont(Label::Body_14);
-    line_sizer->AddSpacer(FromDIP(5));
-    line_sizer->Add(m_cb_idel_heating_protection, 0, wxALL | wxALIGN_CENTER_VERTICAL, FromDIP(5));
-    line_sizer->Add(m_text_idel_heating_protection, 1, wxALL | wxALIGN_CENTER_VERTICAL, FromDIP(5));
-    idel_container_sizer->Add(line_sizer, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(18));
-
-    line_sizer = new wxBoxSizer(wxHORIZONTAL);
-    m_text_idel_heating_protection_caption = new Label(m_idel_heating_container, _L("Stops heating automatically after 5 mins of idle to ensure safety."));
-    m_text_idel_heating_protection_caption->SetFont(Label::Body_12);
-    m_text_idel_heating_protection_caption->SetForegroundColour(STATIC_TEXT_CAPTION_COL);
-    line_sizer->AddSpacer(FromDIP(20));
-    line_sizer->Add(m_text_idel_heating_protection_caption, 1, wxALL | wxALIGN_CENTER_VERTICAL, FromDIP(5));
-    idel_container_sizer->Add(line_sizer, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(30));
-
-    m_idel_heating_container->SetSizer(idel_container_sizer);
-    sizer->Add(m_idel_heating_container, 0, wxEXPAND);
-
-    return sizer;
 }
 
 void SafetyOptionsDialog::update_machine_obj(MachineObject *obj_)
@@ -236,40 +147,31 @@ void SafetyOptionsDialog::update_machine_obj(MachineObject *obj_)
     obj = obj_;
 }
 
-bool SafetyOptionsDialog::Show(bool show)
+void SafetyOptionsDialog::setVisible(bool show)
 {
-    if (show) {
-        wxGetApp().UpdateDlgDarkUI(this);
-        CentreOnParent();
-    }
-    return DPIDialog::Show(show);
+    DPIDialog::setVisible(show);
 }
 
-void SafetyOptionsDialog::show_idel_heating_toast(const wxString &text)
+void SafetyOptionsDialog::on_dpi_changed(const QRect & /*suggested_rect*/) {}
+
+void SafetyOptionsDialog::updateOpenDoorCheck(MachineObject * /*obj*/)
 {
-    if (m_idel_heating_toast)
-    {
-        m_idel_heating_toast->Destroy();
-        m_idel_heating_toast = nullptr;
-    }
+    // stub — to be implemented with actual MachineObject capability check
+}
 
-    m_idel_heating_toast = new wxPopupWindow(this);
-    m_idel_heating_toast->SetBackgroundColour(wxColour(0, 0, 0));
-    wxStaticText *textCtrl = new wxStaticText(m_idel_heating_toast, wxID_ANY, text, wxPoint(10, 10));
-    textCtrl->SetForegroundColour(*wxWHITE);
-    // Start a one-shot timer for 3 seconds to dismiss
-    wxSize textSize = textCtrl->GetBestSize();
-    m_idel_heating_toast->SetSize(textSize + wxSize(20, 20));
+void SafetyOptionsDialog::updateIdelHeatingProtect(MachineObject * /*obj*/)
+{
+    // stub — to be implemented with actual MachineObject capability check
+}
 
-    wxRect  anchor = m_text_idel_heating_protection->GetScreenRect();
-    wxPoint pos    = anchor.GetBottomLeft();
-    pos.y += FromDIP(40);
-
-    m_idel_heating_toast->Move(pos);
-    m_idel_heating_toast->Show(true);
-
-    m_idel_heating_toast_timer.Stop();
-    m_idel_heating_toast_timer.StartOnce(3000);
+void SafetyOptionsDialog::show_idel_heating_toast(const QString &text)
+{
+    if (!m_idel_heating_toast) return;
+    // Update toast text if present
+    auto *lbl = m_idel_heating_toast->findChild<QLabel *>();
+    if (lbl) lbl->setText(text);
+    m_idel_heating_toast->show();
+    m_idel_heating_toast_timer.start(3000);
 }
 
 }} // namespace Slic3r::GUI

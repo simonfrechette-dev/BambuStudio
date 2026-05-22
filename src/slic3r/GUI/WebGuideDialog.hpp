@@ -1,31 +1,15 @@
 #ifndef slic3r_WebGuideDialog_hpp_
 #define slic3r_WebGuideDialog_hpp_
+#include <QWidget>
+#include <QString>
 
-#include "wx/artprov.h"
-#include "wx/cmdline.h"
-#include "wx/notifmsg.h"
-#include "wx/settings.h"
-#include "wx/webview.h"
 #include <atomic>
 
 #if wxUSE_WEBVIEW_IE
-#include "wx/msw/webview_ie.h"
 #endif
 #if wxUSE_WEBVIEW_EDGE
-#include "wx/msw/webview_edge.h"
 #endif
 
-#include "wx/webviewarchivehandler.h"
-#include "wx/webviewfshandler.h"
-#include "wx/numdlg.h"
-#include "wx/infobar.h"
-#include "wx/filesys.h"
-#include "wx/fs_arc.h"
-#include "wx/fs_mem.h"
-#include "wx/stdpaths.h"
-#include <wx/frame.h>
-#include <wx/tbarbase.h>
-#include "wx/textctrl.h"
 
 #include "GUI_App.hpp"
 #include "libslic3r/PresetBundle.hpp"
@@ -38,7 +22,7 @@ namespace Slic3r { namespace GUI {
 class GuideFrame : public DPIDialog
 {
 public:
-    GuideFrame(GUI_App *pGUI, long style = wxCAPTION | wxCLOSE_BOX | wxSYSTEM_MENU);
+    GuideFrame(GUI_App *pGUI, long style = 0);
     virtual ~GuideFrame();
 
     enum GuidePage {
@@ -51,24 +35,24 @@ public:
     }m_page;
 
     //Web Function
-    void load_url(wxString &url);
-    wxString SetStartPage(GuidePage startpage=BBL_WELCOME, bool load = true);
+    void load_url(QString &url);
+    QString SetStartPage(GuidePage startpage=BBL_WELCOME, bool load = true);
 
     void UpdateState();
-    void OnIdle(wxIdleEvent &evt);
-    // void OnClose(wxCloseEvent &evt);
+    void OnIdle(QEvent &evt);
+    // void OnClose(QCloseEvent &evt);
 
-    void OnNavigationRequest(wxWebViewEvent &evt);
-    void OnNavigationComplete(wxWebViewEvent &evt);
-    void OnDocumentLoaded(wxWebViewEvent &evt);
-    void OnNewWindow(wxWebViewEvent &evt);
-    void OnError(wxWebViewEvent &evt);
-    void OnTitleChanged(wxWebViewEvent &evt);
-    void OnFullScreenChanged(wxWebViewEvent &evt);
-    void OnScriptMessage(wxWebViewEvent &evt);
+    void OnNavigationRequest(QEvent &evt);
+    void OnNavigationComplete(QEvent &evt);
+    void OnDocumentLoaded(QEvent &evt);
+    void OnNewWindow(QEvent &evt);
+    void OnError(QEvent &evt);
+    void OnTitleChanged(QEvent &evt);
+    void OnFullScreenChanged(QEvent &evt);
+    void OnScriptMessage(QEvent &evt);
 
-    void OnScriptResponseMessage(wxCommandEvent &evt);
-    void RunScript(const wxString &javascript);
+    void OnScriptResponseMessage(QEvent &evt);
+    void RunScript(const QString &javascript);
 
     //Logic
     bool IsFirstUse();
@@ -85,7 +69,7 @@ public:
     bool run(bool& config_applied);
 
     void        StrReplace(std::string &strBase, std::string strSrc, std::string strDes);
-    std::string w2s(wxString sSrc);
+    std::string w2s(QString sSrc);
     void        GetStardardFilePath(std::string &FilePath);
     //bool LoadFile(std::string jPath, std::string & sContent);
 
@@ -94,16 +78,16 @@ public:
     int InstallPlugin();
     int ShowPluginStatus(int status, int percent, bool &cancel);
 
-    void on_dpi_changed(const wxRect &suggested_rect) {}
+    void on_dpi_changed(const QRect &suggested_rect) {}
 
 private:
     GUI_App *m_MainPtr;
     AppConfig m_appconfig_new;
 
-    wxWebView *m_browser;
-    wxButton * m_TestBtn;
+    QWidget *m_browser;
+    QPushButton * m_TestBtn;
 
-    wxString m_SectionName;
+    QString m_SectionName;
 
     bool bbl_bundle_rsrc;
     boost::filesystem::path vendor_dir;
@@ -123,15 +107,15 @@ private:
     bool network_plugin_ready {false};
 
 #if wxUSE_WEBVIEW_IE
-    wxMenuItem *m_script_object_el;
-    wxMenuItem *m_script_date_el;
-    wxMenuItem *m_script_array_el;
+    QAction *m_script_object_el;
+    QAction *m_script_date_el;
+    QAction *m_script_array_el;
 #endif
     // Last executed JavaScript snippet, for convenience.
-    wxString m_javascript;
-    wxString m_response_js;
+    QString m_javascript;
+    QString m_response_js;
 
-    wxString m_bbl_user_agent;
+    QString m_bbl_user_agent;
     std::string m_editing_filament_id;
 };
 

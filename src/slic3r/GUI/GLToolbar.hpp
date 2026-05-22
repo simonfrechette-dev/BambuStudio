@@ -8,9 +8,11 @@
 
 #include "GLTexture.hpp"
 #include "Event.hpp"
+#include <QFont>
+#include <QMouseEvent>
+#include <QEvent>
 #include "libslic3r/Point.hpp"
 
-class wxEvtHandler;
 
 namespace Slic3r {
 namespace GUI {
@@ -19,46 +21,46 @@ class GLCanvas3D;
 struct Camera;
 
 //BBS: GUI refactor: GLToolbar
-wxDECLARE_EVENT(EVT_GLTOOLBAR_OPEN_PROJECT, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLTOOLBAR_SLICE_ALL, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLTOOLBAR_SLICE_PLATE, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLTOOLBAR_PRINT_ALL, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLTOOLBAR_PRINT_PLATE, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLTOOLBAR_EXPORT_GCODE, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLTOOLBAR_SEND_GCODE, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLTOOLBAR_UPLOAD_GCODE, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLTOOLBAR_EXPORT_SLICED_FILE, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLTOOLBAR_EXPORT_ALL_SLICED_FILE, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLTOOLBAR_PRINT_SELECT, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLTOOLBAR_SEND_TO_PRINTER, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLTOOLBAR_SEND_TO_PRINTER_ALL, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLTOOLBAR_PRINT_MULTI_MACHINE, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLTOOLBAR_SEND_MULTI_APP, SimpleEvent);
+inline const QEvent::Type EVT_GLTOOLBAR_OPEN_PROJECT = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLTOOLBAR_SLICE_ALL = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLTOOLBAR_SLICE_PLATE = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLTOOLBAR_PRINT_ALL = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLTOOLBAR_PRINT_PLATE = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLTOOLBAR_EXPORT_GCODE = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLTOOLBAR_SEND_GCODE = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLTOOLBAR_UPLOAD_GCODE = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLTOOLBAR_EXPORT_SLICED_FILE = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLTOOLBAR_EXPORT_ALL_SLICED_FILE = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLTOOLBAR_PRINT_SELECT = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLTOOLBAR_SEND_TO_PRINTER = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLTOOLBAR_SEND_TO_PRINTER_ALL = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLTOOLBAR_PRINT_MULTI_MACHINE = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLTOOLBAR_SEND_MULTI_APP = static_cast<QEvent::Type>(QEvent::registerEventType());
 
 
-wxDECLARE_EVENT(EVT_GLTOOLBAR_ADD, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLTOOLBAR_DELETE, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLTOOLBAR_DELETE_ALL, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLTOOLBAR_ADD_PLATE, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLTOOLBAR_DEL_PLATE, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLTOOLBAR_ORIENT, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLTOOLBAR_ARRANGE, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLTOOLBAR_CUT, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLTOOLBAR_COPY, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLTOOLBAR_PASTE, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLTOOLBAR_LAYERSEDITING, SimpleEvent);
+inline const QEvent::Type EVT_GLTOOLBAR_ADD = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLTOOLBAR_DELETE = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLTOOLBAR_DELETE_ALL = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLTOOLBAR_ADD_PLATE = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLTOOLBAR_DEL_PLATE = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLTOOLBAR_ORIENT = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLTOOLBAR_ARRANGE = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLTOOLBAR_CUT = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLTOOLBAR_COPY = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLTOOLBAR_PASTE = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLTOOLBAR_LAYERSEDITING = static_cast<QEvent::Type>(QEvent::registerEventType());
 //BBS: add clone event
-wxDECLARE_EVENT(EVT_GLTOOLBAR_CLONE, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLTOOLBAR_MORE, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLTOOLBAR_FEWER, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLTOOLBAR_SPLIT_OBJECTS, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLTOOLBAR_SPLIT_VOLUMES, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLTOOLBAR_FILLCOLOR, IntEvent);
-wxDECLARE_EVENT(EVT_GLTOOLBAR_SELECT_SLICED_PLATE, wxCommandEvent);
+inline const QEvent::Type EVT_GLTOOLBAR_CLONE = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLTOOLBAR_MORE = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLTOOLBAR_FEWER = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLTOOLBAR_SPLIT_OBJECTS = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLTOOLBAR_SPLIT_VOLUMES = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLTOOLBAR_FILLCOLOR = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLTOOLBAR_SELECT_SLICED_PLATE = static_cast<QEvent::Type>(QEvent::registerEventType());
 
-wxDECLARE_EVENT(EVT_GLVIEWTOOLBAR_3D, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLVIEWTOOLBAR_PREVIEW, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLVIEWTOOLBAR_ASSEMBLE, SimpleEvent);
+inline const QEvent::Type EVT_GLVIEWTOOLBAR_3D = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLVIEWTOOLBAR_PREVIEW = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_GLVIEWTOOLBAR_ASSEMBLE = static_cast<QEvent::Type>(QEvent::registerEventType());
 
 
 class GLToolbarItem
@@ -253,7 +255,7 @@ public:
     float get_extra_size_ratio() const { return m_data.extra_size_ratio; }
     void set_extra_size_ratio(const float ratio) { m_data.extra_size_ratio = ratio; }
     void render_text() const;
-    int generate_texture(wxFont& font);
+    int generate_texture(QFont& font);
     int generate_image_texture();
 
     void render(unsigned int tex_id, unsigned int tex_width, unsigned int tex_height, unsigned int icon_size, float toolbar_height, bool b_flip_v = false) const;
@@ -448,10 +450,10 @@ public:
 
     void render_arrow(const std::weak_ptr<GLToolbarItem>& highlighted_item);
 
-    bool on_mouse(wxMouseEvent& evt, GLCanvas3D& parent);
+    bool on_mouse(QMouseEvent& evt, GLCanvas3D& parent);
 
     //BBS: GUI refactor: GLToolbar
-    int generate_button_text_textures(wxFont& font);
+    int generate_button_text_textures(QFont& font);
     int generate_image_textures();
     float get_scaled_icon_size();
 

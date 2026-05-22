@@ -6,10 +6,11 @@
 //**********************************************************/
 
 #pragma once
+#include <QWidget>
+#include <QString>
 
 #include "slic3r/GUI/DeviceCore/DevNozzleSystem.h"
 
-#include <wx/panel.h>
 
 #include <memory>
 
@@ -26,14 +27,12 @@ namespace GUI
 }
 };
 
-wxDECLARE_EVENT(EVT_NOZZLE_SELECT_CHANGED, wxCommandEvent);
-wxDECLARE_EVENT(EVT_NOZZLE_SELECT_CLICKED, wxCommandEvent);
 namespace Slic3r::GUI
 {
-class wgtDeviceNozzleRackSelect : public wxPanel
+class wgtDeviceNozzleRackSelect : public QWidget
 {
 public:
-    wgtDeviceNozzleRackSelect(wxWindow* parent);
+    wgtDeviceNozzleRackSelect(QWidget* parent);
     ~wgtDeviceNozzleRackSelect() = default;
 
 public:
@@ -50,7 +49,7 @@ private:
 
     void UpdateNozzleInfos(std::shared_ptr<DevNozzleRack> rack);
 
-    void OnNozzleItemSelected(wxCommandEvent& evt);
+    void OnNozzleItemSelected(QEvent& evt);
 
 private:
     DevNozzle                    m_selected_nozzle;

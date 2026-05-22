@@ -13,7 +13,7 @@
 #include "slic3r/GUI/wxExtensions.hpp"
 
 //Previous defintions
-class wxGrid;
+class QTableWidget;
 
 namespace Slic3r { namespace GUI {
 
@@ -31,10 +31,10 @@ struct uiAmsHumidityInfo
 /// Note: The popup of DevAms Humidity with percentage and dry time
 /// Author: xin.zhang
 /// </summary>
-class uiAmsPercentHumidityDryPopup : public wxDialog
+class uiAmsPercentHumidityDryPopup : public QDialog
 {
 public:
-    uiAmsPercentHumidityDryPopup(wxWindow *parent);
+    uiAmsPercentHumidityDryPopup(QWidget *parent);
     ~uiAmsPercentHumidityDryPopup() = default;
 
 public:
@@ -64,9 +64,9 @@ private:
     ScalableBitmap idle_img;
 
     // Widgets
-    wxStaticBitmap* m_humidity_img;
+    QLabel* m_humidity_img;
 
-    wxStaticBitmap* m_dry_state_img;
+    QLabel* m_dry_state_img;
     Label*          m_dry_state;
     
     Label* m_humidity_header;
@@ -78,7 +78,7 @@ private:
     Label* left_dry_time_header;
     Label* left_dry_time_label;
 
-    wxSizer*       m_sizer;
+    QLayout*       m_sizer;
 };
 
 }} // namespace Slic3r::GUI

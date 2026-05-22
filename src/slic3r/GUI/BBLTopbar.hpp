@@ -1,51 +1,53 @@
 #pragma once
 
-#include "wx/wxprec.h"
-#include "wx/aui/auibar.h"
+#include <QToolBar>
+#include <QAction>
+#include <QMenu>
+#include <QPixmap>
+#include <QRect>
+#include <QPoint>
+#include <QString>
+#include <QMainWindow>
+#include <QToolButton>
+#include <QLabel>
+#include <QMouseEvent>
+#include <QIcon>
 
-#include "SelectMachine.hpp"
 #include "DeviceManager.hpp"
 
+#include <string>
 
-using namespace Slic3r::GUI;
-
-class BBLTopbar : public wxAuiToolBar
+class BBLTopbar : public QToolBar
 {
+    Q_OBJECT
 public:
-    BBLTopbar(wxWindow* pwin, wxFrame* parent);
-    BBLTopbar(wxFrame* parent);
-    void Init(wxFrame *parent);
+    BBLTopbar(QWidget* pwin, QMainWindow* parent);
+    BBLTopbar(QMainWindow* parent);
+    void Init(QMainWindow *parent);
     ~BBLTopbar();
     void UpdateToolbarWidth(int width);
     void Rescale();
-    void OnIconize(wxAuiToolBarEvent& event);
-    void OnFullScreen(wxAuiToolBarEvent& event);
-    void OnCloseFrame(wxAuiToolBarEvent& event);
-    void OnFileToolItem(wxAuiToolBarEvent& evt);
-    void OnDropdownToolItem(wxAuiToolBarEvent& evt);
-    void OnCalibToolItem(wxAuiToolBarEvent &evt);
-    void OnMouseLeftDClock(wxMouseEvent& mouse);
-    void OnMouseLeftDown(wxMouseEvent& event);
-    void OnMouseLeftUp(wxMouseEvent& event);
-    void OnMouseMotion(wxMouseEvent& event);
-    void OnMouseCaptureLost(wxMouseCaptureLostEvent& event);
-    void OnMenuClose(wxMenuEvent& event);
-    void OnOpenProject(wxAuiToolBarEvent& event);
+    void OnIconize();
+    void OnFullScreen();
+    void OnCloseFrame();
+    void OnFileToolItem();
+    void OnDropdownToolItem();
+    void OnCalibToolItem();
+    void OnMenuClose();
+    void OnOpenProject();
     void show_publish_button(bool show);
-    void OnSaveProject(wxAuiToolBarEvent& event);
-    void OnUndo(wxAuiToolBarEvent& event);
-    void OnRedo(wxAuiToolBarEvent& event);
-    void OnModelStoreClicked(wxAuiToolBarEvent& event);
-    void OnPublishClicked(wxAuiToolBarEvent &event);
+    void OnSaveProject();
+    void OnUndo();
+    void OnRedo();
+    void OnModelStoreClicked();
+    void OnPublishClicked();
 
-    wxAuiToolBarItem* FindToolByCurrentPosition();
-
-    void SetFileMenu(wxMenu* file_menu);
-    void AddDropDownSubMenu(wxMenu* sub_menu, const wxString& title);
-    void AddDropDownMenuItem(wxMenuItem* menu_item);
-    wxMenu *GetTopMenu();
-    wxMenu *GetCalibMenu();
-    void SetTitle(wxString title);
+    void SetFileMenu(QMenu* file_menu);
+    void AddDropDownSubMenu(QMenu* sub_menu, const QString& title);
+    void AddDropDownMenuItem(QAction* menu_item);
+    QMenu *GetTopMenu();
+    QMenu *GetCalibMenu();
+    void SetTitle(QString title);
     void SetMaximizedSize();
     void SetWindowSize();
 
@@ -58,35 +60,58 @@ public:
     void SaveNormalRect();
 
     void ShowCalibrationButton(bool show = true);
+    void ShowSettingsButton(bool show = true);
+
+    // Called by MainFrame to let topbar know current param-panel visibility
+    // so the toggle button can reflect correct checked state.
+    void SetSettingsPanelVisible(bool visible);
+
+protected:
+    void mousePressEvent(QMouseEvent* event) override;
+    void mouseDoubleClickEvent(QMouseEvent* event) override;
 
 private:
-    wxFrame* m_frame;
-    wxAuiToolBarItem* m_file_menu_item;
-    wxAuiToolBarItem* m_dropdown_menu_item;
-    wxRect m_normalRect;
-    wxPoint m_delta;
-    wxMenu m_top_menu;
-    wxMenu* m_file_menu;
-    wxMenu m_calib_menu;
-    wxAuiToolBarItem* m_title_item;
-    wxAuiToolBarItem* m_account_item;
-    wxAuiToolBarItem* m_model_store_item;
+    // Toggle settings (parameters) sidebar
+    void OnToggleSettings();
 
-    wxAuiToolBarItem *m_publish_item;
-    wxAuiToolBarItem *m_save_item;
-    wxAuiToolBarItem* m_undo_item;
-    wxAuiToolBarItem* m_redo_item;
-    wxAuiToolBarItem* m_calib_item;
-    wxAuiToolBarItem* maximize_btn;
+    // Load an SVG from resources/images/<name>.svg and return a QIcon.
+    static QIcon loadSvgIcon(const std::string& name, int size = 18);
 
-    wxBitmap m_publish_bitmap;
-    wxBitmap m_publish_disable_bitmap;
+private:
+    QMainWindow* m_frame{nullptr};
+    QAction* m_file_menu_item{nullptr};
+    QAction* m_dropdown_menu_item{nullptr};
+    QRect m_normalRect;
+    QMenu m_top_menu;
+    QMenu* m_file_menu{nullptr};
+    QMenu m_calib_menu;
+    QLabel* m_title_label{nullptr};    // centred QLabel widget in toolbar
+    QAction* m_title_item{nullptr};    // kept for API compatibility (SetTitle)
+    QAction* m_account_item{nullptr};
+    QAction* m_model_store_item{nullptr};
 
-    wxBitmap maximize_bitmap;
-    wxBitmap window_bitmap;
+    QAction* m_publish_item{nullptr};
+    QAction* m_save_item{nullptr};
+    QAction* m_undo_item{nullptr};
+    QAction* m_redo_item{nullptr};
+    QAction* m_calib_item{nullptr};
+    QAction* m_settings_item{nullptr};  // Toggle settings sidebar
 
-    int m_toolbar_h;
-    bool m_skip_popup_file_menu;
-    bool m_skip_popup_dropdown_menu;
-    bool m_skip_popup_calib_menu;
+    // Window control buttons (right end of topbar)
+    QToolButton* m_btn_minimize{nullptr};
+    QToolButton* m_btn_maximize{nullptr};
+    QToolButton* m_btn_close{nullptr};
+
+    QPixmap m_publish_bitmap;
+    QPixmap m_publish_disable_bitmap;
+
+    QPixmap maximize_bitmap;
+    QPixmap window_bitmap;
+    // kept for SetMaximizedSize / SetWindowSize
+    QAction* maximize_btn{nullptr};
+
+    int m_toolbar_h{0};
+    bool m_skip_popup_file_menu{false};
+    bool m_skip_popup_dropdown_menu{false};
+    bool m_skip_popup_calib_menu{false};
 };

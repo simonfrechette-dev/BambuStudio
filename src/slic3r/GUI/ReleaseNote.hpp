@@ -1,32 +1,15 @@
 #ifndef slic3r_GUI_ReleaseNote_hpp_
 #define slic3r_GUI_ReleaseNote_hpp_
+#include <QWidget>
+#include <QLabel>
+#include <QString>
+#include <QDialog>
+#include <QCheckBox>
+#include <QNetworkRequest>
+#include <QTextBrowser>
 
 #include <limits>
 
-#include <wx/wx.h>
-#include <wx/intl.h>
-#include <wx/collpane.h>
-#include <wx/dataview.h>
-#include <wx/artprov.h>
-#include <wx/xrc/xmlres.h>
-#include <wx/dataview.h>
-#include <wx/gdicmn.h>
-#include <wx/font.h>
-#include <wx/colour.h>
-#include <wx/settings.h>
-#include <wx/string.h>
-#include <wx/sizer.h>
-#include <wx/stattext.h>
-#include <wx/hyperlink.h>
-#include <wx/button.h>
-#include <wx/dialog.h>
-#include <wx/popupwin.h>
-#include <wx/spinctrl.h>
-#include <wx/artprov.h>
-#include <wx/wrapsizer.h>
-#include <wx/event.h>
-#include <wx/hyperlink.h>
-#include <wx/richtext/richtextctrl.h>
 
 #include "AmsMappingPopup.hpp"
 #include "GUI_Utils.hpp"
@@ -37,20 +20,10 @@
 #include "Widgets/CheckBox.hpp"
 #include "Widgets/ComboBox.hpp"
 #include "Widgets/ScrolledWindow.hpp"
-#include <wx/hashmap.h>
-#include <wx/webview.h>
 
 
 namespace Slic3r { namespace GUI {
 
-wxDECLARE_EVENT(EVT_SECONDARY_CHECK_CONFIRM, wxCommandEvent);
-wxDECLARE_EVENT(EVT_SECONDARY_CHECK_CANCEL, wxCommandEvent);
-wxDECLARE_EVENT(EVT_SECONDARY_CHECK_RETRY, wxCommandEvent);
-wxDECLARE_EVENT(EVT_SECONDARY_CHECK_DONE, wxCommandEvent);
-wxDECLARE_EVENT(EVT_SECONDARY_CHECK_RESUME, wxCommandEvent);
-wxDECLARE_EVENT(EVT_UPDATE_NOZZLE, wxCommandEvent);
-wxDECLARE_EVENT(EVT_UPDATE_TEXT_MSG, wxCommandEvent);
-wxDECLARE_EVENT(EVT_ERROR_DIALOG_BTN_CLICKED, wxCommandEvent);
 
 class ReleaseNoteDialog : public DPIDialog
 {
@@ -58,52 +31,52 @@ public:
     ReleaseNoteDialog(Plater *plater = nullptr);
     ~ReleaseNoteDialog();
 
-    void on_dpi_changed(const wxRect &suggested_rect) override;
-    void update_release_note(wxString release_note, std::string version);
+    void on_dpi_changed(const QRect &suggested_rect) override;
+    void update_release_note(QString release_note, std::string version);
 
     Label *    m_text_up_info{nullptr};
-    wxScrolledWindow *m_vebview_release_note {nullptr};
+    QScrollArea *m_vebview_release_note {nullptr};
 };
 
 class UpdatePluginDialog : public DPIDialog
 {
 public:
-    UpdatePluginDialog(wxWindow* parent = nullptr);
+    UpdatePluginDialog(QWidget* parent = nullptr);
     ~UpdatePluginDialog();
 
-    void on_dpi_changed(const wxRect& suggested_rect) override;
+    void on_dpi_changed(const QRect& suggested_rect) override;
     void update_info(std::string json_path);
 
     Label* m_text_up_info{ nullptr };
     Label* operation_tips{ nullptr };
-    wxScrolledWindow* m_vebview_release_note{ nullptr };
+    QScrollArea* m_vebview_release_note{ nullptr };
 };
 
 class UpdateVersionDialog : public DPIDialog
 {
 public:
-    UpdateVersionDialog(wxWindow *parent = nullptr);
+    UpdateVersionDialog(QWidget *parent = nullptr);
     ~UpdateVersionDialog();
 
-    wxWebView* CreateTipView(wxWindow* parent);
-    void OnLoaded(wxWebViewEvent& event);
-    void OnTitleChanged(wxWebViewEvent& event);
-    void OnError(wxWebViewEvent& event);
+    QWidget* CreateTipView(QWidget* parent);
+    void OnLoaded(QEvent& event);
+    void OnTitleChanged(QEvent& event);
+    void OnError(QEvent& event);
     bool ShowReleaseNote(std::string content);
     void RunScript(std::string script);
-    void on_dpi_changed(const wxRect& suggested_rect) override;
-    void update_version_info(wxString release_note, wxString version);
+    void on_dpi_changed(const QRect& suggested_rect) override;
+    void update_version_info(QString release_note, QString version);
     std::vector<std::string> splitWithStl(std::string str, std::string pattern);
 
-    wxStaticBitmap*   m_brand{nullptr};
+    QLabel*   m_brand{nullptr};
     Label *           m_text_up_info{nullptr};
-    wxWebView*        m_vebview_release_note{nullptr};
-    wxSimplebook*     m_simplebook_release_note{nullptr};
-    wxScrolledWindow* m_scrollwindows_release_note{nullptr};
-    wxBoxSizer *      sizer_text_release_note{nullptr};
+    QWidget*        m_vebview_release_note{nullptr};
+    QStackedWidget*     m_simplebook_release_note{nullptr};
+    QScrollArea* m_scrollwindows_release_note{nullptr};
+    QBoxLayout *      sizer_text_release_note{nullptr};
     Label *           m_staticText_release_note{nullptr};
-    wxStaticBitmap*   m_bitmap_open_in_browser;
-    wxHyperlinkCtrl*  m_link_open_in_browser;
+    QLabel*   m_bitmap_open_in_browser;
+    QLabel*  m_link_open_in_browser;
     Button*           m_button_skip_version;
     Button*           m_button_download;
     Button*           m_button_cancel;
@@ -113,7 +86,7 @@ public:
 class SecondaryCheckDialog : public DPIFrame
 {
 private:
-    wxWindow* event_parent { nullptr };
+    QWidget* event_parent { nullptr };
 public:
     enum ButtonStyle {
         ONLY_CONFIRM        = 0,
@@ -125,38 +98,38 @@ public:
         MAX_STYLE_NUM       = 6
     };
     SecondaryCheckDialog(
-        wxWindow* parent,
-        wxWindowID      id = wxID_ANY,
-        const wxString& title = wxEmptyString,
+        QWidget* parent,
+        int      id = -1,
+        const QString& title = QString(),
         enum ButtonStyle btn_style = CONFIRM_AND_CANCEL,
-        const wxPoint& pos = wxDefaultPosition,
-        const wxSize& size = wxDefaultSize,
-        long            style = wxCLOSE_BOX | wxCAPTION,
+        const QPoint& pos = QPoint(),
+        const QSize& size = QSize(),
+        long            style = 0 | 0,
         bool not_show_again_check = false
     );
-    void update_text(wxString text);
+    void update_text(QString text);
     void on_show();
     void on_hide();
-    void update_btn_label(wxString ok_btn_text, wxString cancel_btn_text);
-    void update_title_style(wxString title, SecondaryCheckDialog::ButtonStyle style, wxWindow* parent = nullptr);
-    void post_event(wxCommandEvent&& event);
+    void update_btn_label(QString ok_btn_text, QString cancel_btn_text);
+    void update_title_style(QString title, SecondaryCheckDialog::ButtonStyle style, QWidget* parent = nullptr);
+    void post_event(QEvent&& event);
     void rescale();
     ~SecondaryCheckDialog();
-    void on_dpi_changed(const wxRect& suggested_rect);
+    void on_dpi_changed(const QRect& suggested_rect);
     void msw_rescale();
 
 
     StateColor btn_bg_green;
     StateColor btn_bg_white;
     Label* m_staticText_release_note {nullptr};
-    wxBoxSizer* m_sizer_main;
-    wxScrolledWindow *m_vebview_release_note {nullptr};
+    QBoxLayout* m_sizer_main;
+    QScrollArea *m_vebview_release_note {nullptr};
     Button* m_button_ok { nullptr };
     Button* m_button_retry { nullptr };
     Button* m_button_cancel { nullptr };
     Button* m_button_fn { nullptr };
     Button* m_button_resume { nullptr };
-    wxCheckBox* m_show_again_checkbox;
+    QCheckBox* m_show_again_checkbox;
     ButtonStyle m_button_style;
     bool not_show_again = false;
     std::string show_again_config_text = "";
@@ -165,7 +138,7 @@ public:
 class PrintErrorDialog : public DPIFrame
 {
 private:
-    wxWindow* event_parent{ nullptr };
+    QWidget* event_parent{ nullptr };
 public:
     enum PrintErrorButton : int {
         RESUME_PRINTING = 2,
@@ -195,35 +168,35 @@ public:
         ERROR_BUTTON_COUNT
     };
     PrintErrorDialog(
-        wxWindow* parent,
-        wxWindowID      id = wxID_ANY,
-        const wxString& title = wxEmptyString,
-        const wxPoint& pos = wxDefaultPosition,
-        const wxSize& size = wxDefaultSize,
-        long            style = wxCLOSE_BOX | wxCAPTION
+        QWidget* parent,
+        int      id = -1,
+        const QString& title = QString(),
+        const QPoint& pos = QPoint(),
+        const QSize& size = QSize(),
+        long            style = 0 | 0
     );
-    void update_text_image(const wxString& text, const wxString& error_code,const wxString& image_url);
+    void update_text_image(const QString& text, const QString& error_code,const QString& image_url);
     void on_show();
     void on_hide();
-    void update_title_style(wxString title, std::vector<int> style, wxWindow* parent = nullptr);
-    void post_event(wxCommandEvent& event);
-    void post_event(wxCommandEvent&& event);
+    void update_title_style(QString title, std::vector<int> style, QWidget* parent = nullptr);
+    void post_event(QEvent& event);
+    void post_event(QEvent&& event);
     void rescale();
     ~PrintErrorDialog();
-    void on_dpi_changed(const wxRect& suggested_rect);
+    void on_dpi_changed(const QRect& suggested_rect);
     void msw_rescale();
-    void init_button(PrintErrorButton style, wxString buton_text);
+    void init_button(PrintErrorButton style, QString buton_text);
     void init_button_list();
-    void on_webrequest_state(wxWebRequestEvent& evt);
+    void on_webrequest_state(QEvent& evt);
 
     StateColor btn_bg_white;
-    wxWebRequest web_request;
-    wxStaticBitmap* m_error_prompt_pic_static;
+    QNetworkRequest web_request;
+    QLabel* m_error_prompt_pic_static;
     Label* m_staticText_release_note{ nullptr };
     Label* m_staticText_error_code{ nullptr };
-    wxBoxSizer* m_sizer_main;
-    wxBoxSizer* m_sizer_button;
-    wxScrolledWindow* m_vebview_release_note{ nullptr };
+    QBoxLayout* m_sizer_main;
+    QBoxLayout* m_sizer_button;
+    QScrollArea* m_vebview_release_note{ nullptr };
     std::map<int, Button*> m_button_list;
     std::vector<int> m_used_button;
 };
@@ -236,9 +209,9 @@ public:
         Warning = 1
     };
     InfoLevel level;
-    wxString text;
-    wxString wiki_url;
-    ConfirmBeforeSendInfo(const wxString& txt, const wxString& url = wxEmptyString, InfoLevel lev = Normal) : text(txt), wiki_url(url), level(lev){}
+    QString text;
+    QString wiki_url;
+    ConfirmBeforeSendInfo(const QString& txt, const QString& url = QString(), InfoLevel lev = Normal) : text(txt), wiki_url(url), level(lev){}
 };
 
 class ConfirmBeforeSendDialog : public DPIDialog
@@ -250,39 +223,39 @@ public:
         MAX_STYLE_NUM = 2
     };
     ConfirmBeforeSendDialog(
-        wxWindow* parent,
-        wxWindowID      id = wxID_ANY,
-        const wxString& title = wxEmptyString,
+        QWidget* parent,
+        int      id = -1,
+        const QString& title = QString(),
         enum ButtonStyle btn_style = CONFIRM_AND_CANCEL,
-        const wxPoint& pos = wxDefaultPosition,
-        const wxSize& size = wxDefaultSize,
-        long            style = wxCLOSE_BOX | wxCAPTION,
+        const QPoint& pos = QPoint(),
+        const QSize& size = QSize(),
+        long            style = 0 | 0,
         bool not_show_again_check = false
     );
-    void update_text(wxString text);
+    void update_text(QString text);
     void update_text(std::vector<ConfirmBeforeSendInfo> texts, bool enable_warning_clr = true);
     void on_show();
     void on_hide();
-    void update_btn_label(wxString ok_btn_text, wxString cancel_btn_text);
+    void update_btn_label(QString ok_btn_text, QString cancel_btn_text);
     void rescale();
-    void on_dpi_changed(const wxRect& suggested_rect);
+    void on_dpi_changed(const QRect& suggested_rect);
     void show_update_nozzle_button(bool show = false);
     void hide_button_ok();
-    void edit_cancel_button_txt(const wxString& txt, bool switch_green = false);
+    void edit_cancel_button_txt(const QString& txt, bool switch_green = false);
     void disable_button_ok();
     void enable_button_ok();
-    wxString format_text(wxString str, int warp);
+    QString format_text(QString str, int warp);
 
     ~ConfirmBeforeSendDialog();
 
 protected:
-    wxBoxSizer* m_sizer_main;
-    wxScrolledWindow* m_vebview_release_note{ nullptr };
+    QBoxLayout* m_sizer_main;
+    QScrollArea* m_vebview_release_note{ nullptr };
     Label* m_staticText_release_note{ nullptr };
     Button* m_button_ok;
     Button* m_button_cancel;
     Button* m_button_update_nozzle;
-    wxCheckBox* m_show_again_checkbox;
+    QCheckBox* m_show_again_checkbox;
     bool not_show_again = false;
     std::string show_again_config_text = "";
 };
@@ -290,27 +263,27 @@ protected:
 class InputIpAddressDialog : public DPIDialog
 {
 public:
-    wxString comfirm_before_check_text;
-    wxString comfirm_before_enter_text;
-    wxString comfirm_after_enter_text;
-    wxString comfirm_last_enter_text;
+    QString comfirm_before_check_text;
+    QString comfirm_before_enter_text;
+    QString comfirm_after_enter_text;
+    QString comfirm_last_enter_text;
 
     std::shared_ptr<InputIpAddressDialog> token_;
     boost::thread* m_thread{nullptr};
 
     std::string m_ip;
-    wxWindow* m_step_icon_panel3{ nullptr };
+    QWidget* m_step_icon_panel3{ nullptr };
     Label* m_tip0{ nullptr };
     Label* m_tip1{ nullptr };
     Label* m_tip2{ nullptr };
     Label* m_tip3{ nullptr };
     Label* m_tip4{ nullptr };
-    InputIpAddressDialog(wxWindow* parent = nullptr);
+    InputIpAddressDialog(QWidget* parent = nullptr);
     ~InputIpAddressDialog();
 
     MachineObject* m_obj{nullptr};
-    wxPanel * ip_input_top_panel{ nullptr };
-    wxPanel * ip_input_bot_panel{ nullptr };
+    QWidget * ip_input_top_panel{ nullptr };
+    QWidget * ip_input_bot_panel{ nullptr };
     Button* m_button_ok{ nullptr };
     Label* m_tips_ip{ nullptr };
     Label* m_tips_access_code{ nullptr };
@@ -322,12 +295,12 @@ public:
     TextInput* m_input_access_code{ nullptr };
     TextInput* m_input_sn{ nullptr };
     ComboBox*  m_input_modelID{ nullptr };
-    wxStaticBitmap* m_img_help{ nullptr };
-    wxStaticBitmap* m_img_step1{ nullptr };
-    wxStaticBitmap* m_img_step2{ nullptr };
-    wxStaticBitmap* m_img_step3{ nullptr };
-    wxHyperlinkCtrl* m_trouble_shoot{ nullptr };
-    wxTimer* closeTimer{ nullptr };
+    QLabel* m_img_help{ nullptr };
+    QLabel* m_img_step1{ nullptr };
+    QLabel* m_img_step2{ nullptr };
+    QLabel* m_img_step3{ nullptr };
+    QLabel* m_trouble_shoot{ nullptr };
+    QTimer* closeTimer{ nullptr };
     int     closeCount{3};
     bool   m_show_access_code{ false };
     bool   m_need_input_sn{true};
@@ -339,50 +312,45 @@ public:
 
     void switch_input_panel(int index);
     void on_cancel();
-    void update_title(wxString title);
+    void update_title(QString title);
     void set_machine_obj(MachineObject* obj);
-    void update_test_msg(wxString msg, bool connected);
+    void update_test_msg(QString msg, bool connected);
     bool isIp(std::string ipstr);
     void check_ip_address_failed(int result);
-    void on_check_ip_address_failed(wxCommandEvent& evt);
-    void on_ok(wxMouseEvent& evt);
+    void on_check_ip_address_failed(QEvent& evt);
+    void on_ok(QMouseEvent& evt);
     void on_send_retry();
-    void update_test_msg_event(wxCommandEvent &evt);
-    void post_update_test_msg(std::weak_ptr<InputIpAddressDialog> w, wxString text, bool beconnect);
+    void update_test_msg_event(QEvent &evt);
+    void post_update_test_msg(std::weak_ptr<InputIpAddressDialog> w, QString text, bool beconnect);
     void workerThreadFunc(std::string str_ip, std::string str_access_code, std::string sn, std::string model_id);
-    void OnTimer(wxTimerEvent& event);
-    void on_text(wxCommandEvent& evt);
-    void on_dpi_changed(const wxRect& suggested_rect) override;
+    void OnTimer(QTimerEvent& event);
+    void on_text(QEvent& evt);
+    void on_dpi_changed(const QRect& suggested_rect) override;
 };
 
 class SendFailedConfirm : public DPIDialog
 {
 public:
-    SendFailedConfirm(wxWindow *parent = nullptr);
+    SendFailedConfirm(QWidget *parent = nullptr);
     ~SendFailedConfirm(){};
 
-    //void on_ok(wxMouseEvent &evt);
-    void on_dpi_changed(const wxRect &suggested_rect) override;
+    //void on_ok(QMouseEvent &evt);
+    void on_dpi_changed(const QRect &suggested_rect) override;
 };
 
 class ExpandCenterDialog : public DPIDialog
 {
 public:
-    ExpandCenterDialog(wxWindow* parent = nullptr);
+    ExpandCenterDialog(QWidget* parent = nullptr);
     ~ExpandCenterDialog() {};
 
-    //void on_ok(wxMouseEvent &evt);
-    void on_dpi_changed(const wxRect& suggested_rect) override;
-    void on_open_expand(const wxMouseEvent& evt);
-    void on_uninstall(const wxMouseEvent& evt);
+    //void on_ok(QMouseEvent &evt);
+    void on_dpi_changed(const QRect& suggested_rect) override;
+    void on_open_expand(const QMouseEvent& evt);
+    void on_uninstall(const QMouseEvent& evt);
     void report_consent_unstall();
 };
 
-wxDECLARE_EVENT(EVT_CLOSE_IPADDRESS_DLG, wxCommandEvent);
-wxDECLARE_EVENT(EVT_CHECKBOX_CHANGE, wxCommandEvent);
-wxDECLARE_EVENT(EVT_ENTER_IP_ADDRESS, wxCommandEvent);
-wxDECLARE_EVENT(EVT_CHECK_IP_ADDRESS_FAILED, wxCommandEvent);
-wxDECLARE_EVENT(EVT_CHECK_IP_ADDRESS_LAYOUT, wxCommandEvent);
 
 
 }} // namespace Slic3r::GUI

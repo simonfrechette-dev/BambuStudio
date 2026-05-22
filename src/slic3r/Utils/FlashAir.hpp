@@ -2,7 +2,6 @@
 #define slic3r_FlashAir_hpp_
 
 #include <string>
-#include <wx/string.h>
 
 #include "PrintHost.hpp"
 
@@ -20,9 +19,9 @@ public:
 
 	const char* get_name() const override;
 
-	bool test(wxString &curl_msg) const override;
-	wxString get_test_ok_msg() const override;
-	wxString get_test_failed_msg(wxString &msg) const override;
+	bool test(QString &curl_msg) const override;
+	QString get_test_ok_msg() const override;
+	QString get_test_failed_msg(QString &msg) const override;
 	bool upload(PrintHostUpload upload_data, ProgressFn prorgess_fn, ErrorFn error_fn) const override;
 	bool has_auto_discovery() const override { return false; }
 	bool can_test() const override { return true; }

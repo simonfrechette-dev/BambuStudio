@@ -2,115 +2,99 @@
 #include "Label.hpp"
 #include "StateColor.hpp"
 
-#include <wx/dcclient.h>
-#include <wx/dcgraph.h>
+#include <QPainter>
+#include <QFontMetrics>
 
-BEGIN_EVENT_TABLE(StaticLine, wxWindow)
-
-// catch paint events
-EVT_PAINT(StaticLine::paintEvent)
-
-END_EVENT_TABLE()
-
-StaticLine::StaticLine(wxWindow *parent, bool vertical, const wxString &label, const wxString &icon)
-    : wxWindow(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxBORDER_NONE)
-    , vertical(vertical)
+StaticLine::StaticLine(QWidget *parent, bool vertical,
+                       const QString &label, const QString &icon)
+    : QWidget(parent)
+    , lineColor(QColor("#EEEEEE"))
+    , m_vertical(vertical)
+    , m_text(label)
 {
-    wxWindow::SetBackgroundColour(parent->GetBackgroundColour());
-    this->lineColor = wxColour("#EEEEEE");
-    DisableFocusFromKeyboard();
-    SetFont(Label::Body_14);
-    wxWindow::SetLabel(label);
+    setAutoFillBackground(false);
+    setFont(Label::Body_14);
     SetIcon(icon);
+    measureSize();
 }
 
-void StaticLine::SetLabel(const wxString& label)
+void StaticLine::setText(const QString &label)
 {
-    wxWindow::SetLabel(label);
-    messureSize();
-    Refresh();
+    m_text = label;
+    measureSize();
+    update();
 }
 
-void StaticLine::SetIcon(const wxString &icon)
+void StaticLine::SetIcon(const QString &iconName)
 {
-    this->icon = icon.IsEmpty() ? ScalableBitmap()
-        : ScalableBitmap(this, icon.ToStdString(), 18);
-    messureSize();
-    Refresh();
+    icon = iconName.isEmpty() ? ScalableBitmap()
+                              : ScalableBitmap(this, iconName.toStdString(), 18);
+    measureSize();
+    update();
 }
 
-void StaticLine::SetLineColour(wxColour color)
+void StaticLine::SetLineColour(QColor color)
 {
-    this->lineColor = color;
+    lineColor = color;
+    update();
 }
 
 void StaticLine::Rescale()
 {
-    if (this->icon.bmp().IsOk())
-        this->icon.msw_rescale();
-    messureSize();
+    measureSize();
+    update();
 }
 
-void StaticLine::paintEvent(wxPaintEvent& evt)
-{
-    // depending on your system you may need to look at double-buffered dcs
-    wxPaintDC dc(this);
-    render(dc);
-}
+QSize StaticLine::sizeHint() const { return minimumSizeHint(); }
 
-void StaticLine::messureSize()
+void StaticLine::measureSize()
 {
-    wxClientDC dc(this);
-    wxSize textSize = dc.GetTextExtent(GetLabel());
-    wxSize szContent = textSize;
-    if (this->icon.bmp().IsOk()) {
-        if (szContent.y > 0) {
-            // BBS norrow size between text and icon
-            szContent.x += 5;
-        }
-        wxSize szIcon = this->icon.GetBmpSize();
-        szContent.x += szIcon.x;
-        if (szIcon.y > szContent.y) szContent.y = szIcon.y;
-    }
-    if (vertical)
-        szContent = {std::max(szContent.x, 1), szContent.y + 10};
-    else
-        szContent = { szContent.x + 10, std::max(szContent.y, 1)};
-    SetMinSize(szContent);
-}
-
-/*
- * Here we do the actual rendering. I put it in a separate
- * method so that it can work no matter what type of DC
- * (e.g. wxPaintDC or wxClientDC) is used.
- */
-void StaticLine::render(wxDC& dc)
-{
-    wxSize size = GetSize();
-    wxSize textSize;
-    auto   label = GetLabel();
-    if (!label.IsEmpty()) textSize = dc.GetTextExtent(label);
-    wxRect titleRect{{0, 0}, size};
-    titleRect.height = wxMax(icon.GetBmpHeight(), textSize.GetHeight());
-    int contentWidth = icon.GetBmpWidth() + ((icon.bmp().IsOk() && textSize.GetWidth() > 0) ? 5 : 0) +
-                textSize.GetWidth();
-    if (vertical) titleRect.Deflate((size.GetWidth() - contentWidth) / 2, 0);
+    QFontMetrics fm(font());
+    QSize textSz = fm.boundingRect(m_text).size();
+    QSize szContent = textSz;
     if (icon.bmp().IsOk()) {
-        dc.DrawBitmap(icon.bmp(), {0, (size.y - icon.GetBmpHeight()) / 2});
-        titleRect.x += icon.GetBmpWidth() + 5;
+        QSize szIcon = icon.GetBmpSize();
+        if (szContent.height() > 0)
+            szContent.setWidth(szContent.width() + 5);
+        szContent.setWidth(szContent.width() + szIcon.width());
+        if (szIcon.height() > szContent.height())
+            szContent.setHeight(szIcon.height());
     }
-    if (!label.IsEmpty()) {
-        dc.SetTextForeground(StateColor::darkModeColorFor(GetForegroundColour()));
-        dc.DrawText(label, titleRect.x, (size.GetHeight() - textSize.GetHeight()) / 2);
-        titleRect.x += textSize.GetWidth() + 5;
+    if (m_vertical)
+        szContent = QSize(std::max(szContent.width(), 1), szContent.height() + 10);
+    else
+        szContent = QSize(szContent.width() + 10, std::max(szContent.height(), 1));
+    setMinimumSize(szContent);
+}
+
+void StaticLine::paintEvent(QPaintEvent * /*event*/)
+{
+    QPainter painter(this);
+    painter.setRenderHint(QPainter::Antialiasing);
+    render(painter);
+}
+
+void StaticLine::render(QPainter &painter)
+{
+    const QSize sz = size();
+    QFontMetrics fm(font());
+    QSize textSz = fm.boundingRect(m_text).size();
+
+    painter.setPen(lineColor);
+    int x = 0, y = 0;
+    if (icon.bmp().IsOk()) {
+        const QSize szIcon = icon.GetBmpSize();
+        painter.drawPixmap(QPoint(0, (sz.height() - szIcon.height()) / 2), icon.bmp());
+        x += szIcon.width() + 5;
     }
-    dc.SetPen(wxPen(StateColor::darkModeColorFor(lineColor)));
-    if (vertical) {
-        size.x /= 2;
-        if (titleRect.y > 0) titleRect.y += 5;
-        dc.DrawLine(size.x, titleRect.y, size.x, size.y);
-    } else {
-        size.y /= 2;
-        dc.DrawLine(titleRect.x, size.y, size.x, size.y);
+    if (!m_text.isEmpty()) {
+        painter.setPen(Qt::black);
+        painter.drawText(QPoint(x, (sz.height() + textSz.height()) / 2 - fm.descent()), m_text);
+        x += textSz.width() + 5;
     }
+    painter.setPen(lineColor);
+    if (m_vertical)
+        painter.drawLine(sz.width() / 2, y, sz.width() / 2, sz.height());
+    else
+        painter.drawLine(x, sz.height() / 2, sz.width(), sz.height() / 2);
 }

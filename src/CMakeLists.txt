@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.5...3.31)
 project(BambuStudio-native)
 
 add_subdirectory(build-utils)
@@ -32,74 +32,14 @@ if (SLIC3R_GUI)
     add_subdirectory(hidapi)
     include_directories(hidapi/include)
 
-    if(WIN32)
-        message(STATUS "WXWIN environment set to: $ENV{WXWIN}")
-    elseif(UNIX)
-        set(wxWidgets_USE_UNICODE ON)
-        if(SLIC3R_STATIC)
-            set(wxWidgets_USE_STATIC ON)
-        else()
-            set(wxWidgets_USE_STATIC OFF)
-        endif()
-    endif()
-
-    if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
-        set (wxWidgets_CONFIG_OPTIONS "--toolkit=gtk${SLIC3R_GTK}")
-        if (SLIC3R_WX_STABLE)
-            find_package(wxWidgets 3.0 REQUIRED COMPONENTS base core adv html gl aui net media webview richtext xml)
-        else ()
-            find_package(wxWidgets 3.1 REQUIRED COMPONENTS base core adv html gl aui net media webview richtext xml)
-        endif ()
-    else ()
-        find_package(wxWidgets 3.1 REQUIRED COMPONENTS html adv gl core base webview aui net media richtext xml)
-    endif ()
-
-    if(UNIX)
-        message(STATUS "wx-config path: ${wxWidgets_CONFIG_EXECUTABLE}")
-    endif()
-
-    include(${wxWidgets_USE_FILE})
-
-    find_package(JPEG QUIET)
-    find_package(TIFF QUIET)
-
-    string(REGEX MATCH "wxpng" WX_PNG_BUILTIN ${wxWidgets_LIBRARIES})
-    if (PNG_FOUND AND NOT WX_PNG_BUILTIN)
-        list(FILTER wxWidgets_LIBRARIES EXCLUDE REGEX png)
-        list(APPEND wxWidgets_LIBRARIES ${PNG_LIBRARIES})
-    endif ()
-
-    string(REGEX MATCH "wxtiff" WX_TIFF_BUILTIN ${wxWidgets_LIBRARIES})
-    if (TIFF_FOUND AND NOT WX_TIFF_BUILTIN)
-        list(FILTER wxWidgets_LIBRARIES EXCLUDE REGEX tiff)
-        list(APPEND wxWidgets_LIBRARIES ${TIFF_LIBRARIES})
-    endif ()
-
-    string(REGEX MATCH "wxjpeg" WX_JPEG_BUILTIN ${wxWidgets_LIBRARIES})
-    if (JPEG_FOUND AND NOT WX_JPEG_BUILTIN)
-        list(FILTER wxWidgets_LIBRARIES EXCLUDE REGEX jpeg)
-        list(APPEND wxWidgets_LIBRARIES ${JPEG_LIBRARIES})
-    endif ()
-
-    string(REGEX MATCH "wxexpat" WX_EXPAT_BUILTIN ${wxWidgets_LIBRARIES})
-    if (EXPAT_FOUND AND NOT WX_EXPAT_BUILTIN)
-        list(FILTER wxWidgets_LIBRARIES EXCLUDE REGEX expat)
-        list(APPEND wxWidgets_LIBRARIES ${EXPAT_LIBRARIES})
-    endif ()
-
-    # This is an issue in the new wxWidgets cmake build, doesn't deal with librt
-    find_library(LIBRT rt)
-    if(LIBRT)
-        list(APPEND wxWidgets_LIBRARIES ${LIBRT})
-    endif()
-
-    # This fixes a OpenGL linking issue on OSX. wxWidgets cmake build includes
-    # wrong libs for opengl in the link line and it does not link to it by himself.
-    # libslic3r_gui will link to opengl anyway, so lets override wx
-    list(FILTER wxWidgets_LIBRARIES EXCLUDE REGEX OpenGL)
-
-#    list(REMOVE_ITEM wxWidgets_LIBRARIES oleacc)
-    message(STATUS "wx libs: ${wxWidgets_LIBRARIES}")
+    # Qt6 replaces wxWidgets
+    find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets OpenGL OpenGLWidgets Svg)
+    find_package(Qt6 OPTIONAL_COMPONENTS WebEngineWidgets Multimedia MultimediaWidgets)
+    set(CMAKE_AUTOMOC ON)
+    set(CMAKE_AUTORCC ON)
+    set(CMAKE_AUTOUIC ON)
+    message(STATUS "Qt6 version: ${Qt6_VERSION}")
+    message(STATUS "Qt6 Core: ${Qt6Core_VERSION}")
 
     add_subdirectory(slic3r)
 endif()
@@ -128,7 +68,7 @@ if (NOT WIN32 AND NOT APPLE)
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/platform/unix/BuildLinuxImage.sh.in ${CMAKE_CURRENT_BINARY_DIR}/BuildLinuxImage.sh @ONLY)
 endif ()
 
-target_link_libraries(BambuStudio libslic3r cereal)
+target_link_libraries(BambuStudio libslic3r cereal::cereal)
 if (APPLE)
 #    add_compile_options(-stdlib=libc++)
 #    add_definitions(-DBOOST_THREAD_DONT_USE_CHRONO -DBOOST_NO_CXX11_RVALUE_REFERENCES -DBOOST_THREAD_USES_MOVE)
@@ -240,6 +180,7 @@ else ()
             VERBATIM)
     else ()
         add_custom_command(TARGET BambuStudio POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E echo "Post-build done"
             WORKING_DIRECTORY "$<TARGET_FILE_DIR:BambuStudio>"
             VERBATIM)
     endif ()

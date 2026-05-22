@@ -1,3 +1,4 @@
+#include <QString>
 #ifndef slic3r_GLGizmoMmuSegmentation_hpp_
 #define slic3r_GLGizmoMmuSegmentation_hpp_
 
@@ -108,7 +109,7 @@ protected:
     bool on_is_activable() const override;
     void on_load(cereal::BinaryInputArchive &ar) override;
     void on_save(cereal::BinaryOutputArchive &ar) const override;
-    wxString handle_snapshot_action_name(bool shift_down, Button button_down) const override;
+    QString handle_snapshot_action_name(bool shift_down, Button button_down) const override;
 
     void        clear_parent_paint_outline_volumes() const;
     std::string get_gizmo_entering_text() const override { return "Entering color painting"; }
@@ -145,7 +146,7 @@ private:
 
     // This map holds all translated description texts, so they can be easily referenced during layout calculations
     // etc. When language changes, GUI is recreated and this class constructed again, so the change takes effect.
-    std::map<std::string, wxString> m_desc;
+    std::map<std::string, QString> m_desc;
     mutable GLModel   m_non_manifold_edges_model;
 };
 

@@ -3,8 +3,7 @@
 
 #include "HintNotification.hpp"
 
-//#include <wx/time.h>
-#include <string>
+//#include <string>
 #include <vector>
 #include <memory>
 

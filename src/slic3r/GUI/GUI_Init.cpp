@@ -11,9 +11,10 @@
 #include "slic3r/GUI/Plater.hpp"
 
 // To show a message box if GUI initialization ends up with an exception thrown.
-#include <wx/msgdlg.h>
+#include <QMessageBox>
 
 #include <boost/log/trivial.hpp>
+#include <QString>
 #include <boost/nowide/iostream.hpp>
 #include <boost/nowide/convert.hpp>
 
@@ -40,7 +41,7 @@ int GUI_Run(GUI_InitParams &params)
     //BBS: remove the try-catch and let exception goto above
     try {
         //GUI::GUI_App* gui = new GUI::GUI_App(params.start_as_gcodeviewer ? GUI::GUI_App::EAppMode::GCodeViewer : GUI::GUI_App::EAppMode::Editor);
-        GUI::GUI_App* gui = new GUI::GUI_App();
+        GUI::GUI_App* gui = new GUI::GUI_App(params.argc, params.argv);
         //if (gui->get_app_mode() != GUI::GUI_App::EAppMode::GCodeViewer) {
             // G-code viewer is currently not performing instance check, a new G-code viewer is started every time.
             bool gui_single_instance_setting = gui->app_config->get("app", "single_instance") == "true";
@@ -51,30 +52,23 @@ int GUI_Run(GUI_InitParams &params)
         //}
 
 //      gui->autosave = m_config.opt_string("autosave");
-        GUI::GUI_App::SetInstance(gui);
         gui->init_params = &params;
 
-        if (params.argc > 1) {
-            // STUDIO-273 wxWidgets report error when opening some files with specific names
-            // wxWidgets does not handle parameters, so intercept parameters here, only keep the app name
-            int                 argc = 1;
-            std::vector<char *> argv;
-            argv.push_back(params.argv[0]);
-            return wxEntry(argc, argv.data());
-        } else {
-            return wxEntry(params.argc, params.argv);
+        if (!gui->OnInit()) {
+            return 1;
         }
+        return gui->exec();
     } catch (const Slic3r::Exception &ex) {
         if (is_log_trivival_valid()) {
             BOOST_LOG_TRIVIAL(error) << ex.what() << std::endl; // boost log not initialized yet 
         }
-        wxMessageBox(boost::nowide::widen(ex.what()), _L("Bambu Studio GUI initialization failed"), wxICON_STOP);
+        QMessageBox::critical(nullptr, _L("Bambu Studio GUI initialization failed"), QString::fromStdString(ex.what()));
 
     } catch (const std::exception &ex) {
         if (is_log_trivival_valid()) {
             BOOST_LOG_TRIVIAL(error) << ex.what() << std::endl; // boost log not initialized yet 
         }
-        wxMessageBox(format_wxstr(_L("Fatal error, exception caught: %1%"), ex.what()), _L("Bambu Studio GUI initialization failed"), wxICON_STOP);
+        QMessageBox::critical(nullptr, _L("Bambu Studio GUI initialization failed"), format_wxstr(_L("Fatal error, exception caught: %1%"), ex.what()));
     }
     // error
     return 1;

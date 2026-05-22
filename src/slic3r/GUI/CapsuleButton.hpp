@@ -1,32 +1,37 @@
 #ifndef CAPSULE_BUTTON_HPP
 #define CAPSULE_BUTTON_HPP
 
-#include "wxExtensions.hpp"
+#include "QtExtensions.hpp"
 #include "Widgets/Label.hpp"
 
+#include <QWidget>
+#include <QString>
+
 namespace Slic3r { namespace GUI {
-class CapsuleButton : public wxPanel
+
+class CapsuleButton : public QWidget
 {
+    Q_OBJECT
 public:
-    CapsuleButton(wxWindow *parent, wxWindowID id, const wxString &label, bool selected);
+    CapsuleButton(QWidget *parent, const QString &label, bool selected);
     void Select(bool selected);
     bool IsSelected() const { return m_selected; }
+signals:
+    void clicked();
 protected:
-    void OnPaint(wxPaintEvent &event);
+    void paintEvent(QPaintEvent *event) override;
+    void enterEvent(QEnterEvent *event) override;
+    void leaveEvent(QEvent *event) override;
+    void mousePressEvent(QMouseEvent *event) override;
 private:
-    void OnEnterWindow(wxMouseEvent &event);
-    void OnLeaveWindow(wxMouseEvent &event);
     void UpdateStatus();
-
-    wxBitmapButton *m_btn;
-    Label          *m_label;
-
-    wxBitmap tag_on_bmp;
-    wxBitmap tag_off_bmp;
-
-    bool m_hovered;
-    bool m_selected;
+    Label     *m_label    = nullptr;
+    BBLPixmap  m_tag_on;
+    BBLPixmap  m_tag_off;
+    bool       m_hovered  = false;
+    bool       m_selected = false;
 };
+
 }} // namespace Slic3r::GUI
 
-#endif
+#endif // CAPSULE_BUTTON_HPP

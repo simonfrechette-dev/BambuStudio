@@ -1,36 +1,26 @@
 #include "RoundedRectangle.hpp"
-#include "../wxExtensions.hpp"
-#include <wx/dcclient.h>
-#include <wx/dcgraph.h>
+#include <QPainter>
 
-BEGIN_EVENT_TABLE(RoundedRectangle, wxPanel)
-EVT_PAINT(RoundedRectangle::OnPaint)
-END_EVENT_TABLE()
-
- RoundedRectangle::RoundedRectangle(wxWindow *parent, wxColour col, wxPoint pos, wxSize size, double radius, int type)
-     : wxWindow(parent, wxID_ANY, pos, size, wxBORDER_NONE)
+RoundedRectangle::RoundedRectangle(QWidget *parent, QColor col,
+                                   const QPoint &pos, const QSize &size,
+                                   double radius, int type)
+    : QWidget(parent)
+    , m_radius(radius)
+    , m_type(type)
+    , m_color(col)
 {
-    SetBackgroundColour(wxColour(255,255,255));
-    m_type   = type;
-    m_color  = col;
-    m_radius = radius;
+    move(pos);
+    setFixedSize(size);
 }
 
-void RoundedRectangle::OnPaint(wxPaintEvent &evt)
+void RoundedRectangle::paintEvent(QPaintEvent *)
 {
-    //draw RoundedRectangle
-    if (m_type == 0) {
-        wxPaintDC dc(this);
-        dc.SetPen(*wxTRANSPARENT_PEN);
-        dc.SetBrush(wxBrush(m_color));
-        dc.DrawRoundedRectangle(0, 0, GetSize().GetWidth(), GetSize().GetHeight(), m_radius);
-    }
-
-    //draw RoundedRectangle only board
-    if (m_type == 1) {
-        wxPaintDC dc(this);
-        dc.SetPen(m_color);
-        dc.SetBrush(wxBrush(*wxTRANSPARENT_BRUSH));
-        dc.DrawRoundedRectangle(0, 0, GetSize().GetWidth(), GetSize().GetHeight(), m_radius);
-    }
+    QPainter p(this);
+    p.setRenderHint(QPainter::Antialiasing);
+    p.setBrush(m_color);
+    p.setPen(Qt::NoPen);
+    if (m_radius > 0)
+        p.drawRoundedRect(rect(), m_radius, m_radius);
+    else
+        p.drawRect(rect());
 }

@@ -1,8 +1,9 @@
 #ifndef slic3r_GUI_PRE_PRINT_CHECK_hpp_
 #define slic3r_GUI_PRE_PRINT_CHECK_hpp_
+#include <QWidget>
+#include <QString>
 
 #include <set>
-#include <wx/wx.h>
 #include "Widgets/Label.hpp"
 
 class Button;
@@ -41,10 +42,10 @@ struct prePrintInfo
     prePrintInfoLevel level;
     prePrintInfoType  type;
     prePrintInfoStyle m_style = prePrintInfoStyle::Default;
-    wxString msg;
-    wxString tips;
-    wxString wiki_url;
-    wxString link_label;                          // optional: clickable text appended after msg
+    QString msg;
+    QString tips;
+    QString wiki_url;
+    QString link_label;                          // optional: clickable text appended after msg
     std::function<void()> link_callback;          // optional: internal action for link_label click
     int index;
 
@@ -192,11 +193,11 @@ public:
 public:
     void clear();
     /*auto merge*/
-    void add(PrintDialogStatus state, wxString msg, wxString tip, const wxString& wiki_url, prePrintInfoStyle style);
-    void add_with_link(PrintDialogStatus state, wxString msg, wxString link_label, std::function<void()> callback, prePrintInfoStyle style);
+    void add(PrintDialogStatus state, QString msg, QString tip, const QString& wiki_url, prePrintInfoStyle style);
+    void add_with_link(PrintDialogStatus state, QString msg, QString link_label, std::function<void()> callback, prePrintInfoStyle style);
     static ::std::string get_print_status_info(PrintDialogStatus status);
 
-	wxString get_pre_state_msg(PrintDialogStatus status);
+	QString get_pre_state_msg(PrintDialogStatus status);
     static bool is_error(PrintDialogStatus status) { return (PrintStatusErrorBegin < status) && (PrintStatusErrorEnd > status); };
     static bool is_error_printer(PrintDialogStatus status) { return (PrintStatusPrinterErrorBegin < status) && (PrintStatusPrinterErrorEnd > status); };
     static bool is_error_filament(PrintDialogStatus status) { return (PrintStatusFilamentErrorBegin < status) && (PrintStatusFilamentErrorEnd > status); };
@@ -206,10 +207,10 @@ public:
 };
 
 class SelectMachineDialog;
-class PrinterMsgPanel : public wxPanel
+class PrinterMsgPanel : public QWidget
 {
 public:
-    PrinterMsgPanel(wxWindow *parent, SelectMachineDialog* select_dialog);
+    PrinterMsgPanel(QWidget *parent, SelectMachineDialog* select_dialog);
 
 public:
     void  Clear();
@@ -223,13 +224,13 @@ private:
 
     // events
     void OnNotShowAgain(const prePrintInfo& info);
-    void OnRefreshNozzleBtnClicked(wxMouseEvent& event);
-    void OnUpgradeBtnClicked(wxMouseEvent& event);
+    void OnRefreshNozzleBtnClicked(QMouseEvent& event);
+    void OnUpgradeBtnClicked(QMouseEvent& event);
 
  private:
     SelectMachineDialog* m_select_dialog = nullptr;
 
-    wxBoxSizer*  m_sizer = nullptr;
+    QBoxLayout*  m_sizer = nullptr;
     std::vector<prePrintInfo> m_infos;
     std::vector<ScalableButton*> m_scale_btns;
     std::vector<Button*> m_ctrl_btns;

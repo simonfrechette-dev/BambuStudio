@@ -4,7 +4,7 @@
 #include <optional>
 #include "libslic3r/Point.hpp" // Vec2d, Transform3d
 #include "slic3r/Utils/RaycastManager.hpp"
-#include "wx/event.h" // wxMouseEvent
+#include <QMouseEvent> // QMouseEvent
 #include <functional>
 
 namespace Slic3r {
@@ -66,7 +66,7 @@ constexpr double UP_LIMIT = 0.9;
 /// Refresh state inside of function </param>
 /// <param name="up_limit">When set than use correction of up vector</param>
 /// <returns>True when event is processed otherwise false</returns>
-bool on_mouse_surface_drag(const wxMouseEvent         &mouse_event,
+bool on_mouse_surface_drag(const QMouseEvent          &mouse_event,
                            const Camera               &camera,
                            std::optional<SurfaceDrag> &surface_drag,
                            GLCanvas3D                 &canvas,

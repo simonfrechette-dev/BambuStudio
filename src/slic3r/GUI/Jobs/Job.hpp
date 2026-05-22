@@ -10,8 +10,7 @@
 
 #include "ProgressIndicator.hpp"
 
-#include <wx/event.h>
-
+#include <QObject>
 #include <boost/thread.hpp>
 
 namespace Slic3r { namespace GUI {
@@ -26,10 +25,11 @@ namespace Slic3r { namespace GUI {
 // objects would be frozen for the user. In case of arrange, an animation
 // could be shown, or with the optimize orientations, partial results
 // could be displayed.
-class Job : public wxEvtHandler
+class Job : public QObject
 {
+    Q_OBJECT
     int               m_range = 100;
-    int               m_thread_evt_id = wxID_ANY;
+    int               m_thread_evt_id = -1;
     boost::thread     m_thread;
     std::atomic<bool> m_running{false}, m_canceled{false};
     bool              m_finalized = false, m_finalizing = false;
@@ -43,11 +43,11 @@ protected:
     virtual int status_range() const { return 100; }
 
     // status update, to be used from the work thread (process() method)
-    void update_status(int st, const wxString &msg = "");
+    void update_status(int st, const QString &msg = QString());
 
     void update_percent_finish();
 
-    void show_error_info(wxString msg, int code, wxString description, wxString extra);
+    void show_error_info(const QString& msg, int code, const QString& description, const QString& extra);
 
     bool was_canceled() const { return m_canceled.load(); }
 

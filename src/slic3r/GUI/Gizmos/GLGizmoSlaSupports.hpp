@@ -6,7 +6,8 @@
 
 #include "libslic3r/SLA/SupportPoint.hpp"
 #include "libslic3r/ObjectID.hpp"
-#include <wx/dialog.h>
+#include <QString>
+#include <QDialog>
 
 #include <cereal/types/vector.hpp>
 
@@ -95,7 +96,7 @@ private:
 
     // This map holds all translated description texts, so they can be easily referenced during layout calculations
     // etc. When language changes, GUI is recreated and this class constructed again, so the change takes effect.
-    std::map<std::string, wxString> m_desc;
+    std::map<std::string, QString> m_desc;
 
     GLSelectionRectangle m_selection_rectangle;
 
@@ -147,7 +148,7 @@ protected:
 };
 
 
-class SlaGizmoHelpDialog : public wxDialog
+class SlaGizmoHelpDialog : public QDialog
 {
 public:
     SlaGizmoHelpDialog();

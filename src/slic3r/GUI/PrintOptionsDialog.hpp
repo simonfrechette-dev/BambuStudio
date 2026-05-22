@@ -1,12 +1,8 @@
 #ifndef slic3r_GUI_PrintOptionsDialog_hpp_
 #define slic3r_GUI_PrintOptionsDialog_hpp_
+#include <QWidget>
+#include <QString>
 
-#include <wx/wx.h>
-#include <wx/font.h>
-#include <wx/colour.h>
-#include <wx/string.h>
-#include <wx/sizer.h>
-#include <wx/dialog.h>
 
 #include "GUI_Utils.hpp"
 #include "wxExtensions.hpp"
@@ -47,32 +43,32 @@ protected:
     Label *multiple_change_nozzle_tips;
     Label* multiple_wiki_link;
 
-    wxPanel *single_panel;
-    wxPanel *multiple_panel;
+    QWidget *single_panel;
+    QWidget *multiple_panel;
 
 public:
-    PrinterPartsDialog(wxWindow* parent);
+    PrinterPartsDialog(QWidget* parent);
     ~PrinterPartsDialog();
 
-    void on_dpi_changed(const wxRect& suggested_rect) override;
+    void on_dpi_changed(const QRect& suggested_rect) override;
     void update_machine_obj(MachineObject* obj_);
-    bool Show(bool show) override;
+    void setVisible(bool show) override;
     void UpdateNozzleInfo();
 
 private:
     void  EnableEditing(bool enable);
-    void  OnWikiClicked(wxMouseEvent& e);
-    void  OnNozzleRefresh(wxCommandEvent& e);
+    void  OnWikiClicked(QMouseEvent& e);
+    void  OnNozzleRefresh(QEvent& e);
 
-    wxString GetString(NozzleType nozzle_type) const;
-    wxString GetString(NozzleFlowType nozzle_flow_type) const;
-    wxString GetString(float diameter) const { return wxString::FromDouble(diameter); };
+    QString GetString(NozzleType nozzle_type) const;
+    QString GetString(NozzleFlowType nozzle_flow_type) const;
+    QString GetString(float diameter) const { return QString::number(diameter); };
 };
 
-class PrintOptionToast : public wxPopupWindow
+class PrintOptionToast : public QWidget
 {
 public:
-    PrintOptionToast(wxWindow* parent, const wxString& text);
+    PrintOptionToast(QWidget* parent, const QString& text);
 };
 
 
@@ -80,7 +76,7 @@ class PrintOptionsDialog : public DPIDialog
 {
 protected:
     // settings
-    wxScrolledWindow* m_scrollwindow;
+    QScrollArea* m_scrollwindow;
     CheckBox* m_cb_first_layer;
     CheckBox *        m_cb_ai_monitoring;
     CheckBox* m_cb_spaghetti_detection;
@@ -102,13 +98,13 @@ protected:
     Label* text_ai_detections;
     Label* text_ai_detections_caption;
     Label* text_non_visual_airprinting_detection;
-    wxPanel          *ai_refine_panel;
-    wxSizerItem *ai_detections_bottom_space;
-    wxSizerItem *ai_monitoring_bottom_space;
-    wxSizerItem *spaghetti_bottom_space;
-    wxSizerItem *purgechutepileup_bottom_space;
-    wxSizerItem *nozzleclumping_bottom_space;
-    wxSizerItem *airprinting_bottom_space;
+    QWidget          *ai_refine_panel;
+    QLayoutItem *ai_detections_bottom_space;
+    QLayoutItem *ai_monitoring_bottom_space;
+    QLayoutItem *spaghetti_bottom_space;
+    QLayoutItem *purgechutepileup_bottom_space;
+    QLayoutItem *nozzleclumping_bottom_space;
+    QLayoutItem *airprinting_bottom_space;
 
     Label *           text_ai_monitoring;
     Label *           text_ai_monitoring_caption;
@@ -158,8 +154,8 @@ protected:
     StaticLine* line7;
     SwitchBoard* open_door_switch_board;
     SwitchBoard *purify_air_switch_board;
-    wxBoxSizer* create_settings_group(wxWindow* parent);
-    wxPanel     *m_line;
+    QBoxLayout* create_settings_group(QWidget* parent);
+    QWidget     *m_line;
 
     Label* text_plate_build{nullptr};
     Label* text_plate_build_caption{nullptr};
@@ -170,7 +166,7 @@ protected:
     Label* text_plate_align{nullptr};
     Label* text_plate_align_caption{nullptr};
 
-    wxBoxSizer* m_snapshot_sizer {nullptr};
+    QBoxLayout* m_snapshot_sizer {nullptr};
     CheckBox* m_cb_snapshot_enable{nullptr};
 
 
@@ -179,12 +175,12 @@ protected:
     //print option toast
     PrintOptionToast *m_print_option_toast{nullptr};
     bool           m_print_option_disable{false};
-    wxTimer          *m_print_option_timer;
+    QTimer          *m_print_option_timer;
 
 public:
-    PrintOptionsDialog(wxWindow* parent);
+    PrintOptionsDialog(QWidget* parent);
     ~PrintOptionsDialog();
-    void on_dpi_changed(const wxRect &suggested_rect) override;
+    void on_dpi_changed(const QRect &suggested_rect) override;
 
     void update_ai_monitor_status();
      //refine printer function options
@@ -193,7 +189,7 @@ public:
     void update_nozzleclumping_detection_status();
     void update_airprinting_detection_status();
     void update_purify_air_at_print_end(MachineObject *obj_);
-    void show_print_option_toast(const wxString &text);
+    void show_print_option_toast(const QString &text);
     void purify_air_bind_toast();
 
     MachineObject *obj { nullptr };
@@ -202,7 +198,7 @@ public:
     int              m_state{0};
     void             update_options(MachineObject *obj_);
     void             update_machine_obj(MachineObject *obj_);
-    bool             Show(bool show) override;
+    void setVisible(bool show) override;
 
     enum AiMonitorSensitivityLevel {
         LOW         = 0,
@@ -210,14 +206,14 @@ public:
         HIGH        = 2,
         LEVELS_NUM  = 3
     };
-    wxString sensitivity_level_to_label_string(enum AiMonitorSensitivityLevel level);
+    QString sensitivity_level_to_label_string(enum AiMonitorSensitivityLevel level);
     std::string sensitivity_level_to_msg_string(enum AiMonitorSensitivityLevel level);
 
-    void set_ai_monitor_sensitivity(wxCommandEvent &evt);
-    void set_spaghetti_detection_sensitivity(wxCommandEvent& evt);
-    void set_purgechutepileup_detection_sensitivity(wxCommandEvent &evt);
-    void set_nozzleclumping_detection_sensitivity(wxCommandEvent &evt);
-    void set_airprinting_detection_sensitivity(wxCommandEvent &evt);
+    void set_ai_monitor_sensitivity(QEvent &evt);
+    void set_spaghetti_detection_sensitivity(QEvent& evt);
+    void set_purgechutepileup_detection_sensitivity(QEvent &evt);
+    void set_nozzleclumping_detection_sensitivity(QEvent &evt);
+    void set_airprinting_detection_sensitivity(QEvent &evt);
 
 private:
     void UpdateOptionSavePrintFileToStorage(MachineObject *obj);

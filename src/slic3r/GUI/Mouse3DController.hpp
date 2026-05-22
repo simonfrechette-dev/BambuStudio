@@ -107,7 +107,7 @@ class Mouse3DController
         void append_button(unsigned int id, size_t input_queue_max_size);
 
 #ifdef WIN32
-        // Called by GLCanvas3D::on_mouse_wheel(wxMouseEvent& evt)
+        // Called by GLCanvas3D::on_mouse_wheel(QMouseEvent& evt)
         // to filter out spurious mouse scroll events produced by the 3DConnexion driver on Windows.
         bool process_mouse_wheel();
 #endif /* WIN32 */

@@ -3,8 +3,8 @@
 #include "libslic3r/CommonDefs.hpp"
 
 #include "slic3r/Utils/json_diff.hpp"
-#include <wx/string.h>
-#include <wx/timer.h>
+#include <QObject>
+#include <QTimer>
 
 namespace Slic3r
 {
@@ -108,9 +108,10 @@ public:
         std::string access_code, std::string printer_type);
 };
 
-class DeviceManagerRefresher : public wxObject
+class DeviceManagerRefresher : public QObject
 {
-    wxTimer* m_timer{ nullptr };
+    Q_OBJECT
+    QTimer*        m_timer{ nullptr };
     int            m_timer_interval_msec = 1000;
 
     DeviceManager* m_manager{ nullptr };
@@ -120,10 +121,10 @@ public:
     ~DeviceManagerRefresher();
 
 public:
-    void Start() { m_timer->Start(m_timer_interval_msec); }
-    void Stop() { m_timer->Stop(); }
+    void Start() { m_timer->start(m_timer_interval_msec); }
+    void Stop() { m_timer->stop(); }
 
 protected:
-    virtual void on_timer(wxTimerEvent& event);
+    void on_timer();
 };
 };

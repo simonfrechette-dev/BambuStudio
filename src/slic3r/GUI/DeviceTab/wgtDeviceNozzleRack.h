@@ -9,13 +9,13 @@
 //**********************************************************/
 
 #pragma once
+#include <QWidget>
+#include <QString>
 #include "slic3r/GUI/DeviceCore/DevNozzleRack.h"
 
 #include "slic3r/GUI/Widgets/StaticBox.hpp"
 #include "slic3r/GUI/Widgets/AnimaController.hpp"
 
-#include <wx/panel.h>
-#include <wx/simplebook.h>
 #include <memory>
 
 // Previous definitions
@@ -39,18 +39,17 @@ namespace GUI
 };
 
 // Events
-wxDECLARE_EVENT(EVT_NOZZLE_RACK_NOZZLE_ITEM_SELECTED, wxCommandEvent);
 
 namespace Slic3r::GUI
 {
-class wgtDeviceNozzleRack : public wxPanel
+class wgtDeviceNozzleRack : public QWidget
 {
 public:
-    wgtDeviceNozzleRack(wxWindow* parent,
-                        wxWindowID id = wxID_ANY,
-                        const wxPoint& pos = wxDefaultPosition,
-                        const wxSize& size = wxDefaultSize,
-                        long style = wxTAB_TRAVERSAL);
+    wgtDeviceNozzleRack(QWidget* parent,
+                        int id = -1,
+                        const QPoint& pos = QPoint(),
+                        const QSize& size = QSize(),
+                        long style = 0);
     ~wgtDeviceNozzleRack() = default;
 
 public:
@@ -69,10 +68,10 @@ private:
 };
 
 
-class wgtDeviceNozzleRackToolHead : public wxPanel
+class wgtDeviceNozzleRackToolHead : public QWidget
 {
 public:
-    wgtDeviceNozzleRackToolHead(wxWindow* parent) : wxPanel(parent) { CreateGui();}
+    wgtDeviceNozzleRackToolHead(QWidget* parent) : QWidget(parent) { CreateGui();}
 
 public:
     void UpdateToolHeadInfo(const DevNozzle& extruder_nozzle);
@@ -88,17 +87,17 @@ private:
     // GUI
     ScalableBitmap* m_extruder_nozzle_normal = nullptr;
     ScalableBitmap* m_extruder_nozzle_empty = nullptr;
-    wxStaticBitmap* m_toolhead_icon;
+    QLabel* m_toolhead_icon;
 
     Label*  m_nozzle_diamenter_label;
     Label*  m_nozzle_flowtype_label;
 };
 
 
-class wgtDeviceNozzleRackArea : public wxPanel
+class wgtDeviceNozzleRackArea : public QWidget
 {
 public:
-    wgtDeviceNozzleRackArea(wxWindow* parent) : wxPanel(parent) { CreateGui();}
+    wgtDeviceNozzleRackArea(QWidget* parent) : QWidget(parent) { CreateGui();}
 
 public:
     void UpdateRackInfo(std::weak_ptr<DevNozzleRack> rack);
@@ -107,15 +106,15 @@ public:
 private:
     void CreateGui();
     StaticBox* CreateNozzleBox(const std::vector<int> nozzle_idxes);
-    wxSizer* CreateRefreshBook(wxPanel* parent);
+    QLayout* CreateRefreshBook(QWidget* parent);
 
     // updates
     void UpdateNozzleItems(const std::unordered_map<int, wgtDeviceNozzleRackNozzleItem*>& nozzle_items,
         std::shared_ptr<DevNozzleRack> nozzle_rack);
 
     // events
-    void OnBtnHotendsInfos(wxCommandEvent& evt);
-    void OnBtnReadAll(wxCommandEvent& evt);
+    void OnBtnHotendsInfos(QEvent& evt);
+    void OnBtnReadAll(QEvent& evt);
 
 private:
     std::weak_ptr<DevNozzleRack> m_nozzle_rack;
@@ -123,12 +122,12 @@ private:
     DevNozzleRack::RackStatus m_rack_status = DevNozzleRack::RACK_STATUS_UNKNOWN;
 
     // GUI
-    wxSimplebook* m_simple_book{ nullptr };
-    wxPanel* m_panel_content{ nullptr };
-    wxPanel* m_panel_refresh{ nullptr };
+    QStackedWidget* m_simple_book{ nullptr };
+    QWidget* m_panel_content{ nullptr };
+    QWidget* m_panel_refresh{ nullptr };
 
     wgtDeviceNozzleRackTitle* m_title_nozzle_rack;
-    wxBoxSizer* m_hotends_sizer;
+    QBoxLayout* m_hotends_sizer;
     StaticBox* m_arow_nozzles_box;
     StaticBox* m_brow_nozzles_box;
     std::unordered_map<int, wgtDeviceNozzleRackNozzleItem*> m_nozzle_items;
@@ -145,10 +144,10 @@ private:
     wgtDeviceNozzleRackUpgradeDlg* m_rack_upgrade_dlg = nullptr;
 };
 
-class wgtDeviceNozzleRackPos : public wxPanel
+class wgtDeviceNozzleRackPos : public QWidget
 {
 public:
-    explicit wgtDeviceNozzleRackPos(wxWindow* parent) : wxPanel(parent) { CreateGui();}
+    explicit wgtDeviceNozzleRackPos(QWidget* parent) : QWidget(parent) { CreateGui();}
 
 public:
     void UpdateRackPos(const std::shared_ptr<DevNozzleRack>& rack);
@@ -162,9 +161,9 @@ private:
                        bool is_reading);
 
     // events
-    void OnMoveRackUp(wxCommandEvent& evt);
-    void OnMoveRackDown(wxCommandEvent& evt);
-    void OnBtnHomingRack(wxCommandEvent& evt);
+    void OnMoveRackUp(QEvent& evt);
+    void OnMoveRackDown(QEvent& evt);
+    void OnBtnHomingRack(QEvent& evt);
 
 private:
     std::weak_ptr<DevNozzleRack> m_rack;
@@ -197,13 +196,13 @@ public:
     };
 
 public:
-    wgtDeviceNozzleRackNozzleItem(wxWindow* parent, int nozzle_id);
+    wgtDeviceNozzleRackNozzleItem(QWidget* parent, int nozzle_id);
 
 public:
     void Update(const std::shared_ptr<DevNozzleRack> rack, bool on_rack = true); // on_rack is false means extruder nozzle
 
     int  GetNozzleId() const { return m_nozzle_id; }
-    void SetDisplayIdText(const wxString& text) { m_nozzle_label_id->SetLabel(text);};
+    void SetDisplayIdText(const QString& text) { m_nozzle_label_id->setText(text);};
 
     void EnableSelect();;
     void SetSelected(bool selected);
@@ -217,10 +216,10 @@ public:
 private:
     void CreateGui();
 
-    void SetNozzleStatus(NOZZLE_STATUS status, const wxString& str1, const wxString& str2, const std::string& color);
+    void SetNozzleStatus(NOZZLE_STATUS status, const QString& str1, const QString& str2, const std::string& color);
 
-    void OnBtnNozzleStatus(wxMouseEvent& evt);
-    void OnItemSelected(wxMouseEvent& evt);
+    void OnBtnNozzleStatus(QMouseEvent& evt);
+    void OnItemSelected(QMouseEvent& evt);
 
 private:
     std::weak_ptr<DevNozzleRack> m_rack;
@@ -233,7 +232,7 @@ private:
     bool  m_is_selected = false;
     bool  m_enable_select = false;
     ScalableBitmap* m_nozzle_selected_image{ nullptr };
-    wxStaticBitmap* m_nozzle_selected_bitmap{ nullptr };
+    QLabel* m_nozzle_selected_bitmap{ nullptr };
 
     // enable or disable
     bool m_is_disabled = false;
@@ -245,10 +244,10 @@ private:
     ScalableBitmap* m_nozzle_error_image{ nullptr };
 
     // GUI
-    wxStaticBitmap* m_nozzle_icon{ nullptr };
+    QLabel* m_nozzle_icon{ nullptr };
     Label* m_nozzle_label_id { nullptr };
     Label* m_nozzle_label_1{ nullptr };
-    wxStaticBitmap* m_nozzle_status_icon = nullptr;
+    QLabel* m_nozzle_status_icon = nullptr;
     Label* m_nozzle_label_2{ nullptr };
 };
 

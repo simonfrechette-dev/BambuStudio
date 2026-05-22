@@ -1,27 +1,26 @@
 #ifndef slic3r_MarkdownTip_hpp_
 #define slic3r_MarkdownTip_hpp_
+#include <QWidget>
+#include <QString>
 
-#include <wx/popupwin.h>
-#include <wx/timer.h>
-#include <wx/webview.h>
 
 
 namespace Slic3r { namespace GUI {
 
-class MarkdownTip : public wxPopupTransientWindow
+class MarkdownTip : public QWidget
 {
 public:
-    static bool ShowTip(std::string const &tip, std::string const &tooltip, wxPoint pos);
+    static bool ShowTip(std::string const &tip, std::string const &tooltip, QPoint pos);
 
     static void ExitTip();
 
     static void Reload();
 
-    static void Recreate(wxWindow *parent);
+    static void Recreate(QWidget *parent);
 
-    static wxWindow* AttachTo(wxWindow * parent);
+    static QWidget* AttachTo(QWidget * parent);
 
-    static wxWindow* DetachFrom(wxWindow * parent);
+    static QWidget* DetachFrom(QWidget * parent);
 
 private:
     static MarkdownTip* markdownTip(bool create = true);
@@ -32,31 +31,31 @@ private:
 
     void LoadStyle();
 
-    bool ShowTip(wxPoint pos, std::string const &tip, std::string const & tooltip);
+    bool ShowTip(QPoint pos, std::string const &tip, std::string const & tooltip);
 
     std::string LoadTip(std::string const &tip, std::string const &tooltip);
 
     void RunScript(std::string const& script);
 
 private:
-    wxWebView* CreateTipView(wxWindow* parent);
+    QWidget* CreateTipView(QWidget* parent);
 
-    void OnLoaded(wxWebViewEvent& event);
+    void OnLoaded(QEvent& event);
 
-    void OnTitleChanged(wxWebViewEvent& event);
+    void OnTitleChanged(QEvent& event);
 
-    void OnError(wxWebViewEvent& event);
+    void OnError(QEvent& event);
 
-    void OnTimer(wxTimerEvent& event);
+    void OnTimer(QTimerEvent& event);
     
 private:
-    wxWebView * _tipView = nullptr;
+    QWidget * _tipView = nullptr;
     std::string _lastTip;
     std::string _pendingScript = " ";
     std::string _language;
-    wxPoint _requestPos;
+    QPoint _requestPos;
     double _lastHeight = 0;
-    wxTimer* _timer = nullptr;
+    QTimer* _timer = nullptr;
     bool _hide = false;
     bool _data_dir = false;
 };

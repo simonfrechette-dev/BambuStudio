@@ -36,19 +36,19 @@ struct ConfigIndexValue
     int   index{0};
 };
 
-class CalibrationWizard : public wxPanel {
+class CalibrationWizard : public QWidget {
 public:
-    CalibrationWizard(wxWindow* parent, CalibMode mode,
-        wxWindowID id = wxID_ANY,
-        const wxPoint& pos = wxDefaultPosition,
-        const wxSize& size = wxDefaultSize,
-        long style = wxTAB_TRAVERSAL);
+    CalibrationWizard(QWidget* parent, CalibMode mode,
+        int id = -1,
+        const QPoint& pos = QPoint(),
+        const QSize& size = QSize(),
+        long style = 0);
 
     ~CalibrationWizard();
 
-    void on_cali_job_finished(wxCommandEvent& event);
+    void on_cali_job_finished(QEvent& event);
 
-    virtual void on_cali_job_finished(wxString evt_data) {}
+    virtual void on_cali_job_finished(QString evt_data) {}
 
     CalibrationWizardPageStep* get_curr_step() { return m_curr_step; }
 
@@ -66,8 +66,8 @@ public:
 
     CalibMode get_calibration_mode() { return m_mode; }
 
-    bool save_preset(const std::string &old_preset_name, const std::string &new_preset_name, const std::map<std::string, ConfigOption *> &key_values, wxString& message);
-    bool save_preset_with_index(const std::string &old_preset_name, const std::string &new_preset_name, const std::map<std::string, ConfigIndexValue> &key_values, wxString &message);
+    bool save_preset(const std::string &old_preset_name, const std::string &new_preset_name, const std::map<std::string, ConfigOption *> &key_values, QString& message);
+    bool save_preset_with_index(const std::string &old_preset_name, const std::string &new_preset_name, const std::map<std::string, ConfigIndexValue> &key_values, QString &message);
 
     virtual void cache_preset_info(MachineObject *obj, float nozzle_dia, BedType bed_type);
     virtual void recover_preset_info(MachineObject *obj);
@@ -81,8 +81,8 @@ protected:
 
 protected:
     /* wx widgets*/
-    wxScrolledWindow* m_scrolledWindow;
-    wxBoxSizer* m_all_pages_sizer;
+    QScrollArea* m_scrolledWindow;
+    QBoxLayout* m_all_pages_sizer;
 
     CalibMode           m_mode;
     CalibrationStyle    m_cali_style;
@@ -110,10 +110,10 @@ protected:
 
 class PressureAdvanceWizard : public CalibrationWizard {
 public:
-    PressureAdvanceWizard(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL);
+    PressureAdvanceWizard(QWidget* parent, int id = -1, const QPoint& pos = QPoint(), const QSize& size = QSize(), long style = 0);
     ~PressureAdvanceWizard() {};
 
-    void on_cali_job_finished(wxString evt_data) override;
+    void on_cali_job_finished(QString evt_data) override;
 
 protected:
     void create_pages();
@@ -122,7 +122,7 @@ protected:
 
     void on_cali_save();
 
-    void on_cali_action(wxCommandEvent& evt);
+    void on_cali_action(QEvent& evt);
 
     void update(MachineObject* obj) override;
 
@@ -137,19 +137,19 @@ protected:
 
 class FlowRateWizard : public CalibrationWizard {
 public:
-    FlowRateWizard(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL);
+    FlowRateWizard(QWidget* parent, int id = -1, const QPoint& pos = QPoint(), const QSize& size = QSize(), long style = 0);
     ~FlowRateWizard() {};
 
     void set_cali_method(CalibrationMethod method) override;
 
-    void on_cali_job_finished(wxString evt_data) override;
+    void on_cali_job_finished(QString evt_data) override;
 
     void cache_coarse_info(MachineObject *obj);
 
 protected:
     void create_pages();
 
-    void on_cali_action(wxCommandEvent& evt);
+    void on_cali_action(QEvent& evt);
 
     void on_cali_start(CaliPresetStage stage = CaliPresetStage::CALI_MANULA_STAGE_NONE, float cali_value = 0.0f, FlowRatioCaliSource from_page = FlowRatioCaliSource::FROM_PRESET_PAGE);
 
@@ -164,15 +164,15 @@ protected:
 
 class MaxVolumetricSpeedWizard : public CalibrationWizard {
 public:
-    MaxVolumetricSpeedWizard(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL);
+    MaxVolumetricSpeedWizard(QWidget* parent, int id = -1, const QPoint& pos = QPoint(), const QSize& size = QSize(), long style = 0);
     ~MaxVolumetricSpeedWizard() {};
 
-    void on_cali_job_finished(wxString evt_data) override;
+    void on_cali_job_finished(QString evt_data) override;
 
 protected:
     void create_pages();
 
-    void on_cali_action(wxCommandEvent& evt);
+    void on_cali_action(QEvent& evt);
 
     void on_cali_start();
 
@@ -182,8 +182,6 @@ protected:
 };
 
 // save printer_type in command event
-wxDECLARE_EVENT(EVT_DEVICE_CHANGED, wxCommandEvent);
-wxDECLARE_EVENT(EVT_CALIBRATION_JOB_FINISHED, wxCommandEvent);
 
 }} // namespace Slic3r::GUI
 

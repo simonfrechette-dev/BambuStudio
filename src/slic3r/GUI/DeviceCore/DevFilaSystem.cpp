@@ -16,11 +16,11 @@ using namespace nlohmann;
 
 namespace Slic3r {
 
-wxColour DevAmsTray::decode_color(const std::string &color)
+QColor DevAmsTray::decode_color(const std::string &color)
 {
     if (color.empty()) {
         BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << ": empty";
-        return wxColour(255, 255, 255, 255);//default white
+        return QColor(255, 255, 255, 255);//default white
     }
 
     std::string clr_str = color;
@@ -28,13 +28,13 @@ wxColour DevAmsTray::decode_color(const std::string &color)
         clr_str = "#" + color;
     }
 
-    const auto& clr = wxColour(clr_str);
-    if (clr.IsOk()) {
+    const auto& clr = QColor(QString::fromStdString(clr_str));
+    if (clr.isValid()) {
         return clr;
     }
 
     BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << ": " << clr_str;
-    return wxColour(255, 255, 255, 255);//default white
+    return QColor(255, 255, 255, 255);//default white
 }
 
 void DevAmsTray::UpdateColorFromStr(const std::string& color)
@@ -42,7 +42,7 @@ void DevAmsTray::UpdateColorFromStr(const std::string& color)
     if (color.empty()) return;
     if (this->color != color)
     {
-        wx_color = "#" + wxString::FromUTF8(color);
+        wx_color = QColor(QString("#") + QString::fromStdString(color));
         this->color = color;
     }
 }
@@ -185,16 +185,16 @@ std::optional<int> DevAms::GetCurrentExtruderId() const
     return std::nullopt;
 }
 
-static unordered_map<DevAmsType, wxString> s_ams_display_formats = {
+static unordered_map<DevAmsType, QString> s_ams_display_formats = {
     {DevAmsType::AMS,      "AMS(%d)"},
     {DevAmsType::AMS_LITE, "AMS Lite(%d)"},
     {DevAmsType::N3F,      "AMS 2 Pro(%d)"},
     {DevAmsType::N3S,      "AMS HT(%d)"}
 };
 
-wxString DevAms::GetDisplayName() const
+QString DevAms::GetDisplayName() const
 {
-    wxString ams_display_format;
+    QString ams_display_format;
     auto iter = s_ams_display_formats.find(m_ams_type);
     if (iter != s_ams_display_formats.end())
     {
@@ -219,7 +219,7 @@ wxString DevAms::GetDisplayName() const
     }
 
     int loc = (num_id > 127) ? (num_id - 127) : (num_id + 1);
-    return wxString::Format(ams_display_format, loc);
+    return QString::asprintf(ams_display_format.toUtf8().constData(), loc);
 }
 
 int DevAms::GetSlotCount() const
@@ -324,7 +324,7 @@ DevAmsTray* DevFilaSystem::GetAmsTray(const std::string& ams_id, const std::stri
     return it->second->GetTray(tray_id);
 }
 
-void DevFilaSystem::CollectAmsColors(std::vector<wxColour>& ams_colors) const
+void DevFilaSystem::CollectAmsColors(std::vector<QColor>& ams_colors) const
 {
     ams_colors.clear();
     ams_colors.reserve(amsList.size());

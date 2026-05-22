@@ -18,7 +18,7 @@
 #include <boost/nowide/fstream.hpp>
 #include <nlohmann/json.hpp>
 
-#include <wx/string.h>
+#include <QString>
 
 #include "slic3r/GUI/DeviceCore/DevDefs.h"
 

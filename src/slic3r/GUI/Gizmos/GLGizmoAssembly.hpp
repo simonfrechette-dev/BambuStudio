@@ -1,3 +1,4 @@
+#include <QMouseEvent>
 #ifndef slic3r_GLGizmoAssembly_hpp_
 #define slic3r_GLGizmoAssembly_hpp_
 
@@ -16,7 +17,7 @@ public:
     /// </summary>
     /// <param name="mouse_event">Keep information about mouse click</param>
     /// <returns>Return True when use the information otherwise False.</returns>
-    //bool on_mouse(const wxMouseEvent &mouse_event) override;
+    //bool on_mouse(const QMouseEvent &mouse_event) override;
     //void data_changed(bool is_serializing) override;
     //bool gizmo_event(SLAGizmoEventType action, const Vec2d &mouse_position, bool shift_down, bool alt_down, bool control_down) override;
 

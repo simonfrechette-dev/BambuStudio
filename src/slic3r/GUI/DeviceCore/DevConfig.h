@@ -2,7 +2,7 @@
 #include "libslic3r/CommonDefs.hpp"
 
 #include "slic3r/Utils/json_diff.hpp"
-#include <wx/string.h>
+
 
 #include <limits>
 #include <optional>

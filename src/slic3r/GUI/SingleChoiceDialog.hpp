@@ -10,13 +10,13 @@ namespace Slic3r { namespace GUI {
 class SingleChoiceDialog : public DPIDialog
 {
 public:
-    SingleChoiceDialog(const wxString &message, const wxString &caption, const wxArrayString &choices, int initialSelectionwx, wxWindow *parent = nullptr);
+    SingleChoiceDialog(const QString &message, const QString &caption, const QStringList &choices, int initialSelectionwx, QWidget *parent = nullptr);
     ~SingleChoiceDialog();
 
     int       GetSingleChoiceIndex();
     ComboBox *GetTypeComboBox() { return type_comboBox; };
 
-    void on_dpi_changed(const wxRect &suggested_rect) override;
+    void on_dpi_changed(const QRect &suggested_rect) override;
 
 protected:
     ComboBox *type_comboBox   = nullptr;

@@ -1,124 +1,62 @@
 #ifndef slic3r_CameraPopup_hpp_
 #define slic3r_CameraPopup_hpp_
 
-#include "slic3r/GUI/MonitorBasePanel.h"
-#include "DeviceManager.hpp"
-#include "GUI.hpp"
-#include <wx/panel.h>
-#include <wx/bitmap.h>
-#include <wx/image.h>
-#include <wx/sizer.h>
-#include <wx/timer.h>
+// Phase 4 TODO: Qt port of CameraPopup
+
+#include <QWidget>
 #include <chrono>
-#include <wx/gbsizer.h>
-#include <wx/webrequest.h>
-#include <wx/hyperlink.h>
-#include "Widgets/SwitchButton.hpp"
-#include "Widgets/RadioBox.hpp"
-#include "Widgets/PopupWindow.hpp"
+#include "GUI.hpp"
+
+class MachineObject;
 
 namespace Slic3r {
 namespace GUI {
 
-wxDECLARE_EVENT(EVT_VCAMERA_SWITCH, wxCommandEvent);
-wxDECLARE_EVENT(EVT_SDCARD_ABSENT_HINT, wxCommandEvent);
+// Event IDs replacing wxDECLARE_EVENT
+static constexpr int EVT_VCAMERA_SWITCH    = 10100;
+static constexpr int EVT_SDCARD_ABSENT_HINT = 10101;
 
-class CameraPopup : public PopupWindow
+class CameraPopup : public QWidget
 {
+    Q_OBJECT
 public:
-    CameraPopup(wxWindow *parent);
-    virtual ~CameraPopup() {}
+    explicit CameraPopup(QWidget* parent = nullptr);
+    ~CameraPopup() override = default;
 
-    // PopupWindow virtual methods are all overridden to log them
-    virtual void Popup(wxWindow *focus = NULL) wxOVERRIDE;
-    virtual void OnDismiss() wxOVERRIDE;
-    virtual bool ProcessLeftDown(wxMouseEvent &event) wxOVERRIDE;
-    virtual bool Show(bool show = true) wxOVERRIDE;
+    void Popup(QWidget* focus = nullptr);
+    bool OnDismiss();
+    void sync_vcamera_state();
+    void sync_local_rtsp_url();
+    void on_timer(bool bTimerTriggered);
+    void OnClose();
+    virtual bool ProcessLeftDown(QMouseEvent* evt);
 
-    void sync_vcamera_state(bool show_vcamera);
-    void check_func_supported(MachineObject* obj);
-    void update(bool vcamera_streaming);
+    static bool IsRecordEnable(MachineObject* obj_);
 
-    enum CameraResolution
-    {
-        RESOLUTION_720P = 0,
-        RESOLUTION_1080P = 1,
-        RESOLUTION_OPTIONS_NUM = 2
-    };
-
-    void rescale();
-
-protected:
-    void on_switch_recording(wxMouseEvent& event);
-    void on_set_resolution();
-    void sdcard_absent_hint();
-
-    wxWindow *  create_item_radiobox(wxString title, wxWindow *parent, wxString tooltip, int padding_left);
-    void select_curr_radiobox(int btn_idx);
-    void sync_resolution_setting(std::string resolution);
-    void reset_resolution_setting();
-    wxString to_resolution_label_string(CameraResolution resolution);
-    std::string to_resolution_msg_string(CameraResolution resolution);
-
-private:
-    MachineObject* m_obj { nullptr };
-    wxTimer* m_interval_timer{nullptr};
-    bool  m_is_in_interval{ false };
-    wxStaticText* m_text_recording;
-    SwitchButton* m_switch_recording;
-    wxStaticText* m_text_vcamera;
-    SwitchButton* m_switch_vcamera;
-    wxStaticText* m_text_liveview_retry;
-    SwitchButton* m_switch_liveview_retry;
-    wxStaticText* m_text_resolution;
-    wxWindow* m_resolution_options[RESOLUTION_OPTIONS_NUM];
-    wxScrolledWindow *m_panel;
-    wxBoxSizer* main_sizer;
-    std::vector<RadioBox*> resolution_rbtns;
-    std::vector<wxStaticText*> resolution_texts;
-    CameraResolution curr_sel_resolution = RESOLUTION_1080P;
-    Label* vcamera_guide_link { nullptr };
-    wxPanel* link_underline{ nullptr };
-    bool is_vcamera_show = false;
-    bool allow_alter_resolution = false;
-
-    void start_interval();
-    void stop_interval(wxTimerEvent& event);
-    void OnMouse(wxMouseEvent &event);
-    void OnSize(wxSizeEvent &event);
-    void OnSetFocus(wxFocusEvent &event);
-    void OnKillFocus(wxFocusEvent &event);
-    void OnLeftUp(wxMouseEvent& event);
-
-    // Debounce guards to prevent double-trigger on macOS
-    std::chrono::steady_clock::time_point m_last_recording_click{};
-    std::chrono::steady_clock::time_point m_last_vcamera_click{};
-
-private:
-    wxDECLARE_ABSTRACT_CLASS(CameraPopup);
-    wxDECLARE_EVENT_TABLE();
+    MachineObject* obj = nullptr;
 };
 
 
-class CameraItem : public wxPanel
+class CameraItem : public QWidget
 {
+    Q_OBJECT
 public:
-    CameraItem(wxWindow *parent, std::string normal, std::string hover);
-    ~CameraItem();
+    explicit CameraItem(QWidget* parent = nullptr, const QString& name = QString(), const QString& img = QString());
+    ~CameraItem() override = default;
 
-    MachineObject *m_obj{nullptr};
-    bool     m_hover{false};
-    ScalableBitmap m_bitmap_normal;
-    ScalableBitmap m_bitmap_hover;
+    void OnEnter(QEvent* event);
+    void OnLeave(QEvent* event);
+    void OnSelected();
+    bool IsSelected() { return m_selected; }
+    void SetSelected(bool selected) { m_selected = selected; }
+    QString GetName() { return m_name; }
 
-    void msw_rescale();
-    void on_enter_win(wxMouseEvent &evt);
-    void on_level_win(wxMouseEvent &evt);
-    void paintEvent(wxPaintEvent &evt);
-    void render(wxDC &dc);
-    void doRender(wxDC &dc);
+private:
+    QString m_name;
+    bool    m_selected = false;
 };
 
-}
-}
-#endif
+} // namespace GUI
+} // namespace Slic3r
+
+#endif // slic3r_CameraPopup_hpp_

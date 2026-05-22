@@ -3,11 +3,13 @@
 
 #include "TickCode.hpp"
 #include <imgui/imgui.h>
-#include <wx/slider.h>
+// wx/slider.h removed (Qt migration)
+#include <QWheelEvent>
+#include <Qt>
 
 #include <set>
 
-class wxMenu;
+class QMenu;
 struct IMGUI_API ImRect;
 
 namespace Slic3r {
@@ -55,7 +57,7 @@ enum LabelType
 class IMSlider
 {
 public:
-    IMSlider(int lowerValue, int higherValue, int minValue, int maxValue, long style = wxSL_VERTICAL);
+    IMSlider(int lowerValue, int higherValue, int minValue, int maxValue, long style = Qt::Vertical);
 
     bool init_texture();
 
@@ -99,7 +101,7 @@ public:
     void set_render_as_disabled(bool value) { m_render_as_disabled = value; }
     bool is_rendering_as_disabled() const { return m_render_as_disabled; }
 
-    bool is_horizontal() const { return m_style == wxSL_HORIZONTAL; }
+    bool is_horizontal() const { return m_style == Qt::Horizontal; }
     bool is_one_layer() const { return m_is_one_layer; }
     bool is_lower_at_min() const { return m_lower_value == m_min_value; }
     bool is_higher_at_max() const { return m_higher_value == m_max_value; }
@@ -107,7 +109,7 @@ public:
 
     void UseDefaultColors(bool def_colors_on) { m_ticks.set_default_colors(def_colors_on); }
 
-    void on_mouse_wheel(wxMouseEvent& evt);
+    void on_mouse_wheel(QWheelEvent& evt);
     void post_ticks_changed_event(Type type = Unknown);
     bool check_ticks_changed_event(Type type);
     bool switch_one_layer_mode();

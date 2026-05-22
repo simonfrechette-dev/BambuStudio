@@ -1,3 +1,4 @@
+#include <QString>
 #ifndef slic3r_GLGizmoSeam_hpp_
 #define slic3r_GLGizmoSeam_hpp_
 
@@ -33,7 +34,7 @@ protected:
 
     void tool_changed(wchar_t old_tool, wchar_t new_tool);
 
-    wxString handle_snapshot_action_name(bool shift_down, Button button_down) const override;
+    QString handle_snapshot_action_name(bool shift_down, Button button_down) const override;
 
     std::string get_gizmo_entering_text() const override { return "Entering Seam painting"; }
     std::string get_gizmo_leaving_text() const override { return "Leaving Seam painting"; }
@@ -52,7 +53,7 @@ private:
 
     // This map holds all translated description texts, so they can be easily referenced during layout calculations
     // etc. When language changes, GUI is recreated and this class constructed again, so the change takes effect.
-    std::map<std::string, wxString> m_desc;
+    std::map<std::string, QString> m_desc;
 };
 
 

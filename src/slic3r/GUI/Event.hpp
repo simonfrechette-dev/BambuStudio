@@ -1,92 +1,50 @@
 #ifndef slic3r_Events_hpp_
 #define slic3r_Events_hpp_
 
-#include <array>
-#include <wx/event.h>
+// Qt port of Event.hpp
+// Custom event types inherit from ::QEvent directly.
 
+#include <array>
+#include <QEvent>
+#include <QObject>
 
 namespace Slic3r {
-
 namespace GUI {
 
-
-struct SimpleEvent : public wxEvent
-{
-    SimpleEvent(wxEventType type, wxObject* origin = nullptr) : wxEvent(0, type)
-    {
-        m_propagationLevel = wxEVENT_PROPAGATE_MAX;
-        SetEventObject(origin);
+// SimpleEvent — a QEvent carrying no payload
+struct SimpleEvent : public ::QEvent {
+    static ::QEvent::Type eventType() {
+        static ::QEvent::Type t = static_cast<::QEvent::Type>(::QEvent::registerEventType());
+        return t;
     }
-
-    virtual wxEvent* Clone() const
-    {
-        return new SimpleEvent(GetEventType(), GetEventObject());
-    }
+    explicit SimpleEvent(::QEvent::Type type = eventType()) : ::QEvent(type) {}
 };
 
-struct IntEvent : public wxEvent
-{
-public:
-    IntEvent(wxEventType type, int data, wxObject* origin = nullptr) : wxEvent(0, type)
-    {
-        m_propagationLevel = wxEVENT_PROPAGATE_MAX;
-        SetEventObject(origin);
-        m_data = data;
-    }
-
-    virtual wxEvent* Clone() const
-    {
-        return new IntEvent(GetEventType(), m_data, GetEventObject());
-    }
-    int get_data() { return m_data; }
-
+// IntEvent — a QEvent carrying a single int
+struct IntEvent : public ::QEvent {
+    explicit IntEvent(::QEvent::Type type, int data) : ::QEvent(type), m_data(data) {}
+    int get_data() const { return m_data; }
 private:
     int m_data;
-    
 };
 
-template<class T, size_t N> struct ArrayEvent : public wxEvent
-{
+// ArrayEvent — a QEvent carrying a std::array<T,N>
+template<class T, size_t N>
+struct ArrayEvent : public ::QEvent {
     std::array<T, N> data;
-
-    ArrayEvent(wxEventType type, std::array<T, N> data, wxObject* origin = nullptr)
-        : wxEvent(0, type), data(std::move(data))
-    {
-        m_propagationLevel = wxEVENT_PROPAGATE_MAX;
-        SetEventObject(origin);
-    }
-
-    virtual wxEvent* Clone() const
-    {
-        return new ArrayEvent<T, N>(GetEventType(), data, GetEventObject());
-    }
+    ArrayEvent(::QEvent::Type type, std::array<T, N> d)
+        : ::QEvent(type), data(std::move(d)) {}
 };
 
-template<class T> struct Event : public wxEvent
-{
+// Event<T> — a QEvent carrying a single value of type T
+template<class T>
+struct Event : public ::QEvent {
     T data;
-
-    Event(wxEventType type, const T &data, wxObject* origin = nullptr)
-        : wxEvent(0, type), data(std::move(data))
-    {
-        m_propagationLevel = wxEVENT_PROPAGATE_MAX;
-        SetEventObject(origin);
-    }
-
-    Event(wxEventType type, T&& data, wxObject* origin = nullptr)
-        : wxEvent(0, type), data(std::move(data))
-    {
-        m_propagationLevel = wxEVENT_PROPAGATE_MAX;
-        SetEventObject(origin);
-    }
-
-    virtual wxEvent* Clone() const
-    {
-        return new Event<T>(GetEventType(), data, GetEventObject());
-    }
+    Event(::QEvent::Type type, const T &d) : ::QEvent(type), data(d) {}
+    Event(::QEvent::Type type, T &&d)      : ::QEvent(type), data(std::move(d)) {}
 };
 
-}
-}
+} // namespace GUI
+} // namespace Slic3r
 
 #endif // slic3r_Events_hpp_

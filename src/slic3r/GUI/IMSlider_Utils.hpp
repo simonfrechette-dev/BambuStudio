@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <random>
 
-#include "wx/colour.h"
+#include <QColor>
 
 //double epsilon() { return 0.0011; }
 
@@ -73,8 +73,8 @@ class ColorGenerator
 
     hsv rgb2hsv(const std::string& str_clr_in)
     {
-        wxColour clr(str_clr_in);
-        rgb in = { clr.Red() / 255.0, clr.Green() / 255.0, clr.Blue() / 255.0 };
+        QColor clr(QString::fromStdString(str_clr_in));
+        rgb in = { clr.red() / 255.0, clr.green() / 255.0, clr.blue() / 255.0 };
         return rgb2hsv(in);
     }
 
@@ -166,8 +166,8 @@ public:
 
         rgb rgb_opp_color = hsv2rgb(hsv_clr);
 
-        wxString clr_str = wxString::Format(wxT("#%02X%02X%02X"), (unsigned char)(rgb_opp_color.r * 255), (unsigned char)(rgb_opp_color.g * 255), (unsigned char)(rgb_opp_color.b * 255));
-        opp_color = clr_str.ToStdString();
+        QString clr_str = QString::asprintf("#%02X%02X%02X", (unsigned char)(rgb_opp_color.r * 255), (unsigned char)(rgb_opp_color.g * 255), (unsigned char)(rgb_opp_color.b * 255));
+        opp_color = clr_str.toStdString();
 
         return opp_color;
     }
@@ -188,8 +188,8 @@ public:
         hsv hsv_opp = hsv{ start_h + 0.5 * delta_h, rand_val(), rand_val() };
         rgb rgb_opp_color = hsv2rgb(hsv_opp);
 
-        wxString clr_str = wxString::Format(wxT("#%02X%02X%02X"), (unsigned char)(rgb_opp_color.r * 255), (unsigned char)(rgb_opp_color.g * 255), (unsigned char)(rgb_opp_color.b * 255));
-        opp_color = clr_str.ToStdString();
+        QString clr_str = QString::asprintf("#%02X%02X%02X", (unsigned char)(rgb_opp_color.r * 255), (unsigned char)(rgb_opp_color.g * 255), (unsigned char)(rgb_opp_color.b * 255));
+        opp_color = clr_str.toStdString();
 
         return opp_color;
     }

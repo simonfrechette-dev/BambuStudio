@@ -1,21 +1,23 @@
 #ifndef slic3r_GUI_ROUNDEDRECTANGLE_hpp_
 #define slic3r_GUI_ROUNDEDRECTANGLE_hpp_
 
-#include "../wxExtensions.hpp"
+#include <QWidget>
+#include <QColor>
 
-class RoundedRectangle : public wxWindow
+class RoundedRectangle : public QWidget
 {
+    Q_OBJECT
 public:
-    RoundedRectangle(wxWindow *parent, wxColour col, wxPoint pos, wxSize size, double radius, int type = 0);
-    ~RoundedRectangle(){};
+    RoundedRectangle(QWidget *parent, QColor col, const QPoint &pos,
+                     const QSize &size, double radius, int type = 0);
+
+protected:
+    void paintEvent(QPaintEvent *event) override;
 
 private:
     double m_radius;
-    int      m_type;
-    wxColour m_color;
-
-public:
-    void OnPaint(wxPaintEvent &evt);
-    DECLARE_EVENT_TABLE()
+    int    m_type;
+    QColor m_color;
 };
+
 #endif // !slic3r_GUI_RoundedRectangle_hpp_

@@ -1,14 +1,19 @@
 #ifndef slic3r_GUI_CalibrationWizardPage_hpp_
 #define slic3r_GUI_CalibrationWizardPage_hpp_
+#include <QWidget>
+#include <QRadioButton>
+#include <QString>
 
-#include "wx/event.h"
 #include "Widgets/Button.hpp"
 #include "Widgets/ComboBox.hpp"
 #include "Widgets/TextInput.hpp"
 #include "Widgets/AMSControl.hpp"
 #include "Widgets/ProgressBar.hpp"
 #include "wxExtensions.hpp"
+#include "BBLStatusBarSend.hpp"
 #include "PresetComboBoxes.hpp"
+#include "Widgets/CheckBox.hpp"
+#include "Widgets/SwitchButton.hpp"
 
 #include "../slic3r/Utils/CalibUtils.hpp"
 #include "../../libslic3r/Calib.hpp"
@@ -18,10 +23,10 @@ namespace Slic3r { namespace GUI {
 
 #define MIN_CALIBRATION_PAGE_WIDTH         FromDIP(1100)
 #define PRESET_GAP                         FromDIP(25)
-#define CALIBRATION_COMBOX_SIZE            wxSize(FromDIP(500), FromDIP(24))
-#define CALIBRATION_FILAMENT_COMBOX_SIZE   wxSize(FromDIP(250), FromDIP(24))
-#define CALIBRATION_OPTIMAL_INPUT_SIZE     wxSize(FromDIP(300), FromDIP(24))
-#define CALIBRATION_FROM_TO_INPUT_SIZE     wxSize(FromDIP(160), FromDIP(24))
+#define CALIBRATION_COMBOX_SIZE            QSize(FromDIP(500), FromDIP(24))
+#define CALIBRATION_FILAMENT_COMBOX_SIZE   QSize(FromDIP(250), FromDIP(24))
+#define CALIBRATION_OPTIMAL_INPUT_SIZE     QSize(FromDIP(300), FromDIP(24))
+#define CALIBRATION_FROM_TO_INPUT_SIZE     QSize(FromDIP(160), FromDIP(24))
 #define CALIBRATION_FGSIZER_HGAP           FromDIP(50)
 #define CALIBRATION_TEXT_MAX_LENGTH        FromDIP(90) + CALIBRATION_FGSIZER_HGAP + 2 * CALIBRATION_FILAMENT_COMBOX_SIZE.x
 #define CALIBRATION_PROGRESSBAR_LENGTH     FromDIP(690)
@@ -44,7 +49,7 @@ enum class CalibrationStyle : int
 
 CalibrationStyle get_cali_style(MachineObject* obj);
 
-wxString get_cali_mode_caption_string(CalibMode mode);
+QString get_cali_mode_caption_string(CalibMode mode);
 
 enum CalibrationFilamentMode {
     /* calibration single filament at once */
@@ -53,14 +58,14 @@ enum CalibrationFilamentMode {
     CALI_MODEL_MULITI,
 };
 
-enum CalibrationMethod {
+enum CalibrationMethod : int {
     CALI_METHOD_MANUAL = 0,
     CALI_METHOD_AUTO,
     CALI_METHOD_NEW_AUTO,
     CALI_METHOD_NONE,
 };
 
-wxString get_calibration_wiki_page(CalibMode cali_mode);
+QString get_calibration_wiki_page(CalibMode cali_mode);
 
 CalibrationFilamentMode get_cali_filament_mode(MachineObject* obj, CalibMode mode);
 
@@ -83,10 +88,10 @@ enum class CaliPageType {
     CALI_PAGE_COMMON_SAVE,
 };
 
-class FilamentComboBox : public wxPanel
+class FilamentComboBox : public QWidget
 {
 public:
-    FilamentComboBox(wxWindow* parent, int index, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize);
+    FilamentComboBox(QWidget* parent, int index, const QPoint& pos = QPoint(), const QSize& size = QSize());
     ~FilamentComboBox() {};
 
     void set_select_mode(CalibrationFilamentMode mode);
@@ -100,8 +105,8 @@ public:
     CalibrateFilamentComboBox* GetComboBox() { return m_comboBox; }
     CheckBox* GetCheckBox() { return m_checkBox; }
     void SetCheckBox(CheckBox* cb) { m_checkBox = cb; }
-    wxRadioButton* GetRadioBox() { return m_radioBox; }
-    void SetRadioBox(wxRadioButton* btn) { m_radioBox = btn; }
+    QRadioButton* GetRadioBox() { return m_radioBox; }
+    void SetRadioBox(QRadioButton* btn) { m_radioBox = btn; }
     virtual bool Show(bool show = true);
     virtual bool Enable(bool enable);
     virtual void SetValue(bool value, bool send_event = true);
@@ -110,7 +115,7 @@ public:
     void ShowPanel();
     void HidePanel();
 
-    void UpdateNozzleCombo(const std::vector<std::pair<wxString, int>>& nozzle_list);
+    void UpdateNozzleCombo(const std::vector<std::pair<QString, int>>& nozzle_list);
     int  GetNozzleIdCode() const;
     void ShowNozzleCombo();
     void HideNozzleCombo();
@@ -125,9 +130,9 @@ protected:
     bool m_is_bbl_filamnet{ false };
 
     CheckBox* m_checkBox{ nullptr };
-    wxRadioButton* m_radioBox{ nullptr };
+    QRadioButton* m_radioBox{ nullptr };
     CalibrateFilamentComboBox* m_comboBox{ nullptr };
-    wxStaticBitmap* m_nozzle_bmp{ nullptr };
+    QLabel* m_nozzle_bmp{ nullptr };
     ComboBox* m_nozzle_combo{ nullptr };
 
     CalibrationFilamentMode m_mode { CalibrationFilamentMode::CALI_MODEL_SINGLE };
@@ -136,15 +141,15 @@ protected:
 
 typedef std::vector<FilamentComboBox*> FilamentComboBoxList;
 
-class CaliPageCaption : public wxPanel
+class CaliPageCaption : public QWidget
 {
 public:
-    CaliPageCaption(wxWindow* parent,
+    CaliPageCaption(QWidget* parent,
         CalibMode cali_mode,
-        wxWindowID id = wxID_ANY,
-        const wxPoint& pos = wxDefaultPosition,
-        const wxSize& size = wxDefaultSize,
-        long style = wxTAB_TRAVERSAL);
+        int id = -1,
+        const QPoint& pos = QPoint(),
+        const QSize& size = QSize(),
+        long style = 0);
 
     void show_prev_btn(bool show = true);
     void show_help_icon(bool show = true);
@@ -157,42 +162,42 @@ protected:
 
 private:
     void init_bitmaps();
-    void create_wiki(wxWindow* parent);
+    void create_wiki(QWidget* parent);
 
     Label* m_wiki_text;
-    wxString  m_wiki_url;
+    QString  m_wiki_url;
     ScalableBitmap m_prev_bmp_normal;
     ScalableBitmap m_prev_bmp_hover;
     ScalableBitmap m_help_bmp_normal;
     ScalableBitmap m_help_bmp_hover;
 };
 
-class CaliPageStepGuide : public wxPanel
+class CaliPageStepGuide : public QWidget
 {
 public:
-    CaliPageStepGuide(wxWindow* parent,
-        wxArrayString steps,
-        wxWindowID id = wxID_ANY,
-        const wxPoint& pos = wxDefaultPosition,
-        const wxSize& size = wxDefaultSize,
-        long style = wxTAB_TRAVERSAL);
+    CaliPageStepGuide(QWidget* parent,
+        QStringList steps,
+        int id = -1,
+        const QPoint& pos = QPoint(),
+        const QSize& size = QSize(),
+        long style = 0);
 
     void set_steps(int index);
-    void set_steps_string(wxArrayString steps);
+    void set_steps_string(QStringList steps);
 protected:
-    wxArrayString m_steps;
-    wxBoxSizer* m_step_sizer;
+    QStringList m_steps;
+    QBoxLayout* m_step_sizer;
     std::vector<Label*> m_text_steps;
 };
 
-class CaliPagePicture : public wxPanel
+class CaliPagePicture : public QWidget
 {
 public:
-    CaliPagePicture(wxWindow* parent,
-        wxWindowID id = wxID_ANY,
-        const wxPoint& pos = wxDefaultPosition,
-        const wxSize& size = wxDefaultSize,
-        long style = wxTAB_TRAVERSAL);
+    CaliPagePicture(QWidget* parent,
+        int id = -1,
+        const QPoint& pos = QPoint(),
+        const QSize& size = QSize(),
+        long style = 0);
 
     void set_bmp(const ScalableBitmap& bmp);
     void paint_on_img();
@@ -200,18 +205,18 @@ public:
 
 protected:
     ScalableBitmap m_bmp;
-    wxStaticBitmap* m_img;
+    QLabel* m_img;
 };
 
-class PAPageHelpPanel : public wxPanel
+class PAPageHelpPanel : public QWidget
 {
 public:
-    PAPageHelpPanel(wxWindow* parent,
+    PAPageHelpPanel(QWidget* parent,
         bool ground_panel = true,
-        wxWindowID id = wxID_ANY,
-        const wxPoint& pos = wxDefaultPosition,
-        const wxSize& size = wxDefaultSize,
-        long style = wxTAB_TRAVERSAL);
+        int id = -1,
+        const QPoint& pos = QPoint(),
+        const QSize& size = QSize(),
+        long style = 0);
     void msw_rescale();
 
 protected:
@@ -220,7 +225,7 @@ protected:
     ScalableButton* m_help_btn;
     PopupWindow* m_pop_win;
     ScalableBitmap m_bmp;
-    wxStaticBitmap* m_img;
+    QLabel* m_img;
 };
 
 enum class CaliPageActionType : int
@@ -247,7 +252,7 @@ enum class CaliPageActionType : int
 class CaliPageButton : public Button
 {
 public:
-    CaliPageButton(wxWindow* parent, CaliPageActionType type, wxString text = wxEmptyString);
+    CaliPageButton(QWidget* parent, CaliPageActionType type, QString text = QString());
 
     CaliPageActionType get_action_type() { return m_action_type; }
 
@@ -257,23 +262,23 @@ private:
     CaliPageActionType m_action_type;
 };
 
-class CaliPageSendingPanel : public wxPanel
+class CaliPageSendingPanel : public QWidget
 {
 public:
-    CaliPageSendingPanel(wxWindow* parent,
-        wxWindowID id = wxID_ANY,
-        const wxPoint& pos = wxDefaultPosition,
-        const wxSize& size = wxDefaultSize,
-        long style = wxTAB_TRAVERSAL);
-    void create(wxWindow* parent);
+    CaliPageSendingPanel(QWidget* parent,
+        int id = -1,
+        const QPoint& pos = QPoint(),
+        const QSize& size = QSize(),
+        long style = 0);
+    void create(QWidget* parent);
     void update_print_error_info(int code, const std::string& msg, const std::string& extra);
-    void show_send_failed_info(bool show, int code = 0, wxString description = wxEmptyString, wxString extra = wxEmptyString);
+    void show_send_failed_info(bool show, int code = 0, QString description = QString(), QString extra = QString());
     std::shared_ptr<BBLStatusBarSend> get_sending_progress_bar();
     void reset();
 
 private:
     std::shared_ptr<BBLStatusBarSend> m_send_progress_bar;
-    wxScrolledWindow* m_sw_print_failed_info{ nullptr };
+    QScrollArea* m_sw_print_failed_info{ nullptr };
     Label* m_st_txt_error_code{ nullptr };
     Label* m_st_txt_error_desc{ nullptr };
     Label* m_st_txt_extra_info{ nullptr };
@@ -282,16 +287,16 @@ private:
     std::string                       m_print_error_extra;
 };
 
-class CaliPageActionPanel : public wxPanel
+class CaliPageActionPanel : public QWidget
 {
 public:
-    CaliPageActionPanel(wxWindow* parent,
+    CaliPageActionPanel(QWidget* parent,
         CalibMode cali_mode,
         CaliPageType page_type,
-        wxWindowID id = wxID_ANY,
-        const wxPoint& pos = wxDefaultPosition,
-        const wxSize& size = wxDefaultSize,
-        long style = wxTAB_TRAVERSAL);
+        int id = -1,
+        const QPoint& pos = QPoint(),
+        const QSize& size = QSize(),
+        long style = 0);
 
     void bind_button(CaliPageActionType action_type, bool is_block);
     void show_button(CaliPageActionType action_type, bool show = true);
@@ -302,10 +307,10 @@ protected:
     std::vector<CaliPageButton*> m_action_btns;
 };
 
-class CalibrationWizardPage : public wxPanel
+class CalibrationWizardPage : public QWidget
 {
 public:
-    CalibrationWizardPage(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL);
+    CalibrationWizardPage(QWidget* parent, int id = -1, const QPoint& pos = QPoint(), const QSize& size = QSize(), long style = 0);
     ~CalibrationWizardPage() {};
 
     CaliPageType get_page_type() { return m_page_type; }
@@ -345,7 +350,7 @@ protected:
     CalibrationMethod     m_cali_method{ CalibrationMethod::CALI_METHOD_MANUAL };
     MachineObject*        curr_obj { nullptr };
 
-    wxWindow*             m_parent { nullptr };
+    QWidget*             m_parent { nullptr };
     CaliPageCaption*      m_page_caption { nullptr };
     CaliPageActionPanel*  m_action_panel { nullptr };
     Label*         m_statictext_printer_msg{ nullptr };
@@ -355,8 +360,6 @@ private:
     CalibrationWizardPage* m_next_page {nullptr};
 };
 
-wxDECLARE_EVENT(EVT_CALI_ACTION, wxCommandEvent);
-wxDECLARE_EVENT(EVT_CALI_TRAY_CHANGED, wxCommandEvent);
 
 
 }} // namespace Slic3r::GUI

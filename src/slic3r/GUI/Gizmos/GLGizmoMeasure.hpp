@@ -1,3 +1,5 @@
+#include <QMouseEvent>
+#include <QString>
 #ifndef slic3r_GLGizmoMeasure_hpp_
 #define slic3r_GLGizmoMeasure_hpp_
 
@@ -223,7 +225,7 @@ public:
     /// </summary>
     /// <param name="mouse_event">Keep information about mouse click</param>
     /// <returns>Return True when use the information otherwise False.</returns>
-    bool on_mouse(const wxMouseEvent &mouse_event) override;
+    bool on_mouse(const QMouseEvent &mouse_event) override;
 
     void data_changed(bool is_serializing) override;
 
@@ -291,7 +293,7 @@ protected:
  protected:
     // This map holds all translated description texts, so they can be easily referenced during layout calculations
     // etc. When language changes, GUI is recreated and this class constructed again, so the change takes effect.
-    std::map<std::string, wxString> m_desc;
+    std::map<std::string, QString> m_desc;
     bool                     m_show_reset_first_tip{false};
     bool                     m_selected_wrong_feature_waring_tip{false};
     EMeasureMode             m_measure_mode{EMeasureMode::ONLY_MEASURE};

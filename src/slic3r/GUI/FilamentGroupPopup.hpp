@@ -1,10 +1,8 @@
 #ifndef FILAMENT_GROUP_HOVER_HPP
 #define FILAMENT_GROUP_HOVER_HPP
+#include <QWidget>
+#include <QString>
 
-#include <wx/bitmap.h>
-#include <wx/bmpbuttn.h>
-#include <wx/sizer.h>
-#include <wx/timer.h>
 #include "libslic3r/PrintConfig.hpp"
 #include "Widgets/PopupWindow.hpp"
 #include "Widgets/Label.hpp"
@@ -24,20 +22,20 @@ bool open_filament_group_wiki();
 class FilamentGroupPopup : public PopupWindow
 {
 public:
-    FilamentGroupPopup(wxWindow *parent, const std::vector<FilamentMapMode>& available_modes = {});
+    FilamentGroupPopup(QWidget *parent, const std::vector<FilamentMapMode>& available_modes = {});
     void tryPopup(Plater* plater,PartPlate* plate, bool slice_all);
     void tryClose();
 
     FilamentMapMode GetSelectedMode() const { return m_mode; }
 private:
-    void OnPaint(wxPaintEvent&event);
+    void OnPaint(QPaintEvent&event);
     void StartTimer();
     void ResetTimer();
 
     void OnRadioBtn(int idx);
-    void OnLeaveWindow(wxMouseEvent &);
-    void OnEnterWindow(wxMouseEvent &);
-    void OnTimer(wxTimerEvent &event);
+    void OnLeaveWindow(QMouseEvent &);
+    void OnEnterWindow(QMouseEvent &);
+    void OnTimer(QTimerEvent &event);
     void Dismiss();
 
     void CreateBmps();
@@ -51,9 +49,9 @@ private:
     void SetFilamentMapMode(const FilamentMapMode mode);
 
     // smart filament
-    void MakeSmartFilamentSection(wxSizer *top_sizer, int horizontal_margin, int vertical_padding);
+    void MakeSmartFilamentSection(QLayout *top_sizer, int horizontal_margin, int vertical_padding);
     void UpdateSmartFilamentSection();
-    void OnSmartFilamentToggle(wxCommandEvent &event);
+    void OnSmartFilamentToggle(QEvent &event);
 
 private:
     std::vector<FilamentMapMode> m_all_modes;
@@ -67,29 +65,29 @@ private:
     bool m_slice_all{ false };
     bool m_fila_switch_ready{ false };
     FilamentMapMode m_mode;
-    wxTimer        *m_timer;
+    QTimer        *m_timer;
 
-    std::vector<wxBitmapButton*> radio_btns;
+    std::vector<QPushButton*> radio_btns;
     std::vector<Label *>   button_labels;
     std::vector<Label *>   button_desps;
     std::vector<Label *>   detail_infos;
-    std::vector<wxSizer *> button_sizers;
-    std::vector<wxSizer *> label_sizers;
-    std::vector<wxSizerItem *> mode_spacer; // vertical space between each mode
+    std::vector<QLayout *> button_sizers;
+    std::vector<QLayout *> label_sizers;
+    std::vector<QLayoutItem *> mode_spacer; // vertical space between each mode
 
-    wxBitmap checked_bmp;
-    wxBitmap unchecked_bmp;
-    wxBitmap disabled_bmp;
-    wxBitmap checked_hover_bmp;
-    wxBitmap unchecked_hover_bmp;
-    wxBitmap global_tag_bmp;
+    QPixmap checked_bmp;
+    QPixmap unchecked_bmp;
+    QPixmap disabled_bmp;
+    QPixmap checked_hover_bmp;
+    QPixmap unchecked_hover_bmp;
+    QPixmap global_tag_bmp;
 
-    wxStaticText *wiki_link;
-    wxStaticText *video_link;
+    QLabel *wiki_link;
+    QLabel *video_link;
 
     // Smart filament assign section
     StaticBox    *m_smart_filament_panel{nullptr};
-    wxSizerItem  *m_smart_filament_spacer{nullptr};
+    QLayoutItem  *m_smart_filament_spacer{nullptr};
     SwitchButton *m_smart_filament_switch{nullptr};
 
     PartPlate* partplate_ref{ nullptr };

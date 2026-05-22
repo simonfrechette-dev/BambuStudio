@@ -1,104 +1,82 @@
 #ifndef slic3r_GUI_SpinInput_hpp_
 #define slic3r_GUI_SpinInput_hpp_
 
-#include <wx/dcclient.h>
-#include <wx/event.h>
-#include <wx/timer.h>
-#include <wx/textctrl.h>
-#include <wx/valtext.h>
 #include "StaticBox.hpp"
+#include "StateColor.hpp"
 
-wxDECLARE_EVENT(EVT_SPINCTRL_TEXT, wxCommandEvent);
+#include <QSpinBox>
+#include <QLineEdit>
+#include <QTimer>
+#include <QString>
 
 class Button;
 
-class SpinInput : public wxNavigationEnabled<StaticBox>
+class SpinInput : public StaticBox
 {
-    wxSize labelSize;
-    StateColor   label_color;
-    StateColor   text_color;
-    wxTextCtrl * text_ctrl;
-    Button * button_inc;
-    Button * button_dec;
-    wxTimer timer;
+    Q_OBJECT
 
-    int val;
-    int min;
-    int max;
-    int delta;
-    bool text_updating;
+    StateColor  label_color;
+    StateColor  text_color;
+    QSpinBox   *spin_ctrl  = nullptr;
+    Button     *button_inc = nullptr;
+    Button     *button_dec = nullptr;
+    QTimer      timer;
 
-    static const int SpinInputWidth = 200;
+    int  val   = 0;
+    int  m_min = 0;
+    int  m_max = 100;
+    int  delta = 1;
+    bool text_updating = false;
+
+    QString m_label;
+
+    static const int SpinInputWidth  = 200;
     static const int SpinInputHeight = 50;
 
 public:
     SpinInput();
 
-    SpinInput(wxWindow *     parent,
-              wxString       text,
-              wxString       label = "",
-              const wxPoint &pos   = wxDefaultPosition,
-              const wxSize & size  = wxDefaultSize,
-              long           style = 0,
+    SpinInput(QWidget       *parent,
+              const QString  &text,
+              const QString  &label  = {},
+              const QPoint   &pos    = {},
+              const QSize    &size   = {},
+              long            style  = 0,
               int min = 0, int max = 100, int initial = 0);
 
-    void Create(wxWindow *     parent,
-              wxString       text,
-              wxString       label   = "",
-              const wxPoint &pos     = wxDefaultPosition,
-              const wxSize & size    = wxDefaultSize,
-              long           style   = 0,
-              int            min     = 0,
-              int            max     = 100,
-              int            initial = 0);
+    void init(QWidget       *parent,
+              const QString  &text,
+              const QString  &label   = {},
+              const QSize    &size    = {},
+              long            style   = 0,
+              int min = 0, int max = 100, int initial = 0);
 
-    void SetCornerRadius(double radius);
-
-    void SetLabel(const wxString &label) wxOVERRIDE;
-
-    void SetLabelColor(StateColor const &color);
-
-    void SetTextColor(StateColor const &color);
-
-    void SetSize(wxSize const &size);
-
+    void SetCornerRadius(double radius) { this->radius = radius; }
+    void SetLabel(const QString &label);
+    void SetLabelColor(const StateColor &color);
+    void SetTextColor(const StateColor &color);
+    void SetSize(const QSize &size);
     void Rescale();
+    bool Enable(bool enable = true);
 
-    virtual bool Enable(bool enable = true) wxOVERRIDE;
+    QSpinBox *GetSpinCtrl() { return spin_ctrl; }
 
-    wxTextCtrl * GetTextCtrl() { return text_ctrl; }
-
-    void SetValue(const wxString &text);
-
-    void SetValue (int value);
-
-    int GetValue () const;
-
+    void SetValue(const QString &text);
+    void SetValue(int value);
+    int  GetValue() const;
     void SetRange(int min, int max);
 
+signals:
+    void valueChanged(int value);
+
 protected:
-    void DoSetToolTipText(wxString const &tip) override;
+    void doRender(QPainter &painter) override;
 
 private:
-    void paintEvent(wxPaintEvent& evt);
-
-    void render(wxDC& dc);
-
-    void messureSize();
-
-    Button *createButton(bool inc);
-
-    // some useful events
-    void mouseWheelMoved(wxMouseEvent& event);
-    void keyPressed(wxKeyEvent& event);
-    void onTimer(wxTimerEvent &evnet);
-    void onTextChanged(wxCommandEvent &event);
-    void onTextLostFocus(wxEvent &event);
-    void onTextEnter(wxCommandEvent &event);
-
-    void sendSpinEvent();
-
-    DECLARE_EVENT_TABLE()
+    void setupButtons();
+    void onIncrement();
+    void onDecrement();
+    void onTimerTick();
 };
 
 #endif // !slic3r_GUI_SpinInput_hpp_

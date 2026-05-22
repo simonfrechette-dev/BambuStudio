@@ -1,27 +1,8 @@
 #ifndef slic3r_GUI_Calibration_hpp_
 #define slic3r_GUI_Calibration_hpp_
+#include <QWidget>
+#include <QString>
 
-#include <wx/wx.h>
-#include <wx/intl.h>
-#include <wx/collpane.h>
-#include <wx/dataview.h>
-#include <wx/artprov.h>
-#include <wx/xrc/xmlres.h>
-#include <wx/dataview.h>
-#include <wx/gdicmn.h>
-#include <wx/font.h>
-#include <wx/colour.h>
-#include <wx/settings.h>
-#include <wx/string.h>
-#include <wx/sizer.h>
-#include <wx/stattext.h>
-#include <wx/hyperlink.h>
-#include <wx/button.h>
-#include <wx/dialog.h>
-#include <wx/popupwin.h>
-#include <wx/spinctrl.h>
-#include <wx/artprov.h>
-#include <wx/wrapsizer.h>
 
 #include "GUI_Utils.hpp"
 #include "wxExtensions.hpp"
@@ -39,19 +20,19 @@ class CalibrationDialog : public DPIDialog
 private:
     std::map<std::string, ::CheckBox*> m_checkbox_list;
 
-    wxWindow* select_xcam_cali { nullptr };
-    wxWindow* select_bed_leveling { nullptr };
-    wxWindow* select_vibration { nullptr };
-    wxWindow* select_motor_noise { nullptr };
-    wxWindow* select_nozzle_cali{ nullptr };
-    wxWindow* select_heatbed_cali{ nullptr };
-    wxWindow* select_clumppos_cali{ nullptr };
-    wxWindow* create_check_option(wxString title, wxWindow *parent, wxString tooltip, std::string param);
+    QWidget* select_xcam_cali { nullptr };
+    QWidget* select_bed_leveling { nullptr };
+    QWidget* select_vibration { nullptr };
+    QWidget* select_motor_noise { nullptr };
+    QWidget* select_nozzle_cali{ nullptr };
+    QWidget* select_heatbed_cali{ nullptr };
+    QWidget* select_clumppos_cali{ nullptr };
+    QWidget* create_check_option(QString title, QWidget *parent, QString tooltip, std::string param);
 
 public:
     CalibrationDialog(Plater *plater = nullptr);
     ~CalibrationDialog();
-    void on_dpi_changed(const wxRect &suggested_rect) override;
+    void on_dpi_changed(const QRect &suggested_rect) override;
 
     StepIndicator *m_calibration_flow;
     Button *       m_calibration_btn;
@@ -61,9 +42,9 @@ public:
     int              m_state{0};
     void             update_cali(MachineObject *obj);
     bool             is_stage_list_info_changed(MachineObject *obj);
-    void             on_start_calibration(wxMouseEvent &event);
+    void             on_start_calibration(QMouseEvent &event);
     void             update_machine_obj(MachineObject *obj);
-    bool             Show(bool show) override;
+    void setVisible(bool show) override;
 };
 
 }} // namespace Slic3r::GUI

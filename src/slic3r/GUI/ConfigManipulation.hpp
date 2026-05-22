@@ -10,7 +10,7 @@
 
 #include "libslic3r/PrintConfig.hpp"
 #include "Field.hpp"
-#include <wx/string.h>
+#include <QString>
 #include <set>
 
 namespace Slic3r {
@@ -36,7 +36,7 @@ class ConfigManipulation
     //BBS: change local config to const DynamicPrintConfig
     const DynamicPrintConfig* local_config = nullptr;
     //ModelConfig* local_config = nullptr;
-    wxWindow*    m_msg_dlg_parent {nullptr};
+    QWidget*     m_msg_dlg_parent {nullptr};
 
     t_config_option_keys m_applying_keys;
 
@@ -47,7 +47,7 @@ public:
         std::function<void(const std::string&, const boost::any&)>  cb_value_change,
         //BBS: change local config to DynamicPrintConfig
         const DynamicPrintConfig* local_config = nullptr,
-        wxWindow* msg_dlg_parent  = nullptr) :
+        QWidget* msg_dlg_parent  = nullptr) :
         load_config(load_config),
         cb_toggle_field(cb_toggle_field),
         cb_toggle_line(cb_toggle_line),

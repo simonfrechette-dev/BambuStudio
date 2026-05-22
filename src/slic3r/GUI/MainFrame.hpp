@@ -5,13 +5,11 @@
 
 #include <boost/property_tree/ptree_fwd.hpp>
 
-#include <wx/frame.h>
-#include <wx/settings.h>
-#include <wx/string.h>
-#include <wx/filehistory.h>
-#ifdef __APPLE__
-#include <wx/taskbar.h>
-#endif // __APPLE__
+#include <QString>
+#include <QStringList>
+#include <QLabel>
+#include <QStatusBar>
+// Phase 4 TODO: macOS taskbar icon via Qt
 
 #include <string>
 #include <map>
@@ -23,22 +21,32 @@
 #include "Monitor.hpp"
 #include "Auxiliary.hpp"
 #include "Project.hpp"
-#include "CalibrationPanel.hpp"
 #include "UnsavedChangesDialog.hpp"
 #include "Widgets/SideButton.hpp"
 #include "Widgets/SideMenuPopup.hpp"
 
 // BBS
-#include "BBLTopbar.hpp"
-#include "PrinterWebView.hpp"
-#include "calib_dlg.hpp"
-#include "MultiMachinePage.hpp"
 
 #define ENABEL_PRINT_ALL 0
 
 class Notebook;
-class wxBookCtrlBase;
-class wxProgressDialog;
+class QTabWidget;
+class QProgressDialog;
+class BBLTopbar;
+
+// Forward declarations for classes in namespace Slic3r::GUI
+namespace Slic3r { namespace GUI {
+    class CalibrationPanel;
+    class MaxVolumetricSpeed_Test_Dlg;
+    class VFA_Test_Dlg;
+    class Retraction_Test_Dlg;
+    class SecondaryCheckDialog;
+    class WebViewPanel;
+    class PrinterWebView;
+    class PA_Calibration_Dlg;
+    class Temp_Calibration_Dlg;
+    class MultiMachinePage;
+} }
 
 namespace Slic3r {
 
@@ -52,6 +60,7 @@ class MainFrame;
 class ParamsDialog;
 class FilamentGroupPopup;
 class DeviceWebPage;
+class SimpleGLView;
 
 enum QuickSlice
 {
@@ -74,19 +83,19 @@ struct PresetTab {
 
 class SettingsDialog : public DPIDialog//DPIDialog
 {
-    //wxNotebook* m_tabpanel { nullptr };
+    //QTabWidget* m_tabpanel { nullptr };
     Notebook* m_tabpanel{ nullptr };
     MainFrame*      m_main_frame { nullptr };
-    wxMenuBar*      m_menubar{ nullptr };
+    QMenuBar*      m_menubar{ nullptr };
 public:
     SettingsDialog(MainFrame* mainframe);
     ~SettingsDialog() = default;
-    //void set_tabpanel(wxNotebook* tabpanel) { m_tabpanel = tabpanel; }
+    //void set_tabpanel(QTabWidget* tabpanel) { m_tabpanel = tabpanel; }
     void set_tabpanel(Notebook* tabpanel) { m_tabpanel = tabpanel; }
-    wxMenuBar* menubar() { return m_menubar; }
+    QMenuBar* menubar() { return m_menubar; }
 
 protected:
-    void on_dpi_changed(const wxRect& suggested_rect) override;
+    void on_dpi_changed(const QRect& suggested_rect) override;
 };
 
 class MainFrame : public DPIFrame
@@ -95,30 +104,32 @@ class MainFrame : public DPIFrame
     bool     m_mac_fullscreen{false};
 #endif
     bool     m_loaded {false};
-    wxTimer* m_reset_title_text_colour_timer{ nullptr };
+    QTimer* m_reset_title_text_colour_timer{ nullptr };
+    QTimer* m_idle_topbar_timer{ nullptr };  // polls can_undo/can_redo/can_save
 
-    wxString    m_qs_last_input_file = wxEmptyString;
-    wxString    m_qs_last_output_file = wxEmptyString;
-    wxString    m_last_config = wxEmptyString;
+    QString    m_qs_last_input_file = QString();
+    QString    m_qs_last_output_file = QString();
+    QString    m_last_config = QString();
 
-    wxMenuBar*  m_menubar{ nullptr };
-    //wxMenu* publishMenu{ nullptr };
-    wxMenu *    m_calib_menu{nullptr};
+    QMenuBar*  m_menubar{ nullptr };
+    //QMenu* publishMenu{ nullptr };
+    QMenu *    m_calib_menu{nullptr};
+    QMenu *    m_recent_menu{nullptr};  // "Open Recent" submenu
     bool        enable_multi_machine{ false };
 
 #if 0
-    wxMenuItem* m_menu_item_repeat { nullptr }; // doesn't used now
+    QAction* m_menu_item_repeat { nullptr }; // doesn't used now
 #endif
-    wxMenuItem* m_menu_item_reslice_now { nullptr };
-    wxSizer*    m_main_sizer{ nullptr };
+    QAction* m_menu_item_reslice_now { nullptr };
+    QLayout*    m_main_sizer{ nullptr };
 
     size_t      m_last_selected_tab;
 
-    std::string     get_base_name(const wxString &full_name, const char *extension = nullptr) const;
-    std::string     get_dir_name(const wxString &full_name) const;
+    std::string     get_base_name(const QString &full_name, const char *extension = nullptr) const;
+    std::string     get_dir_name(const QString &full_name) const;
 
-    void on_presets_changed(SimpleEvent&);
-    void on_value_changed(wxCommandEvent&);
+    void on_presets_changed(QEvent&);
+    void on_value_changed(QEvent&);
 
     bool can_start_new_project() const;
     bool can_open_project() const;
@@ -144,7 +155,7 @@ class MainFrame : public DPIFrame
     bool can_reslice() const;
 
     // BBS
-    wxBoxSizer* create_side_tools();
+    QBoxLayout* create_side_tools();
 
     // MenuBar items changeable in respect to printer technology
     enum MenuItems
@@ -156,21 +167,28 @@ class MainFrame : public DPIFrame
     };
 
     // vector of a MenuBar items changeable in respect to printer technology
-    std::vector<wxMenuItem*> m_changeable_menu_items;
+    std::vector<QAction*> m_changeable_menu_items;
 
-    struct FileHistory : wxFileHistory
+    struct FileHistory
     {
-        FileHistory(int max) : wxFileHistory(max) {}
+        FileHistory(int max = 9) : m_max(max) {}
         std::wstring GetThumbnailUrl(int index) const;
 
-        virtual void AddFileToHistory(const wxString &file);
+        virtual void AddFileToHistory(const QString &file);
         virtual void RemoveFileFromHistory(size_t i);
-        size_t FindFileInHistory(const wxString &file);
+        size_t FindFileInHistory(const QString &file);
 
         void LoadThumbnails();
 
         void SetMaxFiles(int max);
+
+        // Returns the list of recently opened files (most recent first)
+        const std::deque<QString>& files() const { return m_files; }
+        void load(const QString& settings_key);
+        void save(const QString& settings_key) const;
     private:
+        int    m_max{9};
+        std::deque<QString> m_files;
         std::deque<std::string> m_thumbnails;
         bool m_load_called = false;
     };
@@ -199,7 +217,7 @@ class MainFrame : public DPIFrame
     bool preview_only_to_editor = false;
 
 protected:
-    virtual void on_dpi_changed(const wxRect &suggested_rect) override;
+    virtual void on_dpi_changed(const QRect &suggested_rect) override;
     virtual void on_sys_color_changed() override;
 
 #ifdef __WIN32__
@@ -209,6 +227,7 @@ protected:
 public:
     MainFrame();
     ~MainFrame() = default;
+    void toggle_settings_panel();  // Show/hide the parameters sidebar
 #ifdef __APPLE__
     bool get_mac_full_screen() { return m_mac_fullscreen; }
 #endif
@@ -278,7 +297,7 @@ public:
     void        create_preset_tabs();
     //BBS: GUI refactor
     void        add_created_tab(Tab* panel, const std::string& bmp_name = "");
-    bool        is_active_and_shown_tab(wxPanel* panel);
+    bool        is_active_and_shown_tab(QWidget* panel);
 
     // Register Win32 RawInput callbacks (3DConnexion) and removable media insert / remove callbacks.
     // Called from wxEVT_ACTIVATE, as wxEVT_CREATE was not reliable (bug in wxWidgets?).
@@ -289,7 +308,7 @@ public:
     void        update_menubar();
     void        update_calibration_button_status();
     // Open item in menu by menu and item name (in actual language)
-    void        open_menubar_item(const wxString& menu_name,const wxString& item_name);
+    void        open_menubar_item(const QString& menu_name,const QString& item_name);
 #ifdef _WIN32
     void        show_tabs_menu(bool show);
 #endif
@@ -300,10 +319,10 @@ public:
     //BBS
     void        show_sync_dialog();
     void        update_side_preset_ui();
-    void        on_select_default_preset(SimpleEvent& evt);
+    void        on_select_default_preset(QEvent& evt);
 
     bool        is_loaded() const { return m_loaded; }
-    bool        is_last_input_file() const  { return !m_qs_last_input_file.IsEmpty(); }
+    bool        is_last_input_file() const  { return !m_qs_last_input_file.isEmpty(); }
     //BBS GUI refactor: remove unused layout new/dlg
     //bool        is_dlg_layout() const { return m_layout == ESettingsLayout::Dlg; }
 
@@ -319,7 +338,7 @@ public:
     //BBS: export all the system preset configs to seperate files
     //void        export_system_configs();
     //void        export_configbundle(bool export_physical_printers = false);
-    //void        load_configbundle(wxString file = wxEmptyString);
+    //void        load_configbundle(QString file = QString());
     void        load_config(const DynamicPrintConfig& config);
     //BBS: jump to monitor
     void        jump_to_monitor(std::string dev_id = "");
@@ -329,7 +348,7 @@ public:
     // Select tab in m_tabpanel
     // When tab == -1, will be selected last selected tab
     //BBS: GUI refactor
-    void        select_tab(wxPanel* panel);
+    void        select_tab(QWidget* panel);
     void        select_tab(size_t tab = size_t(-1));
     void        request_select_tab(TabPosition pos);
     int         get_calibration_curr_tab();
@@ -344,24 +363,32 @@ public:
     //BBS
     bool can_upload() const;
     void save_project();
-    bool save_project_as(const wxString& filename = wxString());
+    bool save_project_as(const QString& filename = QString());
 
-    void        add_to_recent_projects(const wxString& filename);
+    void        add_to_recent_projects(const QString& filename);
+    void        update_recent_menu();  // Rebuild the "Open Recent" submenu
+    void        set_status_message(const QString& msg);  // Update status bar text
+    // Update the estimates panel on the Preview tab after a successful slice
+    void        update_estimates(const QString& time, const QString& filament,
+                                 const QString& weight, const QString& layers);
+    // Set layer slider range + Z-height data after slicing
+    void        set_layer_data(QVector<float> layer_zs);
+    void        set_status_objects(int count);  // Update object count in status bar
     void        get_recent_projects(boost::property_tree::wptree &tree, int images);
-    void        open_recent_project(size_t file_id, wxString const & filename);
-    void        remove_recent_project(size_t file_id, wxString const &filename);
+    void        open_recent_project(size_t file_id, QString const & filename);
+    void        remove_recent_project(size_t file_id, QString const &filename);
 
     void        technology_changed();
 
 
     //BBS
-    void        load_url(wxString url);
-    void        load_printer_url(wxString url);
+    void        load_url(QString url);
+    void        load_printer_url(QString url);
     void        load_printer_url();
     bool        is_printer_view() const;
     void        refresh_plugin_tips();
-    void RunScript(wxString js);
-    void RunScriptLeft(wxString js);
+    void RunScript(QString js);
+    void RunScriptLeft(QString js);
     void show_device(bool bBBLPrinter);
 
     // OrcaSlicer calibration
@@ -379,7 +406,7 @@ public:
     //BBS: GUI refactor
     MonitorPanel*         m_monitor{ nullptr };
 
-    //AuxiliaryPanel*       m_auxiliary{ nullptr };
+    AuxiliaryPanel*       m_auxiliary{ nullptr };
     MultiMachinePage*     m_multi_machine{ nullptr };
     ProjectPanel*         m_project{ nullptr };
 
@@ -387,17 +414,31 @@ public:
     DeviceWebPage*        m_web_device{ nullptr };
     WebViewPanel*         m_webview { nullptr };
     PrinterWebView*       m_printer_view{nullptr};
-    wxLogWindow*          m_log_window { nullptr };
+    // wxLogWindow → not ported
+    void*          m_log_window { nullptr };
     // BBS
     //wxBookCtrlBase*       m_tabpanel { nullptr };
     Notebook*             m_tabpanel{ nullptr };
-    wxBoxSizer*           m_side_tools{ nullptr };
+    QBoxLayout*           m_side_tools{ nullptr };
     ParamsPanel*          m_param_panel{ nullptr };
     ParamsDialog*         m_param_dialog{ nullptr };
+    // Status bar labels
+    QLabel*               m_status_label{ nullptr };   // main status message
+    QLabel*               m_status_objects{ nullptr }; // object count
+    SimpleGLView*         m_preview_gl{ nullptr };     // GL view on Preview tab
+    QSlider*              m_layer_slider{ nullptr };   // Z cut-plane slider on Preview tab
+    QLabel*               m_layer_z_label{ nullptr };  // current Z height label on Preview tab
+    // Preview estimates panel value labels (set by create_preview_panel, updated after slice)
+    QLabel*               m_lbl_est_time    { nullptr };
+    QLabel*               m_lbl_est_filament{ nullptr };
+    QLabel*               m_lbl_est_weight  { nullptr };
+    QLabel*               m_lbl_est_layers  { nullptr };
+    // Z heights for each layer — populated after a successful slice
+    QVector<float>        m_layer_zs;
     //BBS
     SettingsDialog        m_settings_dialog;
     DiffPresetDialog      diff_dialog;
-    wxWindow*             m_plater_page{ nullptr };
+    QWidget*             m_plater_page{ nullptr };
     PrintHostQueueDialog* m_printhost_queue_dlg;
 
     // BBS
@@ -408,10 +449,10 @@ public:
     SideButton* m_print_btn{ nullptr };
     SideButton* m_print_option_btn{ nullptr };
 
-    wxWindowID expand_program_id = wxNewId();
-    wxWindowID expand_helio_id = wxNewId();
+    int expand_program_id = 1000;
+    int expand_helio_id = 1001;
 
-    wxStaticBitmap* split_line_icon{nullptr};
+    QLabel* split_line_icon{nullptr};
     ExpandButtonHolder* expand_program_holder{nullptr};
 
     SidePopup*  m_slice_option_pop_up{ nullptr };
@@ -428,7 +469,7 @@ public:
     int select_device_page_count{ 0 };
 
 #ifdef __APPLE__
-    std::unique_ptr<wxTaskBarIcon> m_taskbar_icon;
+    std::unique_ptr<QSystemTrayIcon> m_taskbar_icon;
 #endif // __APPLE__
 
 #ifdef _WIN32
@@ -440,14 +481,14 @@ public:
 #endif // _WIN32
 };
 
-wxDECLARE_EVENT(EVT_HTTP_ERROR, wxCommandEvent);
-wxDECLARE_EVENT(EVT_USER_LOGIN, wxCommandEvent);
-wxDECLARE_EVENT(EVT_USER_LOGIN_HANDLE, wxCommandEvent);
-wxDECLARE_EVENT(EVT_CHECK_PRIVACY_VER, wxCommandEvent);
-wxDECLARE_EVENT(EVT_CHECK_PRIVACY_SHOW, wxCommandEvent);
-wxDECLARE_EVENT(EVT_SHOW_IP_DIALOG, wxCommandEvent);
-wxDECLARE_EVENT(EVT_UPDATE_MACHINE_LIST, wxCommandEvent);
-wxDECLARE_EVENT(EVT_UPDATE_PRESET_CB, SimpleEvent);
+// Qt event: wxDECLARE_EVENT(EVT_HTTP_ERROR, QEvent)
+// Qt event: wxDECLARE_EVENT(EVT_USER_LOGIN, QEvent)
+// Qt event: wxDECLARE_EVENT(EVT_USER_LOGIN_HANDLE, QEvent)
+// Qt event: wxDECLARE_EVENT(EVT_CHECK_PRIVACY_VER, QEvent)
+// Qt event: wxDECLARE_EVENT(EVT_CHECK_PRIVACY_SHOW, QEvent)
+// Qt event: wxDECLARE_EVENT(EVT_SHOW_IP_DIALOG, QEvent)
+// Qt event: wxDECLARE_EVENT(EVT_UPDATE_MACHINE_LIST, QEvent)
+// Qt event: wxDECLARE_EVENT(EVT_UPDATE_PRESET_CB, QEvent)
 
 
 

@@ -1,9 +1,9 @@
 #pragma once
 #include <optional>
+#include <string>
 #include "libslic3r/CommonDefs.hpp"
 
 #include "slic3r/Utils/json_diff.hpp"
-#include <wx/string.h>
 
 #include "DevDefs.h"
 
@@ -44,8 +44,8 @@ public:
     int  GetExtId() const { return m_ext_id; }
 
     // display
-    wxString GetDisplayLoc() const;
-    wxString GetDisplayName() const;
+    std::string GetDisplayLoc() const;
+    std::string GetDisplayName() const;
 
     // installed nozzle info
     bool           HasNozzleInstalled() const  { return m_has_nozzle; }

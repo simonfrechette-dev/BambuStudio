@@ -1,8 +1,11 @@
+// Phase 4 TODO: Qt port of DeviceErrorDialog
 #pragma once
 
 #include <unordered_set>
-#include <wx/statbmp.h>
-#include <wx/webrequest.h>
+#include <map>
+#include <atomic>
+#include <vector>
+#include <string>
 
 #include "GUI_Utils.hpp"
 #include "Widgets/StateColor.hpp"
@@ -13,12 +16,13 @@ class Button;
 
 namespace Slic3r {
 
-class MachineObject;//Previous definitions
+class MachineObject;
 
 namespace GUI {
 
 class DeviceErrorDialog : public DPIDialog
 {
+    Q_OBJECT
 public:
     enum ActionButton : int {
         RESUME_PRINTING = 2,
@@ -33,88 +37,55 @@ public:
         OK_BUTTON = 11,
         FILAMENT_LOAD_RESUME = 12,
         JUMP_TO_LIVEVIEW,
-
         NO_REMINDER_NEXT_TIME = 23,
         REFRESH_NOZZLE = 24,
         IGNORE_NO_REMINDER_NEXT_TIME = 25,
-        //LOAD_FILAMENT = 26*/
         IGNORE_RESUME = 27,
         PROBLEM_SOLVED_RESUME = 28,
         TURN_OFF_FIRE_ALARM = 29,
-
         RETRY_PROBLEM_SOLVED = 34,
         STOP_DRYING = 35,
         CANCLE = 37,
-        REMOVE_CLOSE_BTN = 39, // special case, do not show close button
+        REMOVE_CLOSE_BTN = 39,
         PROCEED = 41,
         OK_JUMP_RACK = 49,
         ABORT = 51,
         DISABLE_PURIFICATION = 54,
         DONT_REMIND_NEXT_TIME = 57,
-
-        // old error code to pseudo action
         DBL_CHECK_CANCEL = 10000,
         DBL_CHECK_DONE = 10001,
         DBL_CHECK_RETRY = 10002,
         DBL_CHECK_RESUME = 10003,
         DBL_CHECK_OK = 10004,
     };
-    /* action params json */
     nlohmann::json m_action_json;
 
 public:
-    DeviceErrorDialog(MachineObject* obj,
-                      wxWindow* parent,
-                      wxWindowID  id = wxID_ANY,
-                      const wxString& title = wxEmptyString,
-                      const wxPoint& pos = wxDefaultPosition,
-                      const wxSize& size = wxDefaultSize,
-                      long  style = wxCLOSE_BOX | wxCAPTION);
-    ~DeviceErrorDialog();
+    DeviceErrorDialog(MachineObject* obj, QWidget* parent = nullptr);
+    ~DeviceErrorDialog() override;
 
-public:
-    wxString show_error_code(int error_code);
-    void     set_action_json(const nlohmann::json &action_json) { m_action_json = action_json; }
+    QString show_error_code(int error_code);
+    void    set_action_json(const nlohmann::json &action_json) { m_action_json = action_json; }
+    void    update_contents(const QString& title, const QString& text, const QString& error_code,
+                            const QString& image_url, const std::vector<int>& btns);
 
 protected:
     void init_button_list();
-    void init_button(ActionButton style, wxString buton_text);
-
-    wxString parse_error_level(int error_code);
+    void init_button(ActionButton style, const QString& button_text);
+    QString parse_error_level(int error_code);
     std::vector<int> convert_to_pseudo_buttons(std::string error_str);
-
-    void update_contents(const wxString& title, const wxString& text, const wxString& error_code,const wxString& image_url, const std::vector<int>& btns);
-
     void on_button_click(ActionButton btn_id);
-    void on_request_timeout(wxTimerEvent& event);
-    void on_webrequest_state(wxWebRequestEvent& evt);
-    void on_dpi_changed(const wxRect& suggested_rect);
-    wxBitmap get_default_loading_image();
-    wxBitmap get_default_error_image();
-    void clear_request_timer();
-    bool get_fail_snapshot_from_cloud();
-    bool get_fail_snapshot_from_local(const wxString& image_url);
 
 private:
-    MachineObject* m_obj;
-
+    MachineObject* m_obj = nullptr;
     int m_error_code = 0;
     std::unordered_set<Button*> m_used_button;
-
-    wxWebRequest web_request;
-    wxTimer* m_request_timer { nullptr };
     std::atomic<bool> m_request_cancelled{false};
-
-    wxString m_local_img_url;
-
-    wxStaticBitmap* m_error_picture;
-    Label* m_error_msg_label{ nullptr };
-    Label* m_error_code_label{ nullptr };
-    wxBoxSizer* m_sizer_main;
-    wxBoxSizer* m_sizer_button;
-    wxScrolledWindow* m_scroll_area{ nullptr };
-
+    QString m_local_img_url;
+    Label* m_error_msg_label  = nullptr;
+    Label* m_error_code_label = nullptr;
     std::map<int, Button*> m_button_list;
     StateColor btn_bg_white;
 };
+
 }} // namespace Slic3r::GUI

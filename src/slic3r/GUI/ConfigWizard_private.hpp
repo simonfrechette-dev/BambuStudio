@@ -1,5 +1,7 @@
 #ifndef slic3r_ConfigWizard_private_hpp_
 #define slic3r_ConfigWizard_private_hpp_
+#include <QWidget>
+#include <QString>
 
 #include "ConfigWizard.hpp"
 
@@ -10,16 +12,6 @@
 #include <boost/filesystem.hpp>
 #include <boost/log/trivial.hpp>
 
-#include <wx/sizer.h>
-#include <wx/panel.h>
-#include <wx/button.h>
-#include <wx/choice.h>
-#include <wx/spinctrl.h>
-#include <wx/textctrl.h>
-#include <wx/listbox.h>
-#include <wx/checklst.h>
-#include <wx/radiobut.h>
-#include <wx/html/htmlwin.h>
 
 #include "libslic3r/PrintConfig.hpp"
 #include "libslic3r/PresetBundle.hpp"
@@ -163,12 +155,12 @@ struct PrinterPickerEvent;
 
 typedef std::function<bool(const VendorProfile::PrinterModel&)> ModelFilter;
 
-struct PrinterPicker: wxPanel //TO check
+struct PrinterPicker: QWidget //TO check
 {
-    struct Checkbox : wxCheckBox
+    struct Checkbox : QCheckBox
     {
-        Checkbox(wxWindow *parent, const wxString &label, const std::string &model, const std::string &variant) :
-            wxCheckBox(parent, wxID_ANY, label),
+        Checkbox(QWidget *parent, const QString &label, const std::string &model, const std::string &variant) :
+            QCheckBox(parent, -1, label),
             model(model),
             variant(variant)
         {}
@@ -181,8 +173,8 @@ struct PrinterPicker: wxPanel //TO check
     std::vector<Checkbox*> cboxes;
     std::vector<Checkbox*> cboxes_alt;
 
-    PrinterPicker(wxWindow *parent, const VendorProfile &vendor, wxString title, size_t max_cols, const AppConfig &appconfig, const ModelFilter &filter);
-    PrinterPicker(wxWindow *parent, const VendorProfile &vendor, wxString title, size_t max_cols, const AppConfig &appconfig);
+    PrinterPicker(QWidget *parent, const VendorProfile &vendor, QString title, size_t max_cols, const AppConfig &appconfig, const ModelFilter &filter);
+    PrinterPicker(QWidget *parent, const VendorProfile &vendor, QString title, size_t max_cols, const AppConfig &appconfig);
 
     void select_all(bool select, bool alternates = false);
     void select_one(size_t i, bool select);
@@ -200,24 +192,24 @@ private:
     void on_checkbox(const Checkbox *cbox, bool checked);
 };
 
-struct ConfigWizardPage: wxPanel
+struct ConfigWizardPage: QWidget
 {
     ConfigWizard *parent;
-    const wxString shortname;
-    wxBoxSizer *content;
+    const QString shortname;
+    QBoxLayout *content;
     const unsigned indent;
 
-    ConfigWizardPage(ConfigWizard *parent, wxString title, wxString shortname, unsigned indent = 0);
+    ConfigWizardPage(ConfigWizard *parent, QString title, QString shortname, unsigned indent = 0);
     virtual ~ConfigWizardPage();
 
     template<class T>
-    T* append(T *thing, int proportion = 0, int flag = wxEXPAND|wxTOP|wxBOTTOM, int border = 10)
+    T* append(T *thing, int proportion = 0, int flag = 0|0|0, int border = 10)
     {
         content->Add(thing, proportion, flag, border);
         return thing;
     }
 
-    wxStaticText* append_text(wxString text);
+    QLabel* append_text(QString text);
     void append_spacer(int space);
 
     ConfigWizard::priv *wizard_p() const { return parent->p.get(); }
@@ -229,9 +221,9 @@ struct ConfigWizardPage: wxPanel
 
 struct PageWelcome: ConfigWizardPage
 {
-    wxStaticText *welcome_text;
-    wxCheckBox *cbox_reset;
-    wxCheckBox *cbox_integrate;
+    QLabel *welcome_text;
+    QCheckBox *cbox_reset;
+    QCheckBox *cbox_integrate;
 
     PageWelcome(ConfigWizard *parent);
 
@@ -248,8 +240,8 @@ struct PagePrinters: ConfigWizardPage //TO check
     bool install;
 
     PagePrinters(ConfigWizard *parent,
-        wxString title,
-        wxString shortname,
+        QString title,
+        QString shortname,
         const VendorProfile &vendor,
         unsigned indent, Technology technology);
 
@@ -266,12 +258,12 @@ struct PagePrinters: ConfigWizardPage //TO check
     bool is_primary_printer_page { false };
 };
 
-// Here we extend wxListBox and wxCheckListBox
+// Here we extend QListWidget and wxCheckListBox
 // to make the client data API much easier to use.
 template<class T, class D> struct DataList : public T
 {
-    DataList(wxWindow *parent) : T(parent, wxID_ANY) {}
-	DataList(wxWindow* parent, int style) : T(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, 0, NULL, style) {}
+    DataList(QWidget *parent) : T(parent, -1) {}
+	DataList(QWidget* parent, int style) : T(parent, -1, QPoint(), QSize(), 0, NULL, style) {}
 
     // Note: We're _not_ using wxLB_SORT here because it doesn't do the right thing,
     // eg. "ABS" is sorted before "(All)"
@@ -281,7 +273,7 @@ template<class T, class D> struct DataList : public T
         return this->Append(from_u8(label), ptr);
     }
 
-    int append(const wxString &label, const D *data) {
+    int append(const QString &label, const D *data) {
         void *ptr = reinterpret_cast<void*>(const_cast<D*>(data));
         return this->Append(label, ptr);
     }
@@ -300,7 +292,7 @@ template<class T, class D> struct DataList : public T
 
     int size() { return this->GetCount(); }
 
-    void on_mouse_move(const wxPoint& position) {
+    void on_mouse_move(const QPoint& position) {
         int item = T::HitTest(position);
        
         if(item == wxHitTest::wxHT_WINDOW_INSIDE)
@@ -320,7 +312,7 @@ template<class T, class D> struct DataList : public T
     }
 };
 
-typedef DataList<wxListBox, std::string> StringList;
+typedef DataList<QListWidget, std::string> StringList;
 typedef DataList<wxCheckListBox, std::string> PresetList;
 
 struct ProfilePrintData
@@ -340,8 +332,8 @@ struct PageMaterials: ConfigWizardPage
     int sel_type_prev, sel_vendor_prev;
     bool presets_loaded;
 
-    wxFlexGridSizer *grid;
-    wxHtmlWindow* html_window;
+    QGridLayout *grid;
+    QTextBrowser* html_window;
 
     int compatible_printers_width = { 100 };
     std::string empty_printers_label;
@@ -349,7 +341,7 @@ struct PageMaterials: ConfigWizardPage
     static const std::string EMPTY;
     int last_hovered_item = { -1 } ;
 
-    PageMaterials(ConfigWizard *parent, Materials *materials, wxString title, wxString shortname, wxString list1name);
+    PageMaterials(ConfigWizard *parent, Materials *materials, QString title, QString shortname, QString list1name);
 
     void reload_presets();
 	void update_lists(int sel_type, int sel_vendor, int last_selected_printer = -1);
@@ -365,9 +357,9 @@ struct PageMaterials: ConfigWizardPage
     void sort_list_data(PresetList* list, const std::vector<ProfilePrintData>& data);
 
     void on_paint();
-    void on_mouse_move_on_profiles(wxMouseEvent& evt);
-    void on_mouse_enter_profiles(wxMouseEvent& evt);
-    void on_mouse_leave_profiles(wxMouseEvent& evt);
+    void on_mouse_move_on_profiles(QMouseEvent& evt);
+    void on_mouse_enter_profiles(QMouseEvent& evt);
+    void on_mouse_leave_profiles(QMouseEvent& evt);
     virtual void on_activate() override;
 };
 
@@ -381,9 +373,9 @@ struct PageCustom: ConfigWizardPage
 private:
     static const char* default_profile_name;
 
-    wxCheckBox *cb_custom;
-    wxTextCtrl *tc_profile_name;
-    wxString profile_name_prev;
+    QCheckBox *cb_custom;
+    QLineEdit *tc_profile_name;
+    QString profile_name_prev;
 
 };
 
@@ -406,9 +398,9 @@ private:
 //struct PageFilesAssociation : ConfigWizardPage
 //{
 //private:
-//    wxCheckBox* cb_3mf{ nullptr };
-//    wxCheckBox* cb_stl{ nullptr };
-////    wxCheckBox* cb_gcode;
+//    QCheckBox* cb_3mf{ nullptr };
+//    QCheckBox* cb_stl{ nullptr };
+////    QCheckBox* cb_gcode;
 //
 //public:
 //    PageFilesAssociation(ConfigWizard* parent);
@@ -427,7 +419,7 @@ private:
 struct PageFirmware: ConfigWizardPage
 {
     const ConfigOptionDef &gcode_opt;
-    wxChoice *gcode_picker;
+    QComboBox *gcode_picker;
 
     PageFirmware(ConfigWizard *parent);
     virtual void apply_custom_config(DynamicPrintConfig &config);
@@ -443,8 +435,8 @@ struct PageBedShape : ConfigWizardPage
 
 struct PageDiameters: ConfigWizardPage
 {
-    wxTextCtrl *diam_nozzle;
-    wxTextCtrl *diam_filam;
+    QLineEdit *diam_nozzle;
+    QLineEdit *diam_filam;
 
     PageDiameters(ConfigWizard *parent);
     virtual void apply_custom_config(DynamicPrintConfig &config);
@@ -452,8 +444,8 @@ struct PageDiameters: ConfigWizardPage
 
 struct PageTemperatures: ConfigWizardPage
 {
-    wxSpinCtrlDouble *spin_extr;
-    wxSpinCtrlDouble *spin_bed;
+    QDoubleSpinBox *spin_extr;
+    QDoubleSpinBox *spin_bed;
 
     PageTemperatures(ConfigWizard *parent);
     virtual void apply_custom_config(DynamicPrintConfig &config);
@@ -465,13 +457,13 @@ typedef std::map<std::string /* = vendor ID */,
                            PagePrinters* /* = SLA page */>> Pages3rdparty;
 
 
-class ConfigWizardIndex: public wxPanel
+class ConfigWizardIndex: public QWidget
 {
 public:
-    ConfigWizardIndex(wxWindow *parent);
+    ConfigWizardIndex(QWidget *parent);
 
     void add_page(ConfigWizardPage *page);
-    void add_label(wxString label, unsigned indent = 0);
+    void add_label(QString label, unsigned indent = 0);
 
     size_t active_item() const { return item_active; }
     ConfigWizardPage* active_page() const;
@@ -491,7 +483,7 @@ public:
 private:
     struct Item
     {
-        wxString label;
+        QString label;
         unsigned indent;
         ConfigWizardPage *page;     // nullptr page => label-only item
 
@@ -512,11 +504,10 @@ private:
 
     int item_height() const { return std::max(bullet_black.bmp().GetSize().GetHeight(), em_w) + em_w; }
 
-    void on_paint(wxPaintEvent &evt);
-    void on_mouse_move(wxMouseEvent &evt);
+    void on_paint(QPaintEvent &evt);
+    void on_mouse_move(QMouseEvent &evt);
 };
 
-wxDEFINE_EVENT(EVT_INDEX_PAGE, wxCommandEvent);
 
 
 
@@ -544,12 +535,12 @@ struct ConfigWizard::priv
     // Set to true if there are none FFF printers on the main FFF page. If true, only SLA printers are shown (not even custum printers)
     bool only_sla_mode { false };
 
-    wxScrolledWindow *hscroll = nullptr;
-    wxBoxSizer *hscroll_sizer = nullptr;
-    wxBoxSizer *btnsizer = nullptr;
+    QScrollArea *hscroll = nullptr;
+    QBoxLayout *hscroll_sizer = nullptr;
+    QBoxLayout *btnsizer = nullptr;
     ConfigWizardPage *page_current = nullptr;
     ConfigWizardIndex *index = nullptr;
-    //wxButton *btn_sel_all = nullptr;
+    //QPushButton *btn_sel_all = nullptr;
     Button *btn_prev = nullptr;
     Button *btn_next = nullptr;
     Button *btn_finish = nullptr;

@@ -37,29 +37,29 @@ namespace Slic3r
         }
     }
 
-    wxString DevExtder::GetDisplayLoc() const
+    std::string DevExtder::GetDisplayLoc() const
     {
         if (system->GetTotalExtderCount() == 2)
         {
-            return _L(DevPrinterConfigUtil::get_toolhead_display_name(
+            return _u8L(DevPrinterConfigUtil::get_toolhead_display_name(
                 system->Owner()->printer_type, m_ext_id,
                 ToolHeadComponent::Extruder, ToolHeadNameCase::LowerCase, true));  // "right" / "main"
         }
 
-        return wxEmptyString;
+        return {};
     }
 
-    wxString DevExtder::GetDisplayName() const
+    std::string DevExtder::GetDisplayName() const
     {
         if (system->GetTotalExtderCount() == 2)
         {
             std::string name = DevPrinterConfigUtil::get_toolhead_display_name(
                 system->Owner()->printer_type, m_ext_id,
                 ToolHeadComponent::Extruder, ToolHeadNameCase::LowerCase);
-            return _L(name);  // "right extruder" / "main extruder"
+            return _u8L(name);  // "right extruder" / "main extruder"
         }
 
-        return _L("extruder");
+        return _u8L("extruder");
     }
 
     NozzleType DevExtder::GetNozzleType() const

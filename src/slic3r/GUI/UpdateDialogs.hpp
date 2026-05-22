@@ -4,13 +4,12 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include <wx/hyperlink.h>
 
 #include "libslic3r/Semver.hpp"
 #include "MsgDialog.hpp"
 
-class wxBoxSizer;
-class wxCheckBox;
+class QBoxLayout;
+class QCheckBox;
 
 namespace Slic3r {
 
@@ -31,9 +30,9 @@ public:
 	// Tells whether the user checked the "don't bother me again" checkbox
 	bool disable_version_check() const;
 
-	void on_hyperlink(wxHyperlinkEvent& evt);
+	void on_hyperlink(QEvent& evt);
 private:
-	wxCheckBox *cbox;
+	QCheckBox *cbox;
 };
 
 
@@ -60,7 +59,7 @@ public:
 
 	// force_before_wizard - indicates that check of updated is forced before ConfigWizard opening
     MsgUpdateConfig(const std::vector<Update> &updates, bool force_before_wizard = false);
-    void on_dpi_changed(const wxRect &suggested_rect);
+    void on_dpi_changed(const QRect &suggested_rect);
     // MsgUpdateConfig(MsgUpdateConfig &&)      = delete;
     //MsgUpdateConfig(const MsgUpdateConfig &) = delete;
     //MsgUpdateConfig &operator=(MsgUpdateConfig &&) = delete;
@@ -102,7 +101,7 @@ class MsgDataIncompatible : public MsgDialog
 {
 public:
 	// incompats is a map of "vendor name" -> "version restrictions"
-	MsgDataIncompatible(const std::unordered_map<std::string, wxString> &incompats);
+	MsgDataIncompatible(const std::unordered_map<std::string, QString> &incompats);
 	MsgDataIncompatible(MsgDataIncompatible &&) = delete;
 	MsgDataIncompatible(const MsgDataIncompatible &) = delete;
 	MsgDataIncompatible &operator=(MsgDataIncompatible &&) = delete;

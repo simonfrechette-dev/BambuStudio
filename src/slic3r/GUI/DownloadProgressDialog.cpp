@@ -1,222 +1,210 @@
 #include "DownloadProgressDialog.hpp"
 
-#include <wx/settings.h>
-#include <wx/sizer.h>
-#include <wx/stattext.h>
-#include <wx/button.h>
-#include <wx/statbmp.h>
-#include <wx/scrolwin.h>
-#include <wx/clipbrd.h>
-#include <wx/checkbox.h>
-#include <wx/html/htmlwin.h>
+#include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QLabel>
+#include <QStackedWidget>
+#include <QApplication>
+#include <boost/format.hpp>
 
-#include <boost/algorithm/string/replace.hpp>
-
-#include "libslic3r/libslic3r.h"
 #include "libslic3r/Utils.hpp"
 #include "GUI.hpp"
 #include "I18N.hpp"
-#include "wxExtensions.hpp"
-#include "slic3r/GUI/MainFrame.hpp"
 #include "GUI_App.hpp"
-
-#define DESIGN_INPUT_SIZE wxSize(FromDIP(100), -1)
+#include "MainFrame.hpp"
 
 namespace Slic3r {
 namespace GUI {
 
-DownloadProgressDialog::DownloadProgressDialog(wxString title, bool post_login)
-    : DPIDialog(static_cast<wxWindow *>(wxGetApp().mainframe), wxID_ANY, title, wxDefaultPosition, wxDefaultSize, wxCAPTION | wxCLOSE_BOX)
+DownloadProgressDialog::DownloadProgressDialog(QString title, bool post_login)
+    : DPIDialog(static_cast<QWidget *>(wxGetApp().mainframe),
+                Qt::Dialog | Qt::WindowTitleHint | Qt::WindowCloseButtonHint)
     , m_post_login(post_login)
 {
-    wxString download_failed_url = wxT("https://wiki.bambulab.com/en/software/bambu-studio/failed-to-get-network-plugin");
-    wxString install_failed_url = wxT("https://wiki.bambulab.com/en/software/bambu-studio/failed-to-get-network-plugin");
+    setWindowTitle(title);
+    setAttribute(Qt::WA_DeleteOnClose, false);
+    setStyleSheet("background-color: white;");
 
-    wxString download_failed_msg = _L("Failed to download the plug-in. Please check your firewall settings and vpn software, check and retry.");
-    wxString install_failed_msg = _L("Failed to install the plug-in. Please check whether it is blocked or deleted by anti-virus software.");
+    const QString download_failed_msg =
+        _L("Failed to download the plug-in. Please check your firewall settings "
+           "and vpn software, check and retry.");
+    const QString install_failed_msg =
+        _L("Failed to install the plug-in. Please check whether it is blocked or "
+           "deleted by anti-virus software.");
+    const QString wiki_url = "https://wiki.bambulab.com/en/software/bambu-studio/"
+                             "failed-to-get-network-plugin";
 
+    auto *m_sizer_main = new QVBoxLayout(this);
+    m_sizer_main->setContentsMargins(0, 0, 0, 0);
+    m_sizer_main->setSpacing(0);
 
-    std::string icon_path = (boost::format("%1%/images/BambuStudioTitle.ico") % resources_dir()).str();
-    SetIcon(wxIcon(encode_path(icon_path.c_str()), wxBITMAP_TYPE_ICO));
+    // 1-pixel top accent line
+    auto *m_line_top = new QWidget(this);
+    m_line_top->setFixedHeight(1);
+    m_line_top->setStyleSheet("background-color: #a6a9aa;");
+    m_sizer_main->addWidget(m_line_top);
 
-    SetBackgroundColour(*wxWHITE);
-    wxBoxSizer *m_sizer_main = new wxBoxSizer(wxVERTICAL);
-    auto        m_line_top   = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(-1, 1));
-    m_line_top->SetBackgroundColour(wxColour(166, 169, 170));
-    m_sizer_main->Add(m_line_top, 0, wxEXPAND, 0);
+    // Stacked pages: 0 = progress, 1 = download failed, 2 = install failed
+    m_simplebook_status = new QStackedWidget(this);
+    m_simplebook_status->setMinimumWidth(400);
 
-
-    m_simplebook_status = new wxSimplebook(this);
-    m_simplebook_status->SetSize(wxSize(FromDIP(400), -1));
-    m_simplebook_status->SetMinSize(wxSize(FromDIP(400), -1));
-    m_simplebook_status->SetMaxSize(wxSize(FromDIP(400), -1));
-
-    //mode normal
+    // Page 0: progress bar panel
     m_status_bar    = std::make_shared<BBLStatusBarSend>(m_simplebook_status);
     m_panel_download = m_status_bar->get_panel();
-    m_panel_download->SetSize(wxSize(FromDIP(400), FromDIP(70)));
-    m_panel_download->SetMinSize(wxSize(FromDIP(400), FromDIP(70)));
-    m_panel_download->SetMaxSize(wxSize(FromDIP(400), FromDIP(70)));
-    
+    m_panel_download->setMinimumSize(400, 90);
+    m_simplebook_status->addWidget(m_panel_download);   // index 0
 
-    //mode Download Failed 
-    auto m_panel_download_failed = new wxPanel(m_simplebook_status, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
+    // Page 1: download failed
+    auto *m_panel_download_failed = new QWidget(m_simplebook_status);
+    {
+        auto *sizer = new QVBoxLayout(m_panel_download_failed);
+        sizer->setContentsMargins(10, 10, 10, 10);
+        auto *lbl = new QLabel(download_failed_msg, m_panel_download_failed);
+        lbl->setStyleSheet("color: black;");
+        lbl->setWordWrap(true);
+        lbl->setMaximumWidth(360);
+        sizer->addWidget(lbl, 0, Qt::AlignHCenter);
+        auto *link = new QLabel(
+            QString("<a href=\"%1\">%2</a>")
+                .arg(wiki_url, _L("click here to see more info")),
+            m_panel_download_failed);
+        link->setOpenExternalLinks(true);
+        sizer->addWidget(link, 0, Qt::AlignHCenter);
+    }
+    m_simplebook_status->addWidget(m_panel_download_failed); // index 1
 
-    wxBoxSizer* sizer_download_failed = new wxBoxSizer(wxVERTICAL);
+    // Page 2: install failed
+    auto *m_panel_install_failed = new QWidget(m_simplebook_status);
+    {
+        auto *sizer = new QVBoxLayout(m_panel_install_failed);
+        sizer->setContentsMargins(10, 10, 10, 10);
+        auto *lbl = new QLabel(install_failed_msg, m_panel_install_failed);
+        lbl->setStyleSheet("color: black;");
+        lbl->setWordWrap(true);
+        lbl->setMaximumWidth(360);
+        sizer->addWidget(lbl, 0, Qt::AlignHCenter);
+        auto *link = new QLabel(
+            QString("<a href=\"%1\">%2</a>")
+                .arg(wiki_url, _L("click here to see more info")),
+            m_panel_install_failed);
+        link->setOpenExternalLinks(true);
+        sizer->addWidget(link, 0, Qt::AlignHCenter);
+    }
+    m_simplebook_status->addWidget(m_panel_install_failed); // index 2
 
-    auto m_statictext_download_failed = new wxStaticText(m_panel_download_failed, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0);
-    m_statictext_download_failed->SetForegroundColour(*wxBLACK);
-    m_statictext_download_failed->SetLabel(format_text(m_statictext_download_failed, download_failed_msg, FromDIP(360)));
-    m_statictext_download_failed->Wrap(FromDIP(360));
+    // Wrap stacked widget with 20px margins on all sides (matches wx wxALL, FromDIP(20))
+    auto *m_content_wrapper = new QWidget(this);
+    auto *m_content_layout  = new QHBoxLayout(m_content_wrapper);
+    m_content_layout->setContentsMargins(20, 20, 20, 20);
+    m_content_layout->addWidget(m_simplebook_status);
+    m_sizer_main->addWidget(m_content_wrapper);
 
-    sizer_download_failed->Add(m_statictext_download_failed, 0, wxALIGN_CENTER | wxALL, 5);
-
-    auto m_download_hyperlink = new wxHyperlinkCtrl(m_panel_download_failed, wxID_ANY, _L("click here to see more info"), download_failed_url, wxDefaultPosition, wxDefaultSize, wxHL_DEFAULT_STYLE);
-    sizer_download_failed->Add(m_download_hyperlink, 0, wxALIGN_CENTER | wxALL, 5);
-
-
-    m_panel_download_failed->SetSizer(sizer_download_failed);
-    m_panel_download_failed->Layout();
-    sizer_download_failed->Fit(m_panel_download_failed);
-
-
-    //mode Installed failed
-    auto m_panel_install_failed = new wxPanel(m_simplebook_status, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
-
-    wxBoxSizer* sizer_install_failed = new wxBoxSizer(wxVERTICAL);
-
-    auto m_statictext_install_failed = new wxStaticText(m_panel_install_failed, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0);
-    m_statictext_install_failed->SetForegroundColour(*wxBLACK);
-    m_statictext_install_failed->SetLabel(format_text(m_statictext_install_failed, install_failed_msg,FromDIP(360)));
-    m_statictext_install_failed->Wrap(FromDIP(360));
-
-    sizer_install_failed->Add(m_statictext_install_failed, 0, wxALIGN_CENTER | wxALL, 5);
-
-    auto m_install_hyperlink = new wxHyperlinkCtrl(m_panel_install_failed, wxID_ANY, _L("click here to see more info"), install_failed_url, wxDefaultPosition, wxDefaultSize, wxHL_DEFAULT_STYLE);
-    sizer_install_failed->Add(m_install_hyperlink, 0, wxALIGN_CENTER | wxALL, 5);
-
-
-    m_panel_install_failed->SetSizer(sizer_install_failed);
-    m_panel_install_failed->Layout();
-    sizer_install_failed->Fit(m_panel_install_failed);
-
-    m_sizer_main->Add(m_simplebook_status, 0, wxALL, FromDIP(20));
-    m_sizer_main->Add(0, 0, 1, wxBOTTOM, 10);
-
-
-    m_simplebook_status->AddPage(m_status_bar->get_panel(), wxEmptyString, true);
-    m_simplebook_status->AddPage(m_panel_download_failed, wxEmptyString, false);
-    m_simplebook_status->AddPage(m_panel_install_failed, wxEmptyString, false);
-
-    SetSizer(m_sizer_main);
-    Layout();
-    Fit();
-    CentreOnParent();
-
-    Bind(wxEVT_CLOSE_WINDOW, &DownloadProgressDialog::on_close, this);
-    wxGetApp().UpdateDlgDarkUI(this);
+    adjustSize();
 }
 
-wxString DownloadProgressDialog::format_text(wxStaticText* st, wxString str, int warp)
+QString DownloadProgressDialog::format_text(QLabel *st, QString str, int warp)
 {
-    if (wxGetApp().app_config->get("language") != "zh_CN") { return str; }
+    if (!wxGetApp().app_config ||
+        wxGetApp().app_config->get("language") != "zh_CN")
+        return str;
 
-    wxString out_txt = str;
-    wxString count_txt = "";
-    int      new_line_pos = 0;
-
+    QString out = str, cur;
     for (int i = 0; i < str.length(); i++) {
-        auto text_size = st->GetTextExtent(count_txt);
-        if (text_size.x < warp) {
-            count_txt += str[i];
-        }
-        else {
-            out_txt.insert(i - 1, '\n');
-            count_txt = "";
+        if (st->fontMetrics().horizontalAdvance(cur) < warp) {
+            cur += str[i];
+        } else {
+            out.insert(i - 1, '\n');
+            cur.clear();
         }
     }
-    return out_txt;
+    return out;
 }
 
-bool DownloadProgressDialog::Show(bool show)
+void DownloadProgressDialog::setVisible(bool show)
 {
     if (show) {
-        m_simplebook_status->SetSelection(0);
+        m_simplebook_status->setCurrentIndex(0);
         m_upgrade_job = make_job(m_status_bar);
         m_upgrade_job->set_event_handle(this);
         m_status_bar->set_progress(0);
-        Bind(EVT_UPGRADE_NETWORK_SUCCESS, [this](wxCommandEvent& evt) {
-            m_status_bar->change_button_label(_L("OK"));
-            on_finish();
-            if (m_post_login) {
-                m_status_bar->set_cancel_callback_fina(
-                    [this]() {
-                        this->Close();
-                        wxGetApp().request_login();
-                    }
-                );
-            } else {
-                m_status_bar->set_cancel_callback_fina(
-                    [this]() {
-                        this->Close();
-                    }
-                );
-            }
-        });
 
-        //download failed
-        Bind(EVT_DOWNLOAD_NETWORK_FAILED, [this](wxCommandEvent& evt) {
-            m_status_bar->change_button_label(_L("Close"));
-            m_status_bar->set_progress(0);
-            this->m_simplebook_status->SetSelection(1);
-            m_status_bar->set_cancel_callback_fina(
-                [this]() {
-                    this->Close();
-                }
-            );
-        });
-
-        //install failed
-        Bind(EVT_INSTALL_NETWORK_FAILED, [this](wxCommandEvent& evt) {
-            m_status_bar->change_button_label(_L("Close"));
-            m_status_bar->set_progress(0);
-            this->m_simplebook_status->SetSelection(2);
-            m_status_bar->set_cancel_callback_fina(
-                [this]() {
-                    this->Close();
-                }
-            );
-        });
-
+        // Cancel button: cancel the job
         m_status_bar->set_cancel_callback_fina([this]() {
-            if (m_upgrade_job) {
-                m_upgrade_job->cancel();
-                //EndModal(wxID_CLOSE);
-            }
-                
+            if (m_upgrade_job) m_upgrade_job->cancel();
         });
+
         m_upgrade_job->start();
     }
-    return DPIDialog::Show(show);
+    DPIDialog::setVisible(show);
 }
 
-void DownloadProgressDialog::on_close(wxCloseEvent& event)
+bool DownloadProgressDialog::event(QEvent *e)
+{
+    if (e->type() == EVT_UPGRADE_NETWORK_SUCCESS) {
+        m_status_bar->change_button_label(_L("OK"));
+        on_finish();
+        if (m_post_login) {
+            m_status_bar->set_cancel_callback_fina([this]() {
+                close();
+                wxGetApp().request_login();
+            });
+        } else {
+            m_status_bar->set_cancel_callback_fina([this]() { close(); });
+        }
+        return true;
+    }
+    if (e->type() == EVT_DOWNLOAD_NETWORK_FAILED) {
+        m_status_bar->change_button_label(_L("Close"));
+        m_status_bar->set_progress(0);
+        m_simplebook_status->setCurrentIndex(1);
+        m_status_bar->set_cancel_callback_fina([this]() { close(); });
+        return true;
+    }
+    if (e->type() == EVT_INSTALL_NETWORK_FAILED) {
+        m_status_bar->change_button_label(_L("Close"));
+        m_status_bar->set_progress(0);
+        m_simplebook_status->setCurrentIndex(2);
+        m_status_bar->set_cancel_callback_fina([this]() { close(); });
+        return true;
+    }
+    if (e->type() == QEvent::Close) {
+        // Job posted a Close event to signal cancellation complete
+        hide();
+        return true;
+    }
+    return DPIDialog::event(e);
+}
+
+void DownloadProgressDialog::closeEvent(QCloseEvent *event)
+{
+    on_close(*event);
+    event->accept();
+}
+
+void DownloadProgressDialog::on_close(QCloseEvent & /*event*/)
 {
     if (m_upgrade_job) {
         m_upgrade_job->cancel();
         m_upgrade_job->join();
     }
-    event.Skip();
 }
 
- DownloadProgressDialog::~DownloadProgressDialog() {}
+DownloadProgressDialog::~DownloadProgressDialog() {}
 
-void DownloadProgressDialog::on_dpi_changed(const wxRect &suggested_rect) {}
+void DownloadProgressDialog::on_dpi_changed(const QRect & /*suggested_rect*/) {}
 
-void DownloadProgressDialog::update_release_note(std::string release_note, std::string version) {}
+void DownloadProgressDialog::update_release_note(std::string /*release_note*/,
+                                                 std::string /*version*/) {}
 
-std::shared_ptr<UpgradeNetworkJob> DownloadProgressDialog::make_job(std::shared_ptr<ProgressIndicator> pri) { return std::make_shared<UpgradeNetworkJob>(pri); }
+std::shared_ptr<UpgradeNetworkJob>
+DownloadProgressDialog::make_job(std::shared_ptr<ProgressIndicator> pri)
+{
+    return std::make_shared<UpgradeNetworkJob>(pri);
+}
 
-void DownloadProgressDialog::on_finish() { wxGetApp().restart_networking(); }
+void DownloadProgressDialog::on_finish()
+{
+    wxGetApp().restart_networking();
+}
 
 }} // namespace Slic3r::GUI

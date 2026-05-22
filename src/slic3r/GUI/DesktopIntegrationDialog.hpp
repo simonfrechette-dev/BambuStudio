@@ -1,15 +1,16 @@
 #ifdef __linux__
 #ifndef slic3r_DesktopIntegrationDialog_hpp_
 #define slic3r_DesktopIntegrationDialog_hpp_
+#include <QWidget>
+#include <QString>
 
-#include <wx/dialog.h>
 
 namespace Slic3r {
 namespace GUI {
-class DesktopIntegrationDialog : public wxDialog
+class DesktopIntegrationDialog : public QDialog
 {
 public:
-	DesktopIntegrationDialog(wxWindow *parent);
+	DesktopIntegrationDialog(QWidget *parent);
 	DesktopIntegrationDialog(DesktopIntegrationDialog &&) = delete;
 	DesktopIntegrationDialog(const DesktopIntegrationDialog &) = delete;
 	DesktopIntegrationDialog &operator=(DesktopIntegrationDialog &&) = delete;

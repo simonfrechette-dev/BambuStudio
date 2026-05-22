@@ -1,16 +1,16 @@
 #ifndef slic3r_BonjourDialog_hpp_
 #define slic3r_BonjourDialog_hpp_
+#include <QWidget>
+#include <QString>
 
 #include <memory>
 
-#include <wx/dialog.h>
 
 #include "libslic3r/PrintConfig.hpp"
 
-class wxListView;
-class wxStaticText;
-class wxTimer;
-class wxTimerEvent;
+class QLabel;
+class QTimer;
+class QTimerEvent;
 
 
 namespace Slic3r {
@@ -20,10 +20,10 @@ class BonjourReplyEvent;
 class ReplySet;
 
 
-class BonjourDialog: public wxDialog
+class BonjourDialog: public QDialog
 {
 public:
-	BonjourDialog(wxWindow *parent, Slic3r::PrinterTechnology);
+	BonjourDialog(QWidget *parent, Slic3r::PrinterTechnology);
 	BonjourDialog(BonjourDialog &&) = delete;
 	BonjourDialog(const BonjourDialog &) = delete;
 	BonjourDialog &operator=(BonjourDialog &&) = delete;
@@ -31,18 +31,18 @@ public:
 	~BonjourDialog();
 
 	bool show_and_lookup();
-	wxString get_selected() const;
+	QString get_selected() const;
 private:
-	wxListView *list;
+	QListView *list;
 	std::unique_ptr<ReplySet> replies;
-	wxStaticText *label;
+	QLabel *label;
 	std::shared_ptr<Bonjour> bonjour;
-	std::unique_ptr<wxTimer> timer;
+	std::unique_ptr<QTimer> timer;
 	unsigned timer_state;
 	Slic3r::PrinterTechnology tech;
 
 	void on_reply(BonjourReplyEvent &);
-	void on_timer(wxTimerEvent &);
+	void on_timer(QTimerEvent &);
     void on_timer_process();
 };
 

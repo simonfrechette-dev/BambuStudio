@@ -26,7 +26,8 @@
 
 #include "DeviceErrorDialog.hpp"
 
-#include <wx/object.h>
+#include <QString>
+#include <QColor>
 
 #define USE_LOCAL_SOCKET_BIND 0
 
@@ -218,7 +219,7 @@ public:
     PrinterSeries get_printer_series() const;
     PrinterArch get_printer_arch() const;
     std::string get_printer_ams_type() const;
-    wxString get_printer_type_display_str() const;
+    QString get_printer_type_display_str() const;
     std::string get_auto_pa_cali_thumbnail_img_str() const;
 
     // check printer device series
@@ -246,7 +247,7 @@ public:
 
     bool m_is_online;
     bool m_set_ctt_dlg{ false };
-    void set_ctt_dlg( wxString text);
+    void set_ctt_dlg( QString text);
     int  parse_msg_count = 0;
     int  keep_alive_count = 0;
     std::chrono::system_clock::time_point   last_update_time;   /* last received print data from machine */
@@ -301,7 +302,7 @@ public:
     bool is_target_slot_unload() const;
     bool can_unload_filament();
 
-    void get_ams_colors(std::vector<wxColour>& ams_colors);
+    void get_ams_colors(std::vector<QColor>& ams_colors);
 
     /*extruder*/
     bool is_main_extruder_on_left() const { return false;  } // only means the extruder is on the left hand when extruder id is 0
@@ -325,7 +326,7 @@ public:
     bool has_extra_flow_type{false};
 
     [[nodiscard]] bool is_nozzle_flow_type_supported() const { return is_enable_np | has_extra_flow_type; }
-    [[nodiscard]] wxString get_nozzle_replace_url() const;
+    [[nodiscard]] QString get_nozzle_replace_url() const;
 
     /*online*/
     bool   online_rfid;
@@ -438,7 +439,7 @@ public:
 
     bool is_filament_at_extruder();
 
-    wxString get_curr_stage();
+    QString get_curr_stage();
     int get_curr_stage_idx();
     int get_stage_remaining_seconds() const { return stage_remaining_seconds; }
 
@@ -617,7 +618,7 @@ public:
     void parse_version_func();
 
     /* quick check*/
-    bool canEnableTimelapse(wxString& error_message) const;
+    bool canEnableTimelapse(QString& error_message) const;
     bool is_timelapse_storage_low(const std::string& storage) const;
 
     /* command commands */
@@ -819,8 +820,8 @@ private:
 
 
 // change the opacity
-void change_the_opacity(wxColour& colour);
-wxString get_stage_string(int stage);
+void change_the_opacity(QColor& colour);
+QString get_stage_string(int stage);
 
 }; // namespace Slic3r
 

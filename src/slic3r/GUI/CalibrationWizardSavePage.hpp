@@ -15,31 +15,31 @@ enum CaliSaveStyle {
 class CalibrationCommonSavePage : public CalibrationWizardPage
 {
 public:
-    CalibrationCommonSavePage(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL);
+    CalibrationCommonSavePage(QWidget* parent, int id = -1, const QPoint& pos = QPoint(), const QSize& size = QSize(), long style = 0);
 
 protected:
-    wxBoxSizer* m_top_sizer;
+    QBoxLayout* m_top_sizer;
 };
 
-class PAColumnDataPanel : wxPanel {
+class PAColumnDataPanel : QWidget {
 public:
     PAColumnDataPanel(
-        wxWindow* parent,
+        QWidget* parent,
         bool is_failed,
-        wxWindowID id = wxID_ANY,
-        const wxPoint& pos = wxDefaultPosition,
-        const wxSize& size = wxDefaultSize,
-        long style = wxTAB_TRAVERSAL);
+        int id = -1,
+        const QPoint& pos = QPoint(),
+        const QSize& size = QSize(),
+        long style = 0);
 
     bool is_failed() { return m_is_failed; }
     int get_col_idx() { return m_col_idx; }
-    wxString get_k_str();
-    wxString get_n_str();
-    wxString get_name();
-    void set_data(wxString k_str, wxString n_str, wxString name);
+    QString get_k_str();
+    QString get_n_str();
+    QString get_name();
+    void set_data(QString k_str, QString n_str, QString name);
 
 private:
-    wxBoxSizer* m_top_sizer;
+    QBoxLayout* m_top_sizer;
     TextInput* m_k_value_input;
     TextInput* m_n_value_input;
     ComboBox* m_comboBox_tray_name;
@@ -47,10 +47,10 @@ private:
     bool m_is_failed;
 };
 
-class CaliSavePresetValuePanel : public wxPanel
+class CaliSavePresetValuePanel : public QWidget
 {
 protected:
-    wxBoxSizer* m_top_sizer;
+    QBoxLayout* m_top_sizer;
     CaliPagePicture* m_picture_panel;
     Label* m_value_title;
     Label* m_save_name_title;
@@ -60,17 +60,17 @@ protected:
 
 public:
     CaliSavePresetValuePanel(
-        wxWindow* parent,
-        wxWindowID id = wxID_ANY,
-        const wxPoint& pos = wxDefaultPosition,
-        const wxSize& size = wxDefaultSize,
-        long style = wxTAB_TRAVERSAL);
+        QWidget* parent,
+        int id = -1,
+        const QPoint& pos = QPoint(),
+        const QSize& size = QSize(),
+        long style = 0);
 
-    void create_panel(wxWindow* parent);
+    void create_panel(QWidget* parent);
 
     void set_img(const std::string& bmp_name_in);
-    void set_value_title(const wxString& title);
-    void set_save_name_title(const wxString& title);
+    void set_value_title(const QString& title);
+    void set_save_name_title(const QString& title);
     void get_value(double& value);
     void get_save_name(std::string& name);
     void set_save_name(const std::string& name);
@@ -78,23 +78,23 @@ public:
 };
 
 
-class CaliPASaveAutoPanel : public wxPanel
+class CaliPASaveAutoPanel : public QWidget
 {
 public:
     CaliPASaveAutoPanel(
-        wxWindow* parent,
-        wxWindowID id = wxID_ANY,
-        const wxPoint& pos = wxDefaultPosition,
-        const wxSize& size = wxDefaultSize,
-        long style = wxTAB_TRAVERSAL);
+        QWidget* parent,
+        int id = -1,
+        const QPoint& pos = QPoint(),
+        const QSize& size = QSize(),
+        long style = 0);
 
-    void create_panel(wxWindow* parent);
+    void create_panel(QWidget* parent);
 
     void set_machine_obj(MachineObject* obj) { m_obj = obj; }
 
     std::vector<std::pair<int, std::string>> default_naming(std::vector<std::pair<int, std::string>> preset_names);
     void sync_cali_result(const std::vector<PACalibResult>& cali_result, const std::vector<PACalibResult>& history_result);
-    void save_to_result_from_widgets(wxWindow* window, bool* out_is_valid, wxString* out_msg);
+    void save_to_result_from_widgets(QWidget* window, bool* out_is_valid, QString* out_msg);
     bool get_result(std::vector<PACalibResult>& out_result);
     bool is_all_failed() { return m_is_all_failed; }
 
@@ -102,42 +102,42 @@ protected:
     void sync_cali_result_for_multi_extruder(const std::vector<PACalibResult> &cali_result, const std::vector<PACalibResult> &history_result);
 
 protected:
-    wxBoxSizer* m_top_sizer;
-    wxPanel* m_complete_text_panel;
-    wxPanel* m_part_failed_panel;
-    wxPanel*    m_grid_panel{ nullptr };
-    wxPanel*    m_multi_extruder_grid_panel{ nullptr };
+    QBoxLayout* m_top_sizer;
+    QWidget* m_complete_text_panel;
+    QWidget* m_part_failed_panel;
+    QWidget*    m_grid_panel{ nullptr };
+    QWidget*    m_multi_extruder_grid_panel{ nullptr };
     std::vector<PACalibResult> m_calib_results;
     std::vector<PACalibResult> m_history_results;
     bool m_is_all_failed{ true };
     MachineObject* m_obj{ nullptr };
 };
 
-class CaliPASaveManualPanel : public wxPanel
+class CaliPASaveManualPanel : public QWidget
 {
 public:
     CaliPASaveManualPanel(
-        wxWindow* parent,
-        wxWindowID id = wxID_ANY,
-        const wxPoint& pos = wxDefaultPosition,
-        const wxSize& size = wxDefaultSize,
-        long style = wxTAB_TRAVERSAL);
-    void create_panel(wxWindow* parent);
+        QWidget* parent,
+        int id = -1,
+        const QPoint& pos = QPoint(),
+        const QSize& size = QSize(),
+        long style = 0);
+    void create_panel(QWidget* parent);
     void set_save_img();
     void set_pa_cali_method(ManualPaCaliMethod method);
 
     void set_machine_obj(MachineObject* obj) { m_obj = obj; }
 
-    void set_default_name(const wxString& name);
+    void set_default_name(const QString& name);
 
     bool get_result(PACalibResult& out_result);
 
-    virtual bool Show(bool show = true) override;
+    virtual void setVisible(bool show) override;
 
     void msw_rescale();
 
 protected:
-    wxBoxSizer* m_top_sizer;
+    QBoxLayout* m_top_sizer;
     Label *          m_complete_text;
     CaliPagePicture* m_picture_panel;
     ::TextInput* m_save_name_input;
@@ -147,27 +147,27 @@ protected:
     MachineObject* m_obj{ nullptr };
 };
 
-class CaliPASaveP1PPanel : public wxPanel
+class CaliPASaveP1PPanel : public QWidget
 {
 public:
     CaliPASaveP1PPanel(
-        wxWindow* parent,
-        wxWindowID id = wxID_ANY,
-        const wxPoint& pos = wxDefaultPosition,
-        const wxSize& size = wxDefaultSize,
-        long style = wxTAB_TRAVERSAL);
-    void create_panel(wxWindow* parent);
+        QWidget* parent,
+        int id = -1,
+        const QPoint& pos = QPoint(),
+        const QSize& size = QSize(),
+        long style = 0);
+    void create_panel(QWidget* parent);
     void set_save_img();
     void set_pa_cali_method(ManualPaCaliMethod method);
 
     bool get_result(float* out_k, float* out_n);
 
-    virtual bool Show(bool show = true) override;
+    virtual void setVisible(bool show) override;
 
     void msw_rescale();
 
 protected:
-    wxBoxSizer* m_top_sizer;
+    QBoxLayout* m_top_sizer;
     Label *          m_complete_text;
     CaliPagePicture* m_picture_panel;
     ::TextInput* m_k_val;
@@ -177,9 +177,9 @@ protected:
 class CalibrationPASavePage : public CalibrationCommonSavePage
 {
 public:
-    CalibrationPASavePage(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL);
+    CalibrationPASavePage(QWidget* parent, int id = -1, const QPoint& pos = QPoint(), const QSize& size = QSize(), long style = 0);
 
-    void create_page(wxWindow* parent);
+    void create_page(QWidget* parent);
     void set_cali_method(CalibrationMethod method) override;
     // sync widget value from obj cali result
     void sync_cali_result(MachineObject* obj);
@@ -194,7 +194,7 @@ public:
 
     void update(MachineObject* obj) override;
 
-    virtual bool Show(bool show = true) override;
+    virtual void setVisible(bool show) override;
 
     void msw_rescale() override;
 
@@ -211,46 +211,46 @@ protected:
 class CalibrationFlowX1SavePage : public CalibrationCommonSavePage
 {
 public:
-    CalibrationFlowX1SavePage(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL);
+    CalibrationFlowX1SavePage(QWidget* parent, int id = -1, const QPoint& pos = QPoint(), const QSize& size = QSize(), long style = 0);
 
-    void create_page(wxWindow* parent);
+    void create_page(QWidget* parent);
 
     // sync widget value from cali flow rate result
     void sync_cali_result(MachineObject* obj, const std::vector<FlowRatioCalibResult>& cali_result);
-    void save_to_result_from_widgets(wxWindow* window, bool* out_is_valid, wxString* out_msg);
-    bool get_result(std::vector<std::pair<wxString, float>>& out_results);
+    void save_to_result_from_widgets(QWidget* window, bool* out_is_valid, QString* out_msg);
+    bool get_result(std::vector<std::pair<QString, float>>& out_results);
     bool is_all_failed() { return m_is_all_failed; }
 
-    virtual bool Show(bool show = true) override;
+    virtual void setVisible(bool show) override;
 
     void msw_rescale() override;
 
 protected:
     CaliPageStepGuide* m_step_panel{ nullptr };
-    wxPanel* m_complete_text_panel;
-    wxPanel* m_part_failed_panel;
-    wxPanel*           m_grid_panel{ nullptr };
-    std::map<int, std::pair<wxString, float>> m_save_results; // map<tray_id, <name, flow ratio>>
+    QWidget* m_complete_text_panel;
+    QWidget* m_part_failed_panel;
+    QWidget*           m_grid_panel{ nullptr };
+    std::map<int, std::pair<QString, float>> m_save_results; // map<tray_id, <name, flow ratio>>
     bool m_is_all_failed{ true };
 };
 
 class CalibrationFlowCoarseSavePage : public CalibrationCommonSavePage
 {
 public:
-    CalibrationFlowCoarseSavePage(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL);
+    CalibrationFlowCoarseSavePage(QWidget* parent, int id = -1, const QPoint& pos = QPoint(), const QSize& size = QSize(), long style = 0);
 
-    void create_page(wxWindow* parent);
+    void create_page(QWidget* parent);
     void set_save_img();
 
-    void set_default_options(const wxString &name);
+    void set_default_options(const QString &name);
 
     bool is_skip_fine_calibration();
 
     void set_curr_flow_ratio(float value);
 
-    bool get_result(float* out_value, wxString* out_name);
+    bool get_result(float* out_value, QString* out_name);
 
-    virtual bool Show(bool show = true) override;
+    virtual void setVisible(bool show) override;
 
     void update_print_error_info(int code, const std::string& msg, const std::string& extra) { m_sending_panel->update_print_error_info(code, msg, extra); }
 
@@ -285,18 +285,18 @@ protected:
 class CalibrationFlowFineSavePage : public CalibrationCommonSavePage
 {
 public:
-    CalibrationFlowFineSavePage(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL);
+    CalibrationFlowFineSavePage(QWidget* parent, int id = -1, const QPoint& pos = QPoint(), const QSize& size = QSize(), long style = 0);
 
-    void create_page(wxWindow* parent);
+    void create_page(QWidget* parent);
     void set_save_img();
 
-    void set_default_options(const wxString &name);
+    void set_default_options(const QString &name);
 
     void set_curr_flow_ratio(float value);
 
-    bool get_result(float* out_value, wxString* out_name);
+    bool get_result(float* out_value, QString* out_name);
 
-    virtual bool Show(bool show = true) override;
+    virtual void setVisible(bool show) override;
 
     void msw_rescale() override;
 
@@ -315,17 +315,17 @@ protected:
 class CalibrationMaxVolumetricSpeedSavePage : public CalibrationCommonSavePage
 {
 public:
-    CalibrationMaxVolumetricSpeedSavePage(wxWindow *parent, wxWindowID id = wxID_ANY,
-        const wxPoint &pos = wxDefaultPosition, const wxSize &size = wxDefaultSize, long style = wxTAB_TRAVERSAL);
+    CalibrationMaxVolumetricSpeedSavePage(QWidget *parent, int id = -1,
+        const QPoint &pos = QPoint(), const QSize &size = QSize(), long style = 0);
 
-    void create_page(wxWindow *parent);
+    void create_page(QWidget *parent);
     void set_save_img();
 
     bool get_save_result(double &value, std::string &name);
 
     void set_prest_name(const std::string &name) { m_save_preset_panel->set_save_name(name); };
 
-    virtual bool Show(bool show = true) override;
+    virtual void setVisible(bool show) override;
 
 protected:
     CaliPageStepGuide *m_step_panel{nullptr};

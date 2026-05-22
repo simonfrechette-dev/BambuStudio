@@ -1,42 +1,42 @@
 #ifndef slic3r_GUI_PurgeModeDialog_hpp_
 #define slic3r_GUI_PurgeModeDialog_hpp_
+#include <QWidget>
+#include <QString>
 
-#include <wx/dialog.h>
-#include <wx/panel.h>
 
 #include "GUI_Utils.hpp"
 #include "libslic3r/PrintConfig.hpp"
 #include "Widgets/Button.hpp"
 #include "Widgets/Label.hpp"
 
-class wxStaticText;
-class wxBoxSizer;
+class QLabel;
+class QBoxLayout;
 
 namespace Slic3r {
 
 namespace GUI {
 
-class PurgeModeBtnPanel : public wxPanel
+class PurgeModeBtnPanel : public QWidget
 {
 public:
-    PurgeModeBtnPanel(wxWindow *parent, const wxString &label, const wxString &detail, const std::string &icon_path);
+    PurgeModeBtnPanel(QWidget *parent, const QString &label, const QString &detail, const std::string &icon_path);
     void Select(bool selected);
 
 protected:
-    void OnPaint(wxPaintEvent &event);
+    void OnPaint(QPaintEvent &event);
 
 private:
-    void OnEnterWindow(wxMouseEvent &event);
-    void OnLeaveWindow(wxMouseEvent &evnet);
+    void OnEnterWindow(QMouseEvent &event);
+    void OnLeaveWindow(QMouseEvent &evnet);
 
     void UpdateStatus();
 
-    wxBitmap icon;
-    wxBitmap check_icon;
+    QPixmap icon;
+    QPixmap check_icon;
 
-    wxStaticBitmap *m_btn;
-    wxStaticBitmap *m_check_btn;
-    wxStaticText   *m_label;
+    QLabel *m_btn;
+    QLabel *m_check_btn;
+    QLabel   *m_label;
     Label          *m_detail;
     std::string     m_icon_path;
     bool            m_hover{false};
@@ -46,12 +46,12 @@ private:
 class PurgeModeDialog : public DPIDialog
 {
 public:
-    PurgeModeDialog(wxWindow *parent);
+    PurgeModeDialog(QWidget *parent);
 
     PrimeVolumeMode get_selected_mode() const { return m_selected_mode; }
 
 protected:
-    void on_dpi_changed(const wxRect &suggested_rect) override;
+    void on_dpi_changed(const QRect &suggested_rect) override;
 
 private:
     void     select_option(PrimeVolumeMode mode);

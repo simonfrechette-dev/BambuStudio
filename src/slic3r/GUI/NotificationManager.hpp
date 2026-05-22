@@ -1,3 +1,8 @@
+#include <QCoreApplication>
+#include <QDesktopServices>
+#include <QUrl>
+#include <QObject>
+#include <QEvent>
 #ifndef slic3r_GUI_NotificationManager_hpp_
 #define slic3r_GUI_NotificationManager_hpp_
 
@@ -11,8 +16,6 @@
 #include <libslic3r/ObjectID.hpp>
 #include <libslic3r/Technologies.hpp>
 
-#include <wx/time.h>
-
 #include <string>
 #include <vector>
 #include <deque>
@@ -22,14 +25,15 @@
 namespace Slic3r {
 namespace GUI {
 
-using EjectDriveNotificationClickedEvent = SimpleEvent;
-wxDECLARE_EVENT(EVT_EJECT_DRIVE_NOTIFICAION_CLICKED, EjectDriveNotificationClickedEvent);
-using ExportGcodeNotificationClickedEvent = SimpleEvent;
-wxDECLARE_EVENT(EVT_EXPORT_GCODE_NOTIFICAION_CLICKED, ExportGcodeNotificationClickedEvent);
-using PresetUpdateAvailableClickedEvent = SimpleEvent;
-wxDECLARE_EVENT(EVT_PRESET_UPDATE_AVAILABLE_CLICKED, PresetUpdateAvailableClickedEvent);
-using PrinterConfigUpdateAvailableClickedEvent = SimpleEvent;
-wxDECLARE_EVENT(EVT_PRINTER_CONFIG_UPDATE_AVAILABLE_CLICKED, PrinterConfigUpdateAvailableClickedEvent);
+using EjectDriveNotificationClickedEvent = QEvent;
+inline const QEvent::Type EVT_EJECT_DRIVE_NOTIFICAION_CLICKED = static_cast<QEvent::Type>(QEvent::registerEventType());
+using ExportGcodeNotificationClickedEvent = QEvent;
+inline const QEvent::Type EVT_EXPORT_GCODE_NOTIFICAION_CLICKED = static_cast<QEvent::Type>(QEvent::registerEventType());
+using PresetUpdateAvailableClickedEvent = QEvent;
+inline const QEvent::Type EVT_PRESET_UPDATE_AVAILABLE_CLICKED = static_cast<QEvent::Type>(QEvent::registerEventType());
+using PrinterConfigUpdateAvailableClickedEvent = QEvent;
+inline const QEvent::Type EVT_PRINTER_CONFIG_UPDATE_AVAILABLE_CLICKED = static_cast<QEvent::Type>(QEvent::registerEventType());
+inline const QEvent::Type EVT_UPDATE_PLUGINS_WHEN_LAUNCH = static_cast<QEvent::Type>(QEvent::registerEventType());
 
 using CancelFn = std::function<void()>;
 
@@ -203,7 +207,7 @@ public:
 		ErrorNotificationLevel,
 	};
 
-	NotificationManager(wxEvtHandler* evt_handler);
+	NotificationManager(QObject* evt_handler);
 	~NotificationManager(){}
 
 	void on_change_color_mode(bool is_dark);
@@ -216,7 +220,7 @@ public:
 	// Push a NotificationType::CustomNotification with provided notification level and 10s for RegularNotificationLevel.
 	// ErrorNotificationLevel are never faded out.
     void push_notification(NotificationType type, NotificationLevel level, const std::string& text, const std::string& hypertext = "",
-                           std::function<bool(wxEvtHandler*)> callback = std::function<bool(wxEvtHandler*)>(), int timestamp = 0);
+                           std::function<bool(QObject*)> callback = std::function<bool(QObject*)>(), int timestamp = 0);
 	// Pushes basic_notification with delay. See push_delayed_notification_data.
 	void push_delayed_notification(const NotificationType type, std::function<bool(void)> condition_callback, int64_t initial_delay, int64_t delay_interval);
 	// Removes all notifications of type from m_waiting_notifications
@@ -257,10 +261,10 @@ public:
 	void close_plater_error_notification(const std::string& text);
 	void close_plater_warning_notification(const std::string& text);
 	//The flushing volume matrix has zero values in its off-diagonal elements
-    void push_flushing_volume_error_notification(NotificationType type, NotificationLevel level, const std::string &text, const std::string &hypertext = "", std::function<bool(wxEvtHandler *)> callback  = std::function<bool(wxEvtHandler *)>());
+    void push_flushing_volume_error_notification(NotificationType type, NotificationLevel level, const std::string &text, const std::string &hypertext = "", std::function<bool(QObject *)> callback  = std::function<bool(QObject *)>());
     void close_flushing_volume_error_notification(NotificationType type, NotificationLevel level);
 	// GCode exceeds the printing range of the extruder
-    void push_slicing_customize_error_notification(NotificationType type, NotificationLevel level, const std::string &text, const std::string &hypertext = "", std::function<bool(wxEvtHandler*)> callback = std::function<bool(wxEvtHandler*)>());
+    void push_slicing_customize_error_notification(NotificationType type, NotificationLevel level, const std::string &text, const std::string &hypertext = "", std::function<bool(QObject*)> callback = std::function<bool(QObject*)>());
     void close_slicing_customize_error_notification(NotificationType type, NotificationLevel level);
 
     void push_assembly_warning_notification(const std::string& text);
@@ -271,7 +275,7 @@ public:
 
 	// Object warning with ObjectID, closes when object is deleted. ID used is of object not print like in slicing warning.
 	void push_simplify_suggestion_notification(const std::string& text, ObjectID object_id, const std::string& hypertext = "",
-		std::function<bool(wxEvtHandler*)> callback = std::function<bool(wxEvtHandler*)>());
+		std::function<bool(QObject*)> callback = std::function<bool(QObject*)>());
     void set_simplify_suggestion_multiline(const ObjectID oid, bool bMulti);
 	// Close object warnings, whose ObjectID is not in the list.
 	// living_oids is expected to be sorted.
@@ -355,10 +359,10 @@ public:
 
 	//BBS--Objects Info
 	void bbl_show_objectsinfo_notification(const std::string &text, bool is_warning, bool is_hidden,
-		const std::string hypertext = "", std::function<bool(wxEvtHandler*)> callback = std::function<bool(wxEvtHandler*)>());
+		const std::string hypertext = "", std::function<bool(QObject*)> callback = std::function<bool(QObject*)>());
     void bbl_close_objectsinfo_notification();
 
-    void bbl_show_seqprintinfo_notification(const std::string &text, const std::string &link_text = "", std::function<bool(wxEvtHandler*)> callback = nullptr, const std::string &second_link_text = "", std::function<bool(wxEvtHandler*)> second_callback = nullptr,bool has_error = false);
+    void bbl_show_seqprintinfo_notification(const std::string &text, const std::string &link_text = "", std::function<bool(QObject*)> callback = nullptr, const std::string &second_link_text = "", std::function<bool(QObject*)> second_callback = nullptr,bool has_error = false);
     void bbl_close_seqprintinfo_notification();
 
 	//BBS--EmptyLayer
@@ -399,16 +403,16 @@ private:
 		const std::string        text1;
 		const std::string        hypertext;
 		// Callback for hypertext - returns true if notification should close after triggering
-		// Usually sends event to UI thread thru wxEvtHandler.
+		// Usually sends event to UI thread thru QObject.
 		// Examples in basic_notifications.
-        std::function<bool(wxEvtHandler*)> callback;
+        std::function<bool(QObject*)> callback;
 		const std::string        text2;
 		int                      sub_msg_id {-1};
 		std::string        ori_text;
         bool                use_warn_color { false };
         //second_hypertext and second_callback
         std::string second_hypertext;
-        std::function<bool(wxEvtHandler *)> second_callback;
+        std::function<bool(QObject *)> second_callback;
 	};
 
 	// Cache of IDs to identify and reuse ImGUI windows.
@@ -443,7 +447,7 @@ private:
 			Paused
 		};
 
-		PopNotification(const NotificationData &n, NotificationIDProvider &id_provider, wxEvtHandler* evt_handler);
+		PopNotification(const NotificationData &n, NotificationIDProvider &id_provider, QObject* evt_handler);
 		virtual ~PopNotification() { if (m_id) m_id_provider.release_id(m_id); }
 		virtual void           render(GLCanvas3D& canvas, float initial_y, bool move_from_overlay, float overlay_width, float right_margin);
         virtual void bbl_render_block_notification(GLCanvas3D &canvas, float initial_y, bool move_from_overlay, float overlay_width, float right_margin);
@@ -511,7 +515,7 @@ private:
 		virtual void render_minimize_button(ImGuiWrapper& imgui,
 			                                const float win_pos_x, const float win_pos_y);
 		// Hypertext action, returns true if notification should close.
-		// Action is stored in NotificationData::callback as std::function<bool(wxEvtHandler*)>
+		// Action is stored in NotificationData::callback as std::function<bool(QObject*)>
 		virtual bool on_text_click();
         virtual bool on_second_text_click();
 
@@ -614,7 +618,7 @@ private:
 		bool             m_minimize_b_visible   { false };
         size_t           m_lines_count{ 1 };
 	    // Target for wxWidgets events sent by clicking on the hyperlink available at some notifications.
-		wxEvtHandler*    m_evt_handler;
+		QObject*    m_evt_handler;
 
 		float m_scale = 1.0f;
 	};
@@ -624,7 +628,7 @@ private:
 	class ObjectIDNotification : public PopNotification
 	{
 	public:
-		ObjectIDNotification(const NotificationData& n, NotificationIDProvider& id_provider, wxEvtHandler* evt_handler)
+		ObjectIDNotification(const NotificationData& n, NotificationIDProvider& id_provider, QObject* evt_handler)
 			: PopNotification(n, id_provider, evt_handler)
 		{}
 		ObjectID 	object_id;
@@ -634,9 +638,9 @@ private:
 	class PlaterWarningNotification : public PopNotification
 	{
 	public:
-		PlaterWarningNotification(const NotificationData& n, NotificationIDProvider& id_provider, wxEvtHandler* evt_handler) : PopNotification(n, id_provider, evt_handler) {}
+		PlaterWarningNotification(const NotificationData& n, NotificationIDProvider& id_provider, QObject* evt_handler) : PopNotification(n, id_provider, evt_handler) {}
         void close() override;
-		void		 real_close()      { m_state = EState::ClosePending; wxGetApp().plater()->get_current_canvas3D()->schedule_extra_frame(0); }
+		void		 real_close()      { m_state = EState::ClosePending; GUI::wxGetApp().plater()->get_current_canvas3D()->schedule_extra_frame(0); }
 		void         show()            { m_state = EState::Unknown; }
 	};
 
@@ -645,7 +649,7 @@ private:
 	{
 	public:
 
-		ProgressBarNotification(const NotificationData& n, NotificationIDProvider& id_provider, wxEvtHandler* evt_handler) : PopNotification(n, id_provider, evt_handler) { }
+		ProgressBarNotification(const NotificationData& n, NotificationIDProvider& id_provider, QObject* evt_handler) : PopNotification(n, id_provider, evt_handler) { }
 		virtual void set_percentage(float percent) { m_percentage = percent; }
 	protected:
 		virtual void init() override;
@@ -679,7 +683,7 @@ private:
 			PB_CANCELLED,
 			PB_COMPLETED
 		};
-		PrintHostUploadNotification(const NotificationData& n, NotificationIDProvider& id_provider, wxEvtHandler* evt_handler, float percentage, int job_id, float filesize)
+		PrintHostUploadNotification(const NotificationData& n, NotificationIDProvider& id_provider, QObject* evt_handler, float percentage, int job_id, float filesize)
 			:ProgressBarNotification(n, id_provider, evt_handler)
 			, m_job_id(job_id)
 			, m_file_size(filesize)
@@ -722,7 +726,7 @@ private:
 			PIS_PROGRESS_UPDATED, // render was requested
 			PIS_COMPLETED // both completed and canceled state. fades out into PIS_NO_SLICING
 		};
-		ProgressIndicatorNotification(const NotificationData& n, NotificationIDProvider& id_provider, wxEvtHandler* evt_handler)
+		ProgressIndicatorNotification(const NotificationData& n, NotificationIDProvider& id_provider, QObject* evt_handler)
 		: ProgressBarNotification(n, id_provider, evt_handler)
 		{
 			m_render_percentage = true;
@@ -755,7 +759,7 @@ private:
 	class ExportFinishedNotification : public PopNotification
 	{
 	public:
-		ExportFinishedNotification(const NotificationData& n, NotificationIDProvider& id_provider, wxEvtHandler* evt_handler, bool to_removable,const std::string& export_path,const std::string& export_dir_path)
+		ExportFinishedNotification(const NotificationData& n, NotificationIDProvider& id_provider, QObject* evt_handler, bool to_removable,const std::string& export_path,const std::string& export_dir_path)
 			: PopNotification(n, id_provider, evt_handler)
 			, m_to_removable(to_removable)
 			, m_export_path(export_path)
@@ -791,7 +795,7 @@ private:
 	class UpdatedItemsInfoNotification : public PopNotification
 	{
 	public:
-		UpdatedItemsInfoNotification(const NotificationData& n, NotificationIDProvider& id_provider, wxEvtHandler* evt_handler, InfoItemType info_item_type)
+		UpdatedItemsInfoNotification(const NotificationData& n, NotificationIDProvider& id_provider, QObject* evt_handler, InfoItemType info_item_type)
 			: PopNotification(n, id_provider, evt_handler)
 		{
 			//m_types_and_counts.emplace_back(info_item_type, 1);
@@ -811,9 +815,9 @@ private:
     class AssemblyWarningNotification : public PopNotification
     {
     public:
-        AssemblyWarningNotification(const NotificationData& n, NotificationIDProvider& id_provider, wxEvtHandler* evt_handler) : PopNotification(n, id_provider, evt_handler) {}
+        AssemblyWarningNotification(const NotificationData& n, NotificationIDProvider& id_provider, QObject* evt_handler) : PopNotification(n, id_provider, evt_handler) {}
         void close() override;
-        void		 real_close() { m_state = EState::ClosePending; wxGetApp().plater()->get_current_canvas3D()->schedule_extra_frame(0); }
+        void		 real_close() { m_state = EState::ClosePending; GUI::wxGetApp().plater()->get_current_canvas3D()->schedule_extra_frame(0); }
         void         show() { m_state = EState::Unknown; }
     };
 
@@ -876,7 +880,7 @@ private:
 	// set by init(), until false notifications are only added not updated and frame is not requested after push
 	bool m_initialized{ false };
 	// Target for wxWidgets events sent by clicking on the hyperlink available at some notifications.
-	wxEvtHandler*                m_evt_handler;
+	QObject*                m_evt_handler;
 	// Cache of IDs to identify and reuse ImGUI windows.
 	NotificationIDProvider 		 m_id_provider;
 	std::deque<std::unique_ptr<PopNotification>> m_pop_notifications;
@@ -903,16 +907,16 @@ private:
 	const std::vector<NotificationData> basic_notifications = {
         NotificationData{NotificationType::Mouse3dDisconnected, NotificationLevel::RegularNotificationLevel, 10, _u8L("3D Mouse disconnected.")},
         NotificationData{NotificationType::PresetUpdateAvailable, NotificationLevel::ImportantNotificationLevel, BBL_NOTICE_MAX_INTERVAL, _u8L("Configuration can update now."), _u8L("Detail."),
-		[](wxEvtHandler* evnthndlr) {
+		[](QObject* evnthndlr) {
 			if (evnthndlr != nullptr)
-				wxPostEvent(evnthndlr, PresetUpdateAvailableClickedEvent(EVT_PRESET_UPDATE_AVAILABLE_CLICKED));
+				QCoreApplication::postEvent(evnthndlr, new PresetUpdateAvailableClickedEvent(EVT_PRESET_UPDATE_AVAILABLE_CLICKED));
 			return true;
 		}
 	},
         NotificationData{NotificationType::EmptyColorChangeCode, NotificationLevel::PrintInfoNotificationLevel, 10,
-         std::string(_devL("value can not be empty when you add a G-code for color change.\nPlease check the \"Color Change G-code\" in \"Printer Settings > Custom G-code\"").mb_str())},
+         std::string(_devL("value can not be empty when you add a G-code for color change.\nPlease check the \"Color Change G-code\" in \"Printer Settings > Custom G-code\"").toStdString())},
         NotificationData{NotificationType::EmptyAutoColorChange, NotificationLevel::PrintInfoNotificationLevel, 10,
-                         std::string(_devL("You need add a color change event to the print. The print need look like a sign.").mb_str())},
+                         _u8L("You need add a color change event to the print. The print need look like a sign.")},
         NotificationData{NotificationType::DesktopIntegrationSuccess, NotificationLevel::RegularNotificationLevel, 10,
 		_u8L("Integration was successful.") },
         NotificationData{NotificationType::DesktopIntegrationFail, NotificationLevel::WarningNotificationLevel, 10,
@@ -923,25 +927,24 @@ private:
         NotificationData{NotificationType::BBLPluginUpdateAvailable, NotificationLevel::ImportantNotificationLevel, BBL_NOTICE_MAX_INTERVAL,
 			_u8L("New network plug-in available."),
 			_u8L("Details"),
-                         [](wxEvtHandler* evnthndlr) {
+                         [](QObject* evnthndlr) {
                 //BBS set feishu release page by default
-                 wxCommandEvent* evt = new wxCommandEvent(EVT_UPDATE_PLUGINS_WHEN_LAUNCH);
-				 wxQueueEvent(wxGetApp().plater(), evt);
-				 return true;
-             }},
+                QCoreApplication::postEvent(GUI::wxGetApp().plater(), new QEvent(EVT_UPDATE_PLUGINS_WHEN_LAUNCH));
+                return true;
+                         }},
 
         NotificationData{NotificationType::BBLPrinterConfigUpdateAvailable, NotificationLevel::ImportantNotificationLevel, BBL_NOTICE_MAX_INTERVAL,
                          _u8L("New printer config available."), _u8L("Details"),
-                         [](wxEvtHandler *evnthndlr) {
-                             if (evnthndlr != nullptr) wxPostEvent(evnthndlr, PrinterConfigUpdateAvailableClickedEvent(EVT_PRINTER_CONFIG_UPDATE_AVAILABLE_CLICKED));
+                         [](QObject *evnthndlr) {
+                             if (evnthndlr != nullptr) QCoreApplication::postEvent(evnthndlr, new PrinterConfigUpdateAvailableClickedEvent(EVT_PRINTER_CONFIG_UPDATE_AVAILABLE_CLICKED));
                              return true;
                          }},
 
         NotificationData{NotificationType::BBLUserPresetExceedLimit, NotificationLevel::WarningNotificationLevel, BBL_NOTICE_MAX_INTERVAL,
 			_u8L("The number of user presets cached in the cloud has exceeded the upper limit, newly created user presets can only be used locally."),
 			_u8L("Wiki"),
-                         [](wxEvtHandler* evnthndlr) {
-				wxLaunchDefaultBrowser("https://wiki.bambulab.com/en/software/bambu-studio/3rd-party-printer-profile#cloud-user-presets-limit");
+                         [](QObject* evnthndlr) {
+				QDesktopServices::openUrl(QUrl(QString::fromUtf8("https://wiki.bambulab.com/en/software/bambu-studio/3rd-party-printer-profile#cloud-user-presets-limit")));
 				return false;
              }},
 
@@ -949,9 +952,9 @@ private:
 		_u8L("Undo integration failed.") },
         NotificationData{NotificationType::ExportOngoing, NotificationLevel::RegularNotificationLevel, 0, _u8L("Exporting.")},
         NotificationData{NotificationType::NewAppAvailable, NotificationLevel::ImportantNotificationLevel, 20, _u8L("Software has New version."), _u8L("Goto download page."),
-                         [](wxEvtHandler *evnthndlr) {
+                         [](QObject *evnthndlr) {
 				//BBS set feishu release page by default
-				wxGetApp().open_browser_with_warning_dialog("https://www.thingiverse.com/"); return true;
+				QDesktopServices::openUrl(QUrl(QString::fromUtf8("https://www.thingiverse.com/"))); return true;
 			 }},
 			//{NotificationType::NewAppAvailable, NotificationLevel::ImportantNotificationLevel, 20,  _u8L("New vesion of PrusaSlicer is available.",  _u8L("Download page.") },
 			//{NotificationType::LoadingFailed, NotificationLevel::RegularNotificationLevel, 20,  _u8L("Loading of model has Failed") },
